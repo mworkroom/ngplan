@@ -297,9 +297,9 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
       <header className="app-header">
         <div className="app-header__copy">
           <p className="app-header__eyebrow">ngplan · Phase 2</p>
-          <h1>피라미드 직급 플랜 설정</h1>
+          <h1>애터미 직급 플랜 설정</h1>
           <p className="app-header__description">
-            반월 기간, 활성 회원, 좌·우 조직과 네 종류의 시작값을 준비합니다.
+            기간, 활성 회원, 좌·우 조직과 시작값을 준비합니다.
           </p>
         </div>
         <div className="app-header__actions">
@@ -471,7 +471,7 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
         <aside className="workspace-grid__sidebar" aria-label="선택한 회원 편집">
           {selectedMember === undefined ? (
             <section className="panel empty-state">
-              <p>조직 카드에서 회원을 선택하면 상세 입력을 편집할 수 있습니다.</p>
+              <p>카드에서 회원을 선택하면 상세 입력을 편집할 수 있습니다.</p>
             </section>
           ) : (
             <section className="panel">

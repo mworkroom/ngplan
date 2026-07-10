@@ -18,17 +18,17 @@ const OPENING_FIELDS: readonly {
   },
   {
     field: 'dailyCarryPvp',
-    label: '일일 PVP 잔액',
+    label: 'PVP 잔액',
     help: '첫 계산일의 일일 커미션 장부에 사용합니다.',
   },
   {
     field: 'dailyCarryLeft',
-    label: '일일 좌 잔액',
+    label: '좌 잔액',
     help: '첫 계산일의 왼쪽 이월 잔액입니다.',
   },
   {
     field: 'dailyCarryRight',
-    label: '일일 우 잔액',
+    label: '우 잔액',
     help: '첫 계산일의 오른쪽 이월 잔액입니다.',
   },
 ];
@@ -69,9 +69,6 @@ export function OpeningStateForm({
     <section className="opening-state-form" aria-labelledby="opening-state-title">
       <div>
         <h3 id="opening-state-title">시작값</h3>
-        <p className="help-text">
-          네 값은 서로 독립적이며 새 회원에서는 모두 0으로 시작합니다.
-        </p>
       </div>
 
       <div className="form-grid opening-state-form__fields">
@@ -115,10 +112,7 @@ export function OpeningStateForm({
           }
         />
         <span>
-          <strong>회사 시스템의 시작값을 확인했습니다.</strong>
-          <span className="help-text">
-            값이 모두 0이어도 실제 회사 시스템 값인지 확인해야 합니다.
-          </span>
+          <strong>시작값을 확인했습니다.</strong>
         </span>
       </label>
       {confirmationIssue !== undefined ? (
