@@ -82,11 +82,19 @@ export function MemberForm({
         <label htmlFor={fieldId}>{label}</label>
         <input
           id={fieldId}
-          inputMode={field === 'level' ? 'numeric' : undefined}
+          inputMode={field === 'level' || field === 'memberId' ? 'numeric' : undefined}
+          pattern={field === 'memberId' ? '[0-9]*' : undefined}
           value={member[field]}
           aria-invalid={issue !== undefined}
           aria-describedby={issue === undefined ? undefined : errorId}
-          onChange={(event) => onIdentityChange({ [field]: event.currentTarget.value })}
+          onChange={(event) =>
+            onIdentityChange({
+              [field]:
+                field === 'memberId'
+                  ? event.currentTarget.value.replace(/\D/g, '')
+                  : event.currentTarget.value,
+            })
+          }
         />
         {issue === undefined ? null : (
           <p id={errorId} className="field-error">
@@ -112,8 +120,8 @@ export function MemberForm({
           <span className="status-badge">{isRoot ? '루트 회원' : '활성 회원'}</span>
         </div>
         <div className="form-grid form-grid--single">
-          {renderIdentityField('memberId', '회원 ID', memberIdIssue)}
           {renderIdentityField('name', '회원 이름', nameIssue)}
+          {renderIdentityField('memberId', '회사 회원 ID', memberIdIssue)}
           {renderIdentityField('level', '사업 레벨', levelIssue)}
         </div>
       </div>

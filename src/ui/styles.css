@@ -16,6 +16,7 @@ body {
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
+  font-size: 14px;
   background: var(--color-background);
   color: var(--color-text);
   font-family:
@@ -141,9 +142,22 @@ a {
 .workspace-grid,
 .setup-layout {
   display: grid;
-  grid-template-columns: minmax(250px, 0.8fr) minmax(0, 2fr) minmax(290px, 1fr);
+  grid-template-columns: minmax(0, 2fr) minmax(290px, 0.9fr);
   align-items: start;
   gap: 16px;
+}
+
+.project-period-row {
+  margin-bottom: 16px;
+}
+
+.project-period-row .form-grid {
+  grid-template-columns: minmax(110px, 0.45fr) minmax(90px, 0.35fr) minmax(180px, 0.7fr) minmax(280px, 1.5fr);
+  align-items: start;
+}
+
+.project-period-row .field--full {
+  grid-column: auto;
 }
 
 .workspace-grid__sidebar,
@@ -486,6 +500,13 @@ fieldset {
   overflow-wrap: anywhere;
 }
 
+.member-card__opening {
+  margin: 7px 0 0;
+  color: var(--color-muted);
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+}
+
 .member-card__select {
   width: 100%;
   padding: 0;
@@ -519,6 +540,10 @@ fieldset {
   text-transform: uppercase;
 }
 
+.child-slot__state {
+  text-align: center;
+}
+
 .child-slot__action {
   min-height: 36px;
   padding: 6px 8px;
@@ -548,6 +573,33 @@ fieldset {
 .opening-state-form {
   display: grid;
   gap: 16px;
+}
+
+.pvp-target-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.pvp-target-summary > div {
+  padding: 10px 12px;
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-control);
+  background: var(--color-accent-soft);
+}
+
+.pvp-target-summary dt {
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.pvp-target-summary dd {
+  margin: 2px 0 0;
+  color: var(--color-accent-action);
+  font-size: 1.05rem;
+  font-weight: 800;
 }
 
 .member-form__section,
@@ -691,12 +743,11 @@ fieldset {
 @media (max-width: 1180px) {
   .workspace-grid,
   .setup-layout {
-    grid-template-columns: minmax(230px, 0.8fr) minmax(0, 1.7fr);
+    grid-template-columns: minmax(0, 1.7fr) minmax(260px, 0.8fr);
   }
 
-  .workspace-grid__sidebar:last-child,
-  .setup-layout__sidebar:last-child {
-    grid-column: 1 / -1;
+  .project-period-row .form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -723,6 +774,11 @@ fieldset {
   .form-grid,
   .form-grid--four,
   .opening-state-form__fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .project-period-row .form-grid,
+  .pvp-target-summary {
     grid-template-columns: minmax(0, 1fr);
   }
 }

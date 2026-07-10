@@ -52,7 +52,7 @@ export function ProjectPeriodForm({
 
       <div className="form-grid">
         <div className="field">
-          <label htmlFor={projectFieldId('period.year')}>연도</label>
+          <label htmlFor={projectFieldId('period.year')}>대상 연도</label>
           <input
             id={projectFieldId('period.year')}
             inputMode="numeric"
@@ -69,7 +69,7 @@ export function ProjectPeriodForm({
         </div>
 
         <div className="field">
-          <label htmlFor={projectFieldId('period.month')}>월</label>
+          <label htmlFor={projectFieldId('period.month')}>대상 월</label>
           <input
             id={projectFieldId('period.month')}
             inputMode="numeric"
@@ -86,7 +86,7 @@ export function ProjectPeriodForm({
         </div>
 
         <div className="field field--full">
-          <label htmlFor={projectFieldId('period.half')}>기간 선택</label>
+          <label htmlFor={projectFieldId('period.half')}>대상 반월</label>
           <select
             id={projectFieldId('period.half')}
             value={draft.half}
@@ -126,7 +126,7 @@ export function ProjectPeriodForm({
               className="text-button"
               onClick={onRestoreDerivedTitle}
             >
-              제목 초기화
+              기간 기준 제목으로 되돌리기
             </button>
           ) : null}
         </div>

@@ -241,6 +241,18 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
     }
   };
 
+  const handleOpenSlot = (parentMemberKey: string, side: Side): void => {
+    setCommandError(null);
+    if (topology.reassignmentQueue.length === 0) {
+      applyTopologyOutcome(
+        addMemberToSlot(draft, parentMemberKey, side, generateId('MEMBER')),
+        `${side === 'LEFT' ? '왼쪽' : '오른쪽'} 슬롯에 새 회원을 추가했습니다.`,
+      );
+      return;
+    }
+    setSlotAction({ parentMemberKey, side });
+  };
+
   const handleAttachQueuedSubtree = (memberKey: string): void => {
     if (slotAction === null) {
       return;
@@ -366,26 +378,21 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
             </dd>
             <dt>활성 회원</dt>
             <dd>{draft.activeBundle.organization.members.length}명</dd>
-            <dt>조직 스냅샷</dt>
-            <dd>{draft.activeBundle.organization.snapshotId}</dd>
           </dl>
         </section>
       )}
 
+      <div className="project-period-row">
+        <ProjectPeriodForm
+          draft={draft}
+          issues={displayedValidation.issues}
+          onPeriodChange={(patch) => commitDraft(editProjectPeriod(draft, patch))}
+          onTitleChange={(title) => commitDraft(editProjectTitle(draft, title))}
+          onRestoreDerivedTitle={() => commitDraft(restoreDerivedProjectTitle(draft))}
+        />
+      </div>
+
       <div className="workspace-grid">
-        <div className="workspace-grid__sidebar">
-          <ProjectPeriodForm
-            draft={draft}
-            issues={displayedValidation.issues}
-            onPeriodChange={(patch) => commitDraft(editProjectPeriod(draft, patch))}
-            onTitleChange={(title) => commitDraft(editProjectTitle(draft, title))}
-            onRestoreDerivedTitle={() => commitDraft(restoreDerivedProjectTitle(draft))}
-          />
-          <ValidationSummary
-            validation={displayedValidation}
-            onNavigate={focusIssue}
-          />
-        </div>
 
         <div className="workspace-grid__tree">
           <OrganizationTree
@@ -406,52 +413,8 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
                 return next;
               })
             }
-            onOpenSlot={(parentMemberKey, side) => {
-              setSlotAction({ parentMemberKey, side });
-              setCommandError(null);
-            }}
+            onOpenSlot={handleOpenSlot}
           />
-
-          {slotAction === null || slotPanelParent === undefined ? null : (
-            <section className="slot-action-panel" aria-labelledby="slot-action-title">
-              <div>
-                <h3 id="slot-action-title">
-                  {slotPanelParent.name.trim() || slotPanelParent.memberKey} ·{' '}
-                  {slotAction.side === 'LEFT' ? '왼쪽' : '오른쪽'} 빈 슬롯
-                </h3>
-                <p className="help-text">
-                  새 회원을 만들거나 재배치 대기 중인 서브트리를 연결합니다.
-                </p>
-              </div>
-              <div className="button-row">
-                <button
-                  ref={slotFirstActionRef}
-                  type="button"
-                  className="primary-button"
-                  onClick={handleAddMemberToOpenSlot}
-                >
-                  새 회원 만들기
-                </button>
-                {topology.reassignmentQueue.map((entry) => (
-                  <button
-                    type="button"
-                    className="secondary-button"
-                    key={entry.memberKey}
-                    onClick={() => handleAttachQueuedSubtree(entry.memberKey)}
-                  >
-                    {entry.memberName.trim() || entry.memberKey} 서브트리 연결
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  className="text-button"
-                  onClick={() => setSlotAction(null)}
-                >
-                  취소
-                </button>
-              </div>
-            </section>
-          )}
 
           {topology.reassignmentQueue.length === 0 ? null : (
             <ReassignmentQueue
@@ -469,6 +432,34 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
         </div>
 
         <aside className="workspace-grid__sidebar" aria-label="선택한 회원 편집">
+          {slotAction === null || slotPanelParent === undefined ? null : (
+            <section className="slot-action-panel" aria-labelledby="slot-action-title">
+              <div>
+                <h3 id="slot-action-title">
+                  {slotPanelParent.name.trim() || slotPanelParent.memberKey} ·{' '}
+                  {slotAction.side === 'LEFT' ? '왼쪽' : '오른쪽'} 빈 슬롯
+                </h3>
+                <p className="help-text">새 회원을 만들거나 대기 중인 서브트리를 연결합니다.</p>
+              </div>
+              <div className="button-row">
+                <button ref={slotFirstActionRef} type="button" className="primary-button" onClick={handleAddMemberToOpenSlot}>
+                  새 회원 만들기
+                </button>
+                {topology.reassignmentQueue.map((entry) => (
+                  <button type="button" className="secondary-button" key={entry.memberKey} onClick={() => handleAttachQueuedSubtree(entry.memberKey)}>
+                    {entry.memberName.trim() || entry.memberKey} 서브트리 연결
+                  </button>
+                ))}
+                <button type="button" className="text-button" onClick={() => setSlotAction(null)}>
+                  취소
+                </button>
+              </div>
+            </section>
+          )}
+          <ValidationSummary
+            validation={displayedValidation}
+            onNavigate={focusIssue}
+          />
           {selectedMember === undefined ? (
             <section className="panel empty-state">
               <p>카드에서 회원을 선택하면 상세 입력을 편집할 수 있습니다.</p>

@@ -74,8 +74,12 @@ export function MemberCard({
         </span>
       </div>
 
-      <p className="member-card__meta">
-        시작값 {member.openingState.openingStateConfirmed ? '확인됨' : '미확인'}
+      <p className="member-card__opening" aria-label="일일 시작 잔액">
+        PVP {member.openingState.dailyCarryPvp || '0'}
+        <span aria-hidden="true"> | </span>
+        좌 {member.openingState.dailyCarryLeft || '0'}
+        <span aria-hidden="true"> | </span>
+        우 {member.openingState.dailyCarryRight || '0'}
       </p>
 
       <div className="member-card__slots">

@@ -13,7 +13,7 @@ type User = ReturnType<typeof userEvent.setup>;
 
 const INITIAL_DATE = new Date(2026, 6, 10, 12, 0, 0);
 const OPENING_FIELD_LABELS = [
-  '보름 PVP 시작값',
+  '현재 보유 PVP',
   '일일 PVP 잔액',
   '일일 좌 잔액',
   '일일 우 잔액',
@@ -101,7 +101,7 @@ async function fillSelectedMember(
 async function createNamedRoot(
   user: User,
   name = 'Root',
-  memberId = 'root-id',
+  memberId = '1000',
 ): Promise<void> {
   await addRootWithKeyboard(user);
   await fillSelectedMember(user, { memberId, name });
@@ -122,10 +122,6 @@ async function addNamedChild(
       ' 빈 슬롯에 회원 추가 또는 서브트리 연결',
   });
   await activateWithKeyboard(user, slotButton);
-  await activateWithKeyboard(
-    user,
-    screen.getByRole('button', { name: '새 회원 만들기' }),
-  );
   await fillSelectedMember(user, { memberId, name });
 }
 
@@ -186,21 +182,14 @@ describe('App project setup flow', () => {
       '2027년 8월 하반기 직급 플랜',
     );
 
-    await createNamedRoot(user, 'Root', 'root-id');
+    await createNamedRoot(user, 'Root', '1000');
     await user.click(
       screen.getByRole('button', {
         name: 'Root의 왼쪽 빈 슬롯에 회원 추가 또는 서브트리 연결',
       }),
     );
-    await waitFor(() => {
-      expect(document.activeElement).toBe(
-        screen.getByRole('button', { name: '새 회원 만들기' }),
-      );
-    });
-    await user.click(screen.getByRole('button', { name: '취소' }));
-    expect(
-      screen.queryByRole('heading', { name: /Root · 왼쪽 빈 슬롯/ }),
-    ).toBeNull();
+    expect(screen.getByRole('heading', { name: '회원 상세' })).toBeDefined();
+    expect(inputByLabel('회사 회원 ID').value).toBe('');
   });
 
   it('adds a root and both child sides by keyboard using explicit accessible labels', async () => {
@@ -215,7 +204,7 @@ describe('App project setup flow', () => {
     await addRootWithKeyboard(user);
     expectZeroOpeningDefaults();
     await fillSelectedMember(user, {
-      memberId: 'root-id',
+      memberId: '1000',
       name: 'Root',
       confirmed: false,
     });
@@ -224,13 +213,9 @@ describe('App project setup flow', () => {
       name: 'Root의 왼쪽 빈 슬롯에 회원 추가 또는 서브트리 연결',
     });
     await activateWithKeyboard(user, leftSlot);
-    await activateWithKeyboard(
-      user,
-      screen.getByRole('button', { name: '새 회원 만들기' }),
-    );
     expectZeroOpeningDefaults();
     await fillSelectedMember(user, {
-      memberId: 'left-id',
+      memberId: '1001',
       name: 'Left',
       confirmed: false,
     });
@@ -239,23 +224,17 @@ describe('App project setup flow', () => {
       name: 'Root의 오른쪽 빈 슬롯에 회원 추가 또는 서브트리 연결',
     });
     await activateWithKeyboard(user, rightSlot);
-    await activateWithKeyboard(
-      user,
-      screen.getByRole('button', { name: '새 회원 만들기' }),
-    );
     expectZeroOpeningDefaults();
 
-    expect(
-      within(memberCard('Root')).getAllByText('CHILD · 하위 조직'),
-    ).toHaveLength(2);
+    expect(within(memberCard('Root')).queryByText('스스로')).toBeNull();
     expect(screen.getByRole('button', { name: 'Left 보기' })).toBeDefined();
   });
 
   it('publishes a valid READY bundle and invalidates it on the next real edit', async () => {
     const user = renderApp();
     await createNamedRoot(user);
-    await addNamedChild(user, 'Root', '왼쪽', 'Left', 'left-id');
-    await addNamedChild(user, 'Root', '오른쪽', 'Right', 'right-id');
+    await addNamedChild(user, 'Root', '왼쪽', 'Left', '1001');
+    await addNamedChild(user, 'Root', '오른쪽', 'Right', '1002');
 
     await user.click(
       screen.getByRole('button', { name: '설정 검증 및 완료' }),
@@ -309,7 +288,7 @@ describe('App project setup flow', () => {
   it('focuses a queued subtree error and reattaches it through the parent slot', async () => {
     const user = renderApp();
     await createNamedRoot(user);
-    await addNamedChild(user, 'Root', '왼쪽', 'Child', 'child-id');
+    await addNamedChild(user, 'Root', '왼쪽', 'Child', '1001');
 
     await user.click(
       screen.getByRole('button', { name: '현재 부모에서 분리' }),
@@ -354,8 +333,8 @@ describe('App project setup flow', () => {
   it('explicitly promotes the only child when excluding a one-child member', async () => {
     const user = renderApp();
     await createNamedRoot(user);
-    await addNamedChild(user, 'Root', '왼쪽', 'Middle', 'middle-id');
-    await addNamedChild(user, 'Middle', '왼쪽', 'Leaf', 'leaf-id');
+    await addNamedChild(user, 'Root', '왼쪽', 'Middle', '1001');
+    await addNamedChild(user, 'Middle', '왼쪽', 'Leaf', '1002');
     await selectMember(user, 'Middle');
 
     const excludeButton = screen.getByRole('button', {
@@ -400,9 +379,9 @@ describe('App project setup flow', () => {
   it('queues both preserved subtrees without promotion for a two-child exclusion', async () => {
     const user = renderApp();
     await createNamedRoot(user);
-    await addNamedChild(user, 'Root', '왼쪽', 'Middle', 'middle-id');
-    await addNamedChild(user, 'Middle', '왼쪽', 'A', 'a-id');
-    await addNamedChild(user, 'Middle', '오른쪽', 'B', 'b-id');
+    await addNamedChild(user, 'Root', '왼쪽', 'Middle', '1001');
+    await addNamedChild(user, 'Middle', '왼쪽', 'A', '1002');
+    await addNamedChild(user, 'Middle', '오른쪽', 'B', '1003');
     await selectMember(user, 'Middle');
 
     await user.click(
@@ -442,8 +421,8 @@ describe('App project setup flow', () => {
   it('clears an excluded root, queues both child subtrees, and requires an explicit new root', async () => {
     const user = renderApp();
     await createNamedRoot(user);
-    await addNamedChild(user, 'Root', '왼쪽', 'A', 'a-id');
-    await addNamedChild(user, 'Root', '오른쪽', 'B', 'b-id');
+    await addNamedChild(user, 'Root', '왼쪽', 'A', '1001');
+    await addNamedChild(user, 'Root', '오른쪽', 'B', '1002');
     await selectMember(user, 'Root');
 
     await user.click(
@@ -483,8 +462,8 @@ describe('App project setup flow', () => {
       .mockReturnValueOnce(false)
       .mockReturnValueOnce(true);
     const user = renderApp();
-    await createNamedRoot(user, 'Legacy', 'legacy-id');
-    await replaceInput(user, '보름 PVP 시작값', '42');
+    await createNamedRoot(user, 'Legacy', '1000');
+    await replaceInput(user, '현재 보유 PVP', '42');
 
     await user.click(screen.getByRole('button', { name: '새 프로젝트' }));
 
@@ -494,7 +473,7 @@ describe('App project setup flow', () => {
     expect(
       screen.getByRole('button', { name: 'Legacy 회원 상세 편집' }),
     ).toBeDefined();
-    expect(inputByLabel('보름 PVP 시작값').value).toBe('42');
+    expect(inputByLabel('현재 보유 PVP').value).toBe('42');
 
     await user.click(screen.getByRole('button', { name: '새 프로젝트' }));
 
@@ -516,8 +495,8 @@ describe('App project setup flow', () => {
   it('exposes a focusable wide-tree viewport and collapse controls with a real controlled region', async () => {
     const user = renderApp();
     await createNamedRoot(user);
-    await addNamedChild(user, 'Root', '왼쪽', 'Left', 'left-id');
-    await addNamedChild(user, 'Root', '오른쪽', 'Right', 'right-id');
+    await addNamedChild(user, 'Root', '왼쪽', 'Left', '1001');
+    await addNamedChild(user, 'Root', '오른쪽', 'Right', '1002');
 
     const viewport = screen.getByLabelText('좌우 조직 트리 스크롤 영역');
     expect(viewport.classList.contains('organization-tree__viewport')).toBe(true);
@@ -556,8 +535,8 @@ describe('App project setup flow', () => {
   it('moves an existing subtree through explicit parent and side controls', async () => {
     const user = renderApp();
     await createNamedRoot(user);
-    await addNamedChild(user, 'Root', '왼쪽', 'A', 'a-id');
-    await addNamedChild(user, 'Root', '오른쪽', 'B', 'b-id');
+    await addNamedChild(user, 'Root', '왼쪽', 'A', '1001');
+    await addNamedChild(user, 'Root', '오른쪽', 'B', '1002');
     await selectMember(user, 'A');
 
     await user.selectOptions(screen.getByLabelText('새 상위 회원'), 'member-3');

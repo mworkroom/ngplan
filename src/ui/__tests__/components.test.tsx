@@ -176,6 +176,7 @@ describe('tree cards and child slots', () => {
         onSelectChild={onSelectChild}
       />,
     );
+    expect(screen.getByText('스스로')).toBeTruthy();
     fireEvent.click(
       screen.getByRole('button', {
         name: '부모의 왼쪽 빈 슬롯에 회원 추가 또는 서브트리 연결',
@@ -238,6 +239,8 @@ describe('tree cards and child slots', () => {
       />,
     );
     expect(screen.getByText('입력 필요')).toBeTruthy();
+    expect(screen.getByLabelText('일일 시작 잔액').textContent).toContain('PVP 0');
+    expect(screen.getAllByText('스스로')).toHaveLength(2);
     const collapse = screen.getByRole('button', { name: '하위 조직 펼치기' });
     expect(collapse.getAttribute('aria-controls')).toBe('root-children');
     fireEvent.click(collapse);
@@ -310,7 +313,7 @@ describe('member topology controls', () => {
       />,
     );
 
-    fireEvent.change(screen.getByLabelText('회사 회원 ID'), { target: { value: 'new-id' } });
+    fireEvent.change(screen.getByLabelText('회사 회원 ID'), { target: { value: '12a34' } });
     fireEvent.change(screen.getByLabelText('회원 이름'), { target: { value: '새 이름' } });
     fireEvent.change(screen.getByLabelText('사업 레벨'), { target: { value: '4' } });
     fireEvent.change(screen.getByLabelText('새 상위 회원'), {
@@ -323,7 +326,7 @@ describe('member topology controls', () => {
     fireEvent.click(screen.getByRole('button', { name: '선택한 빈 슬롯으로 이동' }));
     fireEvent.click(screen.getByRole('button', { name: '현재 부모에서 분리' }));
     fireEvent.click(screen.getByRole('button', { name: '현재 프로젝트에서 회원 제외' }));
-    expect(onIdentityChange).toHaveBeenCalledWith({ memberId: 'new-id' });
+    expect(onIdentityChange).toHaveBeenCalledWith({ memberId: '1234' });
     expect(onIdentityChange).toHaveBeenCalledWith({ name: '새 이름' });
     expect(onIdentityChange).toHaveBeenCalledWith({ level: '4' });
     expect(onMove).toHaveBeenCalledWith('parent', 'RIGHT');

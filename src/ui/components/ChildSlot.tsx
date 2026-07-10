@@ -32,19 +32,18 @@ export function ChildSlot({
       className="child-slot"
       tabIndex={-1}
     >
-      <span className="child-slot__label">{sideLabel}</span>
-      <span className="child-slot__state">
-        {slot.kind === 'SELF' ? 'SELF · 직접 입력 방향' : 'CHILD · 하위 조직'}
-      </span>
       {slot.kind === 'SELF' ? (
-        <button
-          type="button"
-          className="child-slot__action"
-          aria-label={`${parentName}의 ${sideLabel} 빈 슬롯에 회원 추가 또는 서브트리 연결`}
-          onClick={onOpen}
-        >
-          + {sideLabel} 추가
-        </button>
+        <>
+          <span className="child-slot__state">스스로</span>
+          <button
+            type="button"
+            className="child-slot__action"
+            aria-label={`${parentName}의 ${sideLabel} 빈 슬롯에 회원 추가 또는 서브트리 연결`}
+            onClick={onOpen}
+          >
+            +
+          </button>
+        </>
       ) : (
         <button
           type="button"
