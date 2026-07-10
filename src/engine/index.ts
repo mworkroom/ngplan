@@ -1,4 +1,9 @@
-export { validatePlan } from '../domain/validation';
+export { derivePeriod } from '../domain/period';
+export {
+  validateOrganizationSnapshot,
+  validatePeriod,
+  validatePlan,
+} from '../domain/validation';
 export { parsePv } from '../domain/pv';
 export { calculatePlan } from './calculate-period';
 export { settleDaily } from './daily-ledger';
@@ -16,6 +21,8 @@ export type {
   DailySettlement,
   DerivedPeriod,
   FortnightAssessment,
+  Half,
+  MemberSnapshot,
   NormalizedAllocationCell,
   OpeningStateInput,
   OrganizationSnapshotInput,
@@ -25,7 +32,10 @@ export type {
   RawPerformance,
   RuleSet,
   RunningFortnightState,
+  Side,
+  ValidationCode,
   ValidationIssue,
+  ValidationLocation,
   ValidationReport,
 } from '../domain/types';
 export type { ParsePvResult } from '../domain/pv';

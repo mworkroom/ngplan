@@ -34,3 +34,6 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Smoke test distribution
+        run: npm run smoke:dist

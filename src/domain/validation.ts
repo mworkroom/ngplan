@@ -6,6 +6,8 @@ import type {
   DerivedPeriod,
   MemberSnapshot,
   NormalizedAllocationCell,
+  OrganizationSnapshotInput,
+  PeriodInput,
   RuleSet,
   Side,
   ValidationCode,
@@ -24,6 +26,36 @@ interface OrganizationValidationState {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isPeriodInputStructure(value: unknown): value is PeriodInput {
+  try {
+    return isRecord(value);
+  } catch {
+    return false;
+  }
+}
+
+function isOrganizationSnapshotInputStructure(
+  value: unknown,
+): value is OrganizationSnapshotInput {
+  try {
+    if (!isRecord(value)) {
+      return false;
+    }
+    const members = value.members;
+    const openingStateByMember = value.openingStateByMember;
+    return (
+      Array.isArray(members) &&
+      members.every(isRecord) &&
+      isRecord(openingStateByMember) &&
+      Object.values(openingStateByMember).every(
+        (opening) => opening === undefined || isRecord(opening),
+      )
+    );
+  } catch {
+    return false;
+  }
 }
 
 export function isCalculatePlanInputStructure(
@@ -125,8 +157,8 @@ function validatePvField(
 }
 
 function validatePeriodInput(
-  input: CalculatePlanInput['period'],
-  snapshotId: string,
+  input: PeriodInput,
+  baseLocation: ValidationLocation,
   issues: MutableIssueList,
 ): DerivedPeriod | undefined {
   const raw = input as unknown as {
@@ -146,7 +178,7 @@ function validatePeriodInput(
     pushIssue(
       issues,
       'PERIOD_YEAR_INVALID',
-      { snapshotId, field: 'period.year' },
+      { ...baseLocation, field: 'period.year' },
       '대상 연도는 1부터 9999 사이의 정수여야 합니다.',
     );
   }
@@ -160,7 +192,7 @@ function validatePeriodInput(
     pushIssue(
       issues,
       'PERIOD_MONTH_INVALID',
-      { snapshotId, field: 'period.month' },
+      { ...baseLocation, field: 'period.month' },
       '대상 월은 1부터 12 사이의 정수여야 합니다.',
     );
   }
@@ -169,7 +201,7 @@ function validatePeriodInput(
     pushIssue(
       issues,
       'PERIOD_HALF_INVALID',
-      { snapshotId, field: 'period.half' },
+      { ...baseLocation, field: 'period.half' },
       '대상 반기는 FIRST_HALF 또는 SECOND_HALF여야 합니다.',
     );
   }
@@ -424,7 +456,7 @@ function validateOrganization(
 }
 
 function validateOpeningStates(
-  input: CalculatePlanInput['organization'],
+  input: OrganizationSnapshotInput,
   memberByKey: ReadonlyMap<string, MemberSnapshot>,
   issues: MutableIssueList,
 ): void {
@@ -481,6 +513,15 @@ function validateOpeningStates(
       );
     }
   }
+}
+
+function collectOrganizationValidation(
+  input: OrganizationSnapshotInput,
+  issues: MutableIssueList,
+): OrganizationValidationState {
+  const organizationState = validateOrganization(input, issues);
+  validateOpeningStates(input, organizationState.memberByKey, issues);
+  return organizationState;
 }
 
 function validateAllocationPvFields(
@@ -726,6 +767,42 @@ export function createValidationReport(
   });
 }
 
+/** Phase 1 period rules without requiring organization or allocation input. */
+export function validatePeriod(input: unknown): ValidationReport {
+  const issues: ValidationIssue[] = [];
+  if (!isPeriodInputStructure(input)) {
+    pushIssue(
+      issues,
+      'INPUT_STRUCTURE_INVALID',
+      { field: 'period' },
+      '기간 입력은 연도, 월, 반기를 가진 객체여야 합니다.',
+      '정규 PeriodInput 구조로 입력을 다시 만들어 주세요.',
+    );
+    return createValidationReport(issues);
+  }
+
+  validatePeriodInput(input, {}, issues);
+  return createValidationReport(issues);
+}
+
+/** Phase 1 organization and opening-state rules without allocation input. */
+export function validateOrganizationSnapshot(input: unknown): ValidationReport {
+  const issues: ValidationIssue[] = [];
+  if (!isOrganizationSnapshotInputStructure(input)) {
+    pushIssue(
+      issues,
+      'INPUT_STRUCTURE_INVALID',
+      { field: 'organization' },
+      '조직 입력은 회원 배열과 회원별 시작값을 가진 객체여야 합니다.',
+      '정규 OrganizationSnapshotInput 구조로 입력을 다시 만들어 주세요.',
+    );
+    return createValidationReport(issues);
+  }
+
+  collectOrganizationValidation(input, issues);
+  return createValidationReport(issues);
+}
+
 export function validatePlan(
   input: unknown,
   rules: RuleSet = DEFAULT_RULE_SET,
@@ -767,9 +844,8 @@ export function validatePlan(
     );
   }
 
-  const period = validatePeriodInput(input.period, snapshotId, issues);
-  const organizationState = validateOrganization(input.organization, issues);
-  validateOpeningStates(input.organization, organizationState.memberByKey, issues);
+  const period = validatePeriodInput(input.period, { snapshotId }, issues);
+  const organizationState = collectOrganizationValidation(input.organization, issues);
   validateAllocations(
     input.allocations,
     period,

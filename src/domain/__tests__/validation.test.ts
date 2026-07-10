@@ -1,20 +1,30 @@
 import { describe, expect, it } from 'vitest';
 
-import { DEFAULT_RULE_SET } from '../constants';
-import { derivePeriod } from '../period';
+import {
+  derivePeriod,
+  validateOrganizationSnapshot,
+  validatePeriod,
+  validatePlan,
+} from '../../engine/index';
 import type {
   CalculatePlanInput,
+  Half,
   MemberSnapshot,
   NormalizedAllocationCell,
   OpeningStateInput,
+  OrganizationSnapshotInput,
   PeriodInput,
   RuleSet,
+  Side,
   ValidationCode,
   ValidationIssue,
-} from '../types';
-import { createValidationReport, validatePlan } from '../validation';
+  ValidationLocation,
+} from '../../engine/index';
+import { DEFAULT_RULE_SET } from '../constants';
+import { createValidationReport } from '../validation';
 
 const PERIOD: PeriodInput = { year: 2026, month: 7, half: 'FIRST_HALF' };
+const SECOND_HALF: Half = 'SECOND_HALF';
 const ZERO_OPENING: OpeningStateInput = {
   fortnightPvpOpeningCredit: 0,
   dailyCarryPvp: 0,
@@ -40,7 +50,7 @@ function root(
 function child(
   memberKey: string,
   parentMemberKey: string,
-  sideAtParent: 'LEFT' | 'RIGHT',
+  sideAtParent: Side,
   overrides: Partial<MemberSnapshot> = {},
 ): MemberSnapshot {
   return {
@@ -93,12 +103,19 @@ function planFor(
   const period = options.period ?? PERIOD;
   return {
     period,
-    organization: {
-      snapshotId: 'snapshot-1',
-      members,
-      openingStateByMember: options.openings ?? openingsFor(members),
-    },
+    organization: organizationFor(members, options.openings),
     allocations: options.allocations ?? allocationsFor(members, period),
+  };
+}
+
+function organizationFor(
+  members: readonly MemberSnapshot[],
+  openings: Readonly<Record<string, OpeningStateInput>> = openingsFor(members),
+): OrganizationSnapshotInput {
+  return {
+    snapshotId: 'snapshot-1',
+    members,
+    openingStateByMember: openings,
   };
 }
 
@@ -120,6 +137,191 @@ function replaceCell(
     cell.date === date && cell.memberKey === memberKey ? replacement(cell) : cell,
   );
 }
+
+const ORGANIZATION_VALIDATION_CODES = new Set<ValidationCode>([
+  'PV_INVALID',
+  'PV_NEGATIVE',
+  'PV_NOT_INTEGER',
+  'PV_OUT_OF_RANGE',
+  'MEMBER_KEY_REQUIRED',
+  'MEMBER_KEY_DUPLICATE',
+  'MEMBER_ID_REQUIRED',
+  'MEMBER_ID_DUPLICATE',
+  'MEMBER_NAME_REQUIRED',
+  'LEVEL_NOT_INTEGER',
+  'LEVEL_OUT_OF_RANGE',
+  'PLACEMENT_INCOMPLETE',
+  'ROOT_PLACEMENT_INVALID',
+  'PARENT_NOT_FOUND',
+  'PARENT_SIDE_OCCUPIED',
+  'MEMBER_ATTACHED_MULTIPLE_TIMES',
+  'ORGANIZATION_CYCLE',
+  'ROOT_MISSING',
+  'MULTIPLE_ROOTS',
+  'ORGANIZATION_DISCONNECTED',
+  'OPENING_STATE_MISSING',
+  'OPENING_STATE_MEMBER_NOT_FOUND',
+]);
+
+function withoutSnapshotId(location: ValidationLocation): ValidationLocation {
+  return Object.fromEntries(
+    Object.entries(location).filter(([key]) => key !== 'snapshotId'),
+  ) as ValidationLocation;
+}
+
+describe('Phase 2용 Phase 1 공개 검증 경계', () => {
+  it.each([
+    [{ year: 2027, month: 2, half: SECOND_HALF }, '2027-02-28'],
+    [{ year: 2028, month: 2, half: SECOND_HALF }, '2028-02-29'],
+    [{ year: 2026, month: 4, half: SECOND_HALF }, '2026-04-30'],
+    [{ year: 2026, month: 7, half: SECOND_HALF }, '2026-07-31'],
+  ] as const)(
+    '28/29/30/31일 월의 유효한 기간을 독립 검증한다: %o → %s',
+    (period, expectedEndDate) => {
+      const report = validatePeriod(period);
+
+      expect(report.isValid).toBe(true);
+      expect(report.issues).toEqual([]);
+      expect(derivePeriod(period).endDate).toBe(expectedEndDate);
+    },
+  );
+
+  it.each([null, [], '2026-07-FIRST_HALF'])(
+    '기간의 비객체 런타임 구조를 예외 없이 거부한다: %s',
+    (period) => {
+      const report = validatePeriod(period);
+
+      expect(report.errors).toEqual([
+        expect.objectContaining({
+          code: 'INPUT_STRUCTURE_INVALID',
+          location: { field: 'period' },
+        }),
+      ]);
+    },
+  );
+
+  it('기간 필드 오류가 validatePlan과 같은 세부 계약을 사용한다', () => {
+    const period = {} as PeriodInput;
+    const standalone = validatePeriod(period);
+    const planIssues = validatePlan({
+      ...validPlan(),
+      period,
+      allocations: [],
+    }).issues
+      .filter((issue) => issue.code.startsWith('PERIOD_'))
+      .map((issue) => ({
+        ...issue,
+        location: withoutSnapshotId(issue.location),
+      }));
+
+    expect(standalone.issues).toEqual(planIssues);
+    expect(standalone.issues.map((issue) => issue.code).sort()).toEqual([
+      'PERIOD_HALF_INVALID',
+      'PERIOD_MONTH_INVALID',
+      'PERIOD_YEAR_INVALID',
+    ]);
+  });
+
+  it.each([
+    null,
+    [],
+    {},
+    { snapshotId: 'snapshot-1', members: [null], openingStateByMember: {} },
+    { snapshotId: 'snapshot-1', members: [], openingStateByMember: [] },
+    { snapshotId: 'snapshot-1', members: [], openingStateByMember: { A: 0 } },
+  ])('조직의 잘못된 런타임 구조를 예외 없이 거부한다: %s', (organization) => {
+    const report = validateOrganizationSnapshot(organization);
+
+    expect(report.errors).toEqual([
+      expect.objectContaining({
+        code: 'INPUT_STRUCTURE_INVALID',
+        location: { field: 'organization' },
+      }),
+    ]);
+  });
+
+  it('완전한 조직을 독립 검증하고 입력과 불변 보고서를 보존한다', () => {
+    const organization = organizationFor([
+      root('A'),
+      child('B', 'A', 'LEFT'),
+      child('C', 'A', 'RIGHT'),
+    ]);
+    const before = structuredClone(organization);
+    const report = validateOrganizationSnapshot(organization);
+
+    expect(report.isValid).toBe(true);
+    expect(report.issues).toEqual([]);
+    expect(organization).toEqual(before);
+    expect(Object.isFrozen(report)).toBe(true);
+    expect(Object.isFrozen(report.issues)).toBe(true);
+  });
+
+  it.each([
+    {
+      name: 'duplicate member ID',
+      members: [root('A'), child('B', 'A', 'LEFT', { memberId: 'ID-A' })],
+    },
+    {
+      name: 'duplicate occupied slot',
+      members: [root('A'), child('B', 'A', 'LEFT'), child('C', 'A', 'LEFT')],
+    },
+    {
+      name: 'missing parent',
+      members: [root('A'), child('B', 'UNKNOWN', 'LEFT')],
+    },
+    {
+      name: 'cycle',
+      members: [child('A', 'B', 'LEFT'), child('B', 'A', 'RIGHT')],
+    },
+    {
+      name: 'multiple roots',
+      members: [root('A'), root('B')],
+    },
+    {
+      name: 'disconnected cycle below one root',
+      members: [root('A'), child('B', 'C', 'LEFT'), child('C', 'B', 'RIGHT')],
+    },
+    {
+      name: 'invalid level',
+      members: [root('A', { level: 0 })],
+    },
+  ] satisfies readonly { readonly name: string; readonly members: readonly MemberSnapshot[] }[])(
+    '조직 오류 코드·위치·메시지를 validatePlan과 동일하게 유지한다: $name',
+    ({ members }) => {
+      const organization = organizationFor(members);
+      const standalone = validateOrganizationSnapshot(organization);
+      const planIssues = validatePlan({
+        period: PERIOD,
+        organization,
+        allocations: [],
+      }).issues.filter((issue) => ORGANIZATION_VALIDATION_CODES.has(issue.code));
+
+      expect(standalone.issues).toEqual(planIssues);
+      expect(standalone.errors.length).toBeGreaterThan(0);
+    },
+  );
+
+  it('시작값 누락·여분·PV 오류도 validatePlan과 완전히 동일하다', () => {
+    const members = [root('A'), child('B', 'A', 'LEFT')];
+    const organization = organizationFor(members, {
+      A: { ...ZERO_OPENING, dailyCarryRight: -1 },
+      UNKNOWN: ZERO_OPENING,
+    });
+    const standalone = validateOrganizationSnapshot(organization);
+    const planIssues = validatePlan({
+      period: PERIOD,
+      organization,
+      allocations: [],
+    }).issues.filter((issue) => ORGANIZATION_VALIDATION_CODES.has(issue.code));
+
+    expect(standalone.issues).toEqual(planIssues);
+    expect(standalone.issues.map((issue) => issue.code)).toEqual([
+      'PV_NEGATIVE',
+      'OPENING_STATE_MISSING',
+      'OPENING_STATE_MEMBER_NOT_FOUND',
+    ]);
+  });
+});
 
 describe('[ORG-003] — 연결 방향 직접 입력 거부', () => {
   it('값이 1인 연결 방향 필드를 CONNECTED_SIDE_ALLOCATION으로 거부한다', () => {

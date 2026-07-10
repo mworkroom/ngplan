@@ -1,0 +1,63 @@
+import {
+  childSlotId,
+  type ChildSlotState,
+} from '../../application/project-setup';
+
+type Side = ChildSlotState['side'];
+
+const SIDE_LABEL: Readonly<Record<Side, string>> = {
+  LEFT: '왼쪽',
+  RIGHT: '오른쪽',
+};
+
+export interface ChildSlotProps {
+  readonly slot: ChildSlotState;
+  readonly parentName: string;
+  readonly childName: string | null;
+  readonly onOpen: () => void;
+  readonly onSelectChild: (memberKey: string) => void;
+}
+
+export function ChildSlot({
+  slot,
+  parentName,
+  childName,
+  onOpen,
+  onSelectChild,
+}: ChildSlotProps) {
+  const sideLabel = SIDE_LABEL[slot.side];
+  return (
+    <div
+      id={childSlotId(slot.parentMemberKey, slot.side)}
+      className="child-slot"
+      tabIndex={-1}
+    >
+      <span className="child-slot__label">{sideLabel}</span>
+      <span className="child-slot__state">
+        {slot.kind === 'SELF' ? 'SELF · 직접 입력 방향' : 'CHILD · 하위 조직'}
+      </span>
+      {slot.kind === 'SELF' ? (
+        <button
+          type="button"
+          className="child-slot__action"
+          aria-label={`${parentName}의 ${sideLabel} 빈 슬롯에 회원 추가 또는 서브트리 연결`}
+          onClick={onOpen}
+        >
+          + {sideLabel} 추가
+        </button>
+      ) : (
+        <button
+          type="button"
+          className="child-slot__action"
+          onClick={() => {
+            if (slot.childMemberKey !== null) {
+              onSelectChild(slot.childMemberKey);
+            }
+          }}
+        >
+          {childName ?? slot.childMemberKey ?? '하위 회원'} 보기
+        </button>
+      )}
+    </div>
+  );
+}
