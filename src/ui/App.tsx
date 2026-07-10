@@ -299,7 +299,7 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
           <p className="app-header__eyebrow">ngplan · Phase 2</p>
           <h1>애터미 직급 플랜 설정</h1>
           <p className="app-header__description">
-            기간, 활성 회원, 좌·우 조직과 시작값을 준비합니다.
+            여기에 팀 전용 COPY 쓸 예정
           </p>
         </div>
         <div className="app-header__actions">
