@@ -9,3 +9,9 @@ docs/project specs/
 
 
 # Keep example CSVs only if intentionally needed
+
+# Node.js / Vite / Vitest generated files
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
