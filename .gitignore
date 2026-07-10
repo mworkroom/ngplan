@@ -1,0 +1,11 @@
+# Personal notes / local-only references
+docs/learning log/
+docs/ideas/
+docs/project specs/
+
+# Local source assets / temporary data
+*.psd
+*.csv
+
+
+# Keep example CSVs only if intentionally needed
