@@ -328,10 +328,10 @@ describe('WP1 manual-plan draft and worksheet schema', () => {
   });
 
   it('fails explicitly when the setup handoff is not a complete single tree', () => {
-    expect(() => deriveManualPlanSchema(bundle([]))).toThrow(/루트/);
+    expect(() => deriveManualPlanSchema(bundle([]))).toThrow(/맨 위 회원/);
     expect(() =>
       deriveManualPlanSchema(bundle([member('A', null, null), member('B', null, null)])),
-    ).toThrow(/루트/);
+    ).toThrow(/맨 위 회원/);
 
     const members = [member('A', null, null), member('B', 'A', 'LEFT')];
     const broken = bundle(members);

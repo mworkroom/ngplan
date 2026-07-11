@@ -110,7 +110,7 @@ function validateTargetSlot(
     return failure(
       draft,
       'SLOT_OCCUPIED',
-      `회원 ${parentMemberKey}의 ${side} 슬롯은 회원 ${occupant}가 사용 중입니다.`,
+      `선택한 ${side}쪽 자리는 회원 ${occupant}님이 사용 중입니다.`,
     );
   }
   if (movingMemberKey !== null) {
@@ -122,7 +122,7 @@ function validateTargetSlot(
       return failure(
         draft,
         'ORGANIZATION_CYCLE',
-        '서브트리를 자기 자신 또는 자신의 하위 회원 아래로 이동할 수 없습니다.',
+        '이 회원을 자기 자신이나 자기 아래 회원 밑으로 옮길 수 없습니다.',
       );
     }
   }
@@ -137,7 +137,7 @@ export function addRootMember(
     return failure(draft, 'MEMBER_KEY_DUPLICATE', `회원 키 ${memberKey}가 이미 존재합니다.`);
   }
   if (draft.rootMemberKey !== null && activeMember(draft, draft.rootMemberKey) !== undefined) {
-    return failure(draft, 'ROOT_ALREADY_EXISTS', '활성 루트 회원이 이미 존재합니다.');
+    return failure(draft, 'ROOT_ALREADY_EXISTS', '맨 위 회원이 이미 있습니다.');
   }
   const members = [...draft.members, createMemberDraft(memberKey)];
   return success(
@@ -154,7 +154,7 @@ export function setRootMember(
   memberKey: string,
 ): TopologyCommandOutcome {
   if (draft.rootMemberKey !== null && activeMember(draft, draft.rootMemberKey) !== undefined) {
-    return failure(draft, 'ROOT_ALREADY_EXISTS', '활성 루트 회원이 이미 존재합니다.');
+    return failure(draft, 'ROOT_ALREADY_EXISTS', '맨 위 회원이 이미 있습니다.');
   }
   const member = requireActiveMember(draft, memberKey);
   if (isFailure(member)) {
@@ -164,7 +164,7 @@ export function setRootMember(
     member.placement.parentMemberKey !== null ||
     member.placement.sideAtParent !== null
   ) {
-    return failure(draft, 'SUBTREE_NOT_UNPLACED', '부모에서 먼저 분리한 서브트리만 루트로 지정할 수 있습니다.');
+    return failure(draft, 'SUBTREE_NOT_UNPLACED', '현재 위치에서 뺀 회원만 맨 위 회원으로 정할 수 있습니다.');
   }
   return success(
     replaceDraftMembers(draft, draft.members, {
@@ -211,13 +211,13 @@ export function attachSubtree(
     return member;
   }
   if (member.memberKey === draft.rootMemberKey) {
-    return failure(draft, 'ROOT_CANNOT_MOVE', '현재 루트 회원은 다른 슬롯에 연결할 수 없습니다.');
+    return failure(draft, 'ROOT_CANNOT_MOVE', '맨 위 회원은 다른 회원 아래로 옮길 수 없습니다.');
   }
   if (
     member.placement.parentMemberKey !== null ||
     member.placement.sideAtParent !== null
   ) {
-    return failure(draft, 'SUBTREE_NOT_UNPLACED', '재배치 대기 중인 서브트리만 이 동작으로 연결할 수 있습니다.');
+    return failure(draft, 'SUBTREE_NOT_UNPLACED', '새 위치를 기다리는 회원만 이 자리로 연결할 수 있습니다.');
   }
   const target = validateTargetSlot(draft, memberKey, parentMemberKey, side);
   if (isFailure(target)) {
@@ -244,13 +244,13 @@ export function moveSubtree(
     return member;
   }
   if (member.memberKey === draft.rootMemberKey) {
-    return failure(draft, 'ROOT_CANNOT_MOVE', '루트 회원은 일반 서브트리 이동으로 옮길 수 없습니다.');
+    return failure(draft, 'ROOT_CANNOT_MOVE', '맨 위 회원은 이 방법으로 옮길 수 없습니다.');
   }
   if (
     member.placement.parentMemberKey === null ||
     member.placement.sideAtParent === null
   ) {
-    return failure(draft, 'SUBTREE_NOT_UNPLACED', '부모가 없는 서브트리는 재배치 대기 연결 동작을 사용해야 합니다.');
+    return failure(draft, 'SUBTREE_NOT_UNPLACED', '현재 위치가 없는 회원은 조직 그림의 빈 자리에서 다시 연결해 주세요.');
   }
   const target = validateTargetSlot(draft, memberKey, parentMemberKey, side);
   if (isFailure(target)) {
@@ -277,13 +277,13 @@ export function detachSubtree(
     return member;
   }
   if (member.memberKey === draft.rootMemberKey) {
-    return failure(draft, 'ROOT_CANNOT_MOVE', '루트는 서브트리 분리 동작으로 분리할 수 없습니다.');
+    return failure(draft, 'ROOT_CANNOT_MOVE', '맨 위 회원은 현재 위치에서 뺄 수 없습니다.');
   }
   if (
     member.placement.parentMemberKey === null ||
     member.placement.sideAtParent === null
   ) {
-    return failure(draft, 'SUBTREE_NOT_UNPLACED', '이미 재배치 대기 중인 서브트리입니다.');
+    return failure(draft, 'SUBTREE_NOT_UNPLACED', '이미 새 위치를 기다리고 있습니다.');
   }
   const vacatedParentMemberKey = member.placement.parentMemberKey;
   const vacatedSide = member.placement.sideAtParent;
@@ -326,7 +326,7 @@ export function excludeMember(
     return failure(
       draft,
       'PROMOTION_NOT_AVAILABLE',
-      '루트가 아니고 직계 자식이 정확히 한 명일 때만 명시적으로 승격할 수 있습니다.',
+      '맨 위 회원이 아니고 바로 아래 회원이 한 명일 때만 그 회원을 현재 자리로 올릴 수 있습니다.',
     );
   }
 

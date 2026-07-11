@@ -94,12 +94,12 @@ describe('project and opening forms', () => {
       />,
     );
 
-    fireEvent.change(screen.getByLabelText('대상 연도'), { target: { value: '2027' } });
-    fireEvent.change(screen.getByLabelText('대상 월'), { target: { value: '8' } });
-    fireEvent.change(screen.getByLabelText('대상 반월'), {
+    fireEvent.change(screen.getByLabelText('몇 년도인가요?'), { target: { value: '2027' } });
+    fireEvent.change(screen.getByLabelText('몇 월인가요?'), { target: { value: '8' } });
+    fireEvent.change(screen.getByLabelText('어느 기간인가요?'), {
       target: { value: 'SECOND_HALF' },
     });
-    fireEvent.change(screen.getByLabelText('프로젝트 제목'), {
+    fireEvent.change(screen.getByLabelText('계획 이름'), {
       target: { value: '직접 제목' },
     });
     expect(onPeriodChange).toHaveBeenCalledWith({ year: '2027' });
@@ -188,7 +188,7 @@ describe('tree cards and child slots', () => {
     expect(screen.getByText('스스로')).toBeTruthy();
     fireEvent.click(
       screen.getByRole('button', {
-        name: '부모의 왼쪽 빈 슬롯에 회원 추가 또는 서브트리 연결',
+        name: '부모의 왼쪽 빈 자리에 회원 연결',
       }),
     );
     expect(onOpen).toHaveBeenCalledOnce();
@@ -202,7 +202,7 @@ describe('tree cards and child slots', () => {
         onRemoveChild={onRemoveChild}
       />,
     );
-    fireEvent.click(screen.getByRole('button', { name: '자식 제외 또는 재배치' }));
+    fireEvent.click(screen.getByRole('button', { name: '자식 위치 바꾸기 또는 명단에서 빼기' }));
     expect(onRemoveChild).toHaveBeenCalledWith('child');
 
     rerender(
@@ -214,7 +214,7 @@ describe('tree cards and child slots', () => {
         onRemoveChild={onRemoveChild}
       />,
     );
-    fireEvent.click(screen.getByRole('button', { name: '하위 회원 제외 또는 재배치' }));
+    fireEvent.click(screen.getByRole('button', { name: '아래 회원 위치 바꾸기 또는 명단에서 빼기' }));
     expect(onRemoveChild).toHaveBeenCalledTimes(1);
   });
 
@@ -255,7 +255,7 @@ describe('tree cards and child slots', () => {
     expect(collapse.getAttribute('aria-controls')).toBe('root-children');
     fireEvent.click(collapse);
     fireEvent.click(screen.getByRole('button', { name: 'root 회원 상세 편집' }));
-    fireEvent.click(screen.getByRole('button', { name: /root의 왼쪽 빈 슬롯/ }));
+    fireEvent.click(screen.getByRole('button', { name: /root의 왼쪽 빈 자리/ }));
     expect(onToggle).toHaveBeenCalledWith('root');
     expect(onSelect).toHaveBeenCalledWith('root');
     expect(onOpenSlot).toHaveBeenCalledWith('root', 'LEFT');
@@ -282,7 +282,7 @@ describe('tree cards and child slots', () => {
     const { rerender } = render(
       <OrganizationTree draft={draft} topology={deriveTopology(draft)} {...sharedProps} />,
     );
-    fireEvent.click(screen.getByRole('button', { name: '새 루트 회원 만들기' }));
+    fireEvent.click(screen.getByRole('button', { name: '맨 위 회원 만들기' }));
     expect(onAddRoot).toHaveBeenCalledOnce();
 
     const rootOutcome = addRootMember(draft, 'root-tree');
@@ -294,8 +294,8 @@ describe('tree cards and child slots', () => {
     rerender(
       <OrganizationTree draft={draft} topology={deriveTopology(draft)} {...sharedProps} />,
     );
-    expect(screen.getByLabelText('좌우 조직 트리 스크롤 영역')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'right-child 제외 또는 재배치' })).toBeTruthy();
+    expect(screen.getByLabelText('좌우 조직 그림')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'right-child 위치 바꾸기 또는 명단에서 빼기' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '하위 조직 접기' }));
     expect(sharedProps.onToggleCollapsed).toHaveBeenCalledWith('root-tree');
   });
@@ -330,16 +330,16 @@ describe('member topology controls', () => {
     fireEvent.change(screen.getByLabelText('이름에 표지판 붙이기'), {
       target: { value: 'GREEN_2' },
     });
-    fireEvent.change(screen.getByLabelText('새 상위 회원'), {
+    fireEvent.change(screen.getByLabelText('새로 연결할 위 회원'), {
       target: { value: '' },
     });
-    fireEvent.change(screen.getByLabelText('새 상위 회원'), {
+    fireEvent.change(screen.getByLabelText('새로 연결할 위 회원'), {
       target: { value: 'parent' },
     });
-    fireEvent.change(screen.getByLabelText('새 배치 방향'), { target: { value: 'RIGHT' } });
-    fireEvent.click(screen.getByRole('button', { name: '선택한 빈 슬롯으로 이동' }));
-    fireEvent.click(screen.getByRole('button', { name: '현재 부모에서 분리' }));
-    fireEvent.click(screen.getByRole('button', { name: '현재 프로젝트에서 회원 제외' }));
+    fireEvent.change(screen.getByLabelText('어느 쪽에 놓을까요?'), { target: { value: 'RIGHT' } });
+    fireEvent.click(screen.getByRole('button', { name: '선택한 자리로 옮기기' }));
+    fireEvent.click(screen.getByRole('button', { name: '현재 위치에서 빼기' }));
+    fireEvent.click(screen.getByRole('button', { name: '이 명단에서 빼기' }));
     expect(onIdentityChange).toHaveBeenCalledWith({ memberId: '1234' });
     expect(onIdentityChange).toHaveBeenCalledWith({ name: '새 이름' });
     expect(onIdentityChange).toHaveBeenCalledWith({ sheetMarker: 'GREEN_2' });
@@ -360,9 +360,9 @@ describe('member topology controls', () => {
       onExclude: vi.fn(),
     };
     const { rerender } = render(<MemberForm member={root} isRoot {...props} />);
-    expect(screen.queryByText('서브트리 이동')).toBeNull();
+    expect(screen.queryByText('이 회원의 위치 바꾸기')).toBeNull();
     rerender(<MemberForm member={member('queued')} isRoot={false} {...props} />);
-    expect(screen.getByText(/재배치 대기 중입니다/)).toBeTruthy();
+    expect(screen.getByText(/새 위치를 정해야 합니다/)).toBeTruthy();
   });
 });
 
@@ -384,8 +384,8 @@ describe('queue, dialog, and validation feedback', () => {
         onSetRoot={onSetRoot}
       />,
     );
-    fireEvent.click(screen.getByRole('button', { name: '서브트리 선택' }));
-    fireEvent.click(screen.getByRole('button', { name: '새 루트로 지정' }));
+    fireEvent.click(screen.getByRole('button', { name: '회원 정보 보기' }));
+    fireEvent.click(screen.getByRole('button', { name: '맨 위 회원으로 정하기' }));
     expect(onSelect).toHaveBeenCalledWith('queued');
     expect(onSetRoot).toHaveBeenCalledWith('queued');
     rerender(
@@ -396,7 +396,7 @@ describe('queue, dialog, and validation feedback', () => {
         onSetRoot={onSetRoot}
       />,
     );
-    expect(screen.queryByRole('button', { name: '새 루트로 지정' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '맨 위 회원으로 정하기' })).toBeNull();
   });
 
   it('offers explicit one-child promotion and supports cancellation by Escape', () => {
@@ -414,11 +414,11 @@ describe('queue, dialog, and validation feedback', () => {
         onConfirm={onConfirm}
       />,
     );
-    expect(screen.getByLabelText(/자식을 기존 슬롯으로 승격/)).toBeTruthy();
-    fireEvent.click(screen.getByLabelText(/서브트리를 재배치 대기로 이동/));
-    fireEvent.click(screen.getByLabelText(/자식을 기존 슬롯으로 승격/));
-    fireEvent.click(screen.getByLabelText(/서브트리를 재배치 대기로 이동/));
-    fireEvent.click(screen.getByRole('button', { name: '선택한 방식으로 제외' }));
+    expect(screen.getByLabelText(/아래 회원을 이 자리로 올리기/)).toBeTruthy();
+    fireEvent.click(screen.getByLabelText(/아래 회원들의 새 위치를 나중에 정하기/));
+    fireEvent.click(screen.getByLabelText(/아래 회원을 이 자리로 올리기/));
+    fireEvent.click(screen.getByLabelText(/아래 회원들의 새 위치를 나중에 정하기/));
+    fireEvent.click(screen.getByRole('button', { name: '명단에서 빼기' }));
     expect(onConfirm).toHaveBeenCalledWith('DETACH_CHILDREN');
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(onCancel).toHaveBeenCalledOnce();
@@ -436,9 +436,9 @@ describe('queue, dialog, and validation feedback', () => {
         onConfirm={onConfirm}
       />,
     );
-    expect(screen.getByText(/기존 부모의 슬롯만 비워집니다/)).toBeTruthy();
+    expect(screen.getByText(/현재 자리만 비게 됩니다/)).toBeTruthy();
     const cancel = screen.getByRole('button', { name: '취소' });
-    const confirm = screen.getByRole('button', { name: '선택한 방식으로 제외' });
+    const confirm = screen.getByRole('button', { name: '명단에서 빼기' });
     confirm.focus();
     fireEvent.keyDown(document, { key: 'Tab' });
     expect(document.activeElement).toBe(cancel);
@@ -460,8 +460,8 @@ describe('queue, dialog, and validation feedback', () => {
         onConfirm={onConfirm}
       />,
     );
-    expect(screen.getByText(/현재 루트 지정만 해제됩니다/)).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: '선택한 방식으로 제외' }));
+    expect(screen.getByText(/맨 위 자리가 비게 됩니다/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '명단에서 빼기' }));
     expect(onConfirm).toHaveBeenCalledWith('DETACH_CHILDREN');
   });
 
@@ -477,8 +477,8 @@ describe('queue, dialog, and validation feedback', () => {
         onConfirm={onConfirm}
       />,
     );
-    expect(screen.getByText(/두 서브트리 모두/)).toBeTruthy();
-    expect(screen.getByText(/새 루트로 명시적으로 지정/)).toBeTruthy();
+    expect(screen.getByText(/두 회원의 새 위치를 각각 정해 주세요/)).toBeTruthy();
+    expect(screen.getByText(/새 맨 위 회원으로 정해 주세요/)).toBeTruthy();
     rerender(
       <ExcludeMemberDialog
         member={member('queued')}
@@ -488,8 +488,8 @@ describe('queue, dialog, and validation feedback', () => {
         onConfirm={onConfirm}
       />,
     );
-    expect(screen.queryByLabelText(/자식을 기존 슬롯으로 승격/)).toBeNull();
-    expect(screen.getByText(/승격할 자리가 없습니다/)).toBeTruthy();
+    expect(screen.queryByLabelText(/아래 회원을 이 자리로 올리기/)).toBeNull();
+    expect(screen.getByText(/새 위치를 다시 정해야 합니다/)).toBeTruthy();
   });
 
   it('navigates errors and warnings or reports an empty validation', () => {
@@ -522,6 +522,6 @@ describe('queue, dialog, and validation feedback', () => {
         onNavigate={onNavigate}
       />,
     );
-    expect(screen.getByText(/발견된 오류나 경고가 없습니다/)).toBeTruthy();
+    expect(screen.getByText(/모든 필수 입력을 확인했습니다/)).toBeTruthy();
   });
 });

@@ -21,10 +21,11 @@ export function ReassignmentQueue({
       <div className="panel__header">
         <div>
           <h2 id="reassignment-title" className="panel__title">
-            재배치 대기 서브트리
+            새 위치를 정해야 하는 회원
           </h2>
           <p className="panel__description">
-            내부 하위 연결은 보존되어 있습니다. 빈 좌·우 + 슬롯에서 연결해 주세요.
+            아래에 연결된 회원들은 그대로 유지됩니다. 조직 그림의 빈 왼쪽·오른쪽
+            자리에서 다시 연결해 주세요.
           </p>
         </div>
         <span className="status-badge status-badge--warning">
@@ -50,7 +51,7 @@ export function ReassignmentQueue({
                 className="secondary-button"
                 onClick={() => onSelect(entry.memberKey)}
               >
-                서브트리 선택
+                회원 정보 보기
               </button>
               {rootMissing ? (
                 <button
@@ -58,7 +59,7 @@ export function ReassignmentQueue({
                   className="primary-button"
                   onClick={() => onSetRoot(entry.memberKey)}
                 >
-                  새 루트로 지정
+                  맨 위 회원으로 정하기
                 </button>
               ) : null}
             </div>

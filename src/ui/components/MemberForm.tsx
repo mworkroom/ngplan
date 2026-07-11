@@ -113,11 +113,9 @@ export function MemberForm({
             <h2 id="member-form-title" className="panel__title">
               회원 상세
             </h2>
-            <p className="panel__description">
-              내부 키 {member.memberKey}
-            </p>
+            <p className="panel__description">이 회원의 정보를 입력해 주세요.</p>
           </div>
-          <span className="status-badge">{isRoot ? '루트 회원' : '활성 회원'}</span>
+          <span className="status-badge">{isRoot ? '맨 위 회원' : '등록된 회원'}</span>
         </div>
         <div className="form-grid form-grid--single">
           {renderIdentityField('name', '회원 이름', nameIssue)}
@@ -150,14 +148,14 @@ export function MemberForm({
 
       {!isRoot && isPlaced ? (
         <fieldset className="member-form__section">
-          <legend>서브트리 이동</legend>
+          <legend>이 회원의 위치 바꾸기</legend>
           <p className="help-text">
-            회원과 모든 하위 연결을 유지한 채 빈 슬롯으로 옮깁니다.
+            이 회원과 아래에 연결된 회원들을 함께 옮깁니다.
           </p>
           <div className="form-grid">
             <div className="field">
               <label htmlFor={memberFieldId(member.memberKey, 'parentMemberKey')}>
-                새 상위 회원
+                새로 연결할 위 회원
               </label>
               <select
                 id={memberFieldId(member.memberKey, 'parentMemberKey')}
@@ -168,7 +166,7 @@ export function MemberForm({
                 }
                 onChange={(event) => setTargetParentMemberKey(event.currentTarget.value)}
               >
-                <option value="">상위 회원 선택</option>
+                <option value="">위 회원 선택</option>
                 {candidateParents.map((candidate) => (
                   <option key={candidate.memberKey} value={candidate.memberKey}>
                     {candidate.name.trim() || candidate.memberKey}
@@ -178,7 +176,7 @@ export function MemberForm({
             </div>
             <div className="field">
               <label htmlFor={memberFieldId(member.memberKey, 'sideAtParent')}>
-                새 배치 방향
+                어느 쪽에 놓을까요?
               </label>
               <select
                 id={memberFieldId(member.memberKey, 'sideAtParent')}
@@ -196,7 +194,7 @@ export function MemberForm({
             </p>
           )}
           {targetParentMemberKey !== '' && !targetAvailable && !isCurrentPlacement ? (
-            <p className="field-error">선택한 좌·우 슬롯은 이미 사용 중입니다.</p>
+            <p className="field-error">선택한 자리는 이미 다른 회원이 사용하고 있습니다.</p>
           ) : null}
           <div className="form-actions">
             <button
@@ -209,10 +207,10 @@ export function MemberForm({
                 }
               }}
             >
-              선택한 빈 슬롯으로 이동
+              선택한 자리로 옮기기
             </button>
             <button type="button" className="text-button" onClick={onDetach}>
-              현재 부모에서 분리
+              현재 위치에서 빼기
             </button>
           </div>
         </fieldset>
@@ -220,14 +218,14 @@ export function MemberForm({
 
       {!isRoot && !isPlaced ? (
         <p className="storage-notice">
-          이 서브트리는 재배치 대기 중입니다. 조직 카드의 빈 좌·우 + 슬롯에서
-          다시 연결할 수 있습니다.
+          이 회원과 아래 회원들의 새 위치를 정해야 합니다. 조직 그림의 빈
+          왼쪽·오른쪽 자리에서 다시 연결해 주세요.
         </p>
       ) : null}
 
       <div className="form-actions">
         <button type="button" className="danger-button" onClick={onExclude}>
-          현재 프로젝트에서 회원 제외
+          이 명단에서 빼기
         </button>
       </div>
     </section>

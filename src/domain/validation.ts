@@ -103,10 +103,10 @@ const TOPOLOGY_BLOCKING_CODES = new Set<ValidationCode>([
 ]);
 
 const PV_MESSAGES = {
-  PV_INVALID: 'PV는 유한한 숫자여야 합니다.',
+  PV_INVALID: 'PV 숫자를 입력해 주세요.',
   PV_NEGATIVE: 'PV는 0 이상이어야 합니다.',
-  PV_NOT_INTEGER: 'PV는 1 PV 단위의 정수여야 합니다.',
-  PV_OUT_OF_RANGE: 'PV는 JavaScript 안전 정수 범위 안이어야 합니다.',
+  PV_NOT_INTEGER: 'PV는 소수점 없이 숫자만 입력해 주세요.',
+  PV_OUT_OF_RANGE: '입력한 PV 숫자가 너무 큽니다.',
 } as const;
 
 function slotKey(parentMemberKey: string, side: Side): string {
@@ -149,7 +149,7 @@ function validatePvField(
       parsed.code,
       location,
       PV_MESSAGES[parsed.code],
-      '0 이상의 안전한 정수 PV를 입력해 주세요.',
+      '0 이상의 숫자를 소수점 없이 입력해 주세요.',
     );
     return undefined;
   }
@@ -179,7 +179,7 @@ function validatePeriodInput(
       issues,
       'PERIOD_YEAR_INVALID',
       { ...baseLocation, field: 'period.year' },
-      '대상 연도는 1부터 9999 사이의 정수여야 합니다.',
+      '연도는 숫자로 입력해 주세요.',
     );
   }
   if (
@@ -193,7 +193,7 @@ function validatePeriodInput(
       issues,
       'PERIOD_MONTH_INVALID',
       { ...baseLocation, field: 'period.month' },
-      '대상 월은 1부터 12 사이의 정수여야 합니다.',
+      '월은 1부터 12 사이의 숫자로 입력해 주세요.',
     );
   }
   if (raw.half !== 'FIRST_HALF' && raw.half !== 'SECOND_HALF') {
@@ -350,7 +350,7 @@ function validateOrganization(
         issues,
         'ROOT_PLACEMENT_INVALID',
         { ...baseLocation, field: 'sideAtParent' },
-        '루트 회원은 부모 방향을 가질 수 없습니다.',
+        '맨 위 회원은 다른 회원 아래에 놓을 수 없습니다.',
       );
     } else if (
       (parent === null && side === undefined) ||
@@ -360,7 +360,7 @@ function validateOrganization(
         issues,
         'PLACEMENT_INCOMPLETE',
         { ...baseLocation, field: 'parentMemberKey' },
-        '비루트 회원은 유효한 부모 키와 LEFT/RIGHT 방향을 모두 가져야 합니다.',
+        '맨 위 회원이 아니라면 바로 위 회원과 왼쪽·오른쪽 위치를 정해 주세요.',
       );
     }
   });
@@ -379,7 +379,7 @@ function validateOrganization(
         issues,
         'PARENT_NOT_FOUND',
         { snapshotId, memberKey: member.memberKey, field: 'parentMemberKey' },
-        `회원 ${member.memberKey}의 부모 ${parent}를 찾을 수 없습니다.`,
+        `회원 ${member.memberKey}님이 연결될 바로 위 회원을 찾을 수 없습니다.`,
       );
       continue;
     }
@@ -408,7 +408,7 @@ function validateOrganization(
       'ORGANIZATION_CYCLE',
       { snapshotId, memberKey, field: 'parentMemberKey' },
       `조직에 순환 연결이 있습니다: ${cycle.join(' → ')}.`,
-      '모든 부모 연결이 하나의 루트 방향으로 끝나도록 수정해 주세요.',
+      '회원 연결이 빙글빙글 이어지지 않도록 위아래 위치를 다시 확인해 주세요.',
     );
   }
 
@@ -420,14 +420,14 @@ function validateOrganization(
       issues,
       'ROOT_MISSING',
       { snapshotId, field: 'members' },
-      '조직에 루트 회원이 없습니다.',
+      '맨 위 회원이 없습니다.',
     );
   } else if (roots.length > 1) {
     pushIssue(
       issues,
       'MULTIPLE_ROOTS',
       { snapshotId, field: 'members' },
-      `조직에 루트 회원이 ${roots.length}명 있습니다.`,
+      `맨 위 회원은 한 명이어야 합니다. 현재 ${roots.length}명입니다.`,
     );
   } else if (roots.length === 1) {
     const root = roots[0]!;
@@ -455,7 +455,7 @@ function validateOrganization(
           memberKey,
           field: 'members',
         },
-        `루트 ${root.memberKey}에서 연결되지 않은 회원이 있습니다: ${disconnected.join(', ')}.`,
+        `조직 그림에 연결되지 않은 회원이 있습니다: ${disconnected.join(', ')}.`,
       );
     }
   }
@@ -546,7 +546,7 @@ function validateAllocationPvFields(
       issues,
       'ALLOCATION_FIELD_MISSING',
       { ...baseLocation, field: 'pvp' },
-      '정규 입력 셀에는 pvp 필드가 반드시 있어야 합니다.',
+      'PVP 입력칸이 빠져 있습니다.',
     );
   } else {
     pvp = validatePvField(cell.pvp, { ...baseLocation, field: 'pvp' }, issues);
@@ -581,15 +581,15 @@ function validateSideAllocation(
       issues,
       'CONNECTED_SIDE_ALLOCATION',
       { ...baseLocation, side, field },
-      `자식이 연결된 ${side} 방향에는 직접 PV 필드를 둘 수 없습니다.`,
-      '해당 필드를 제거하고 하위 회원의 직접 원본을 입력해 주세요.',
+      `아래 회원이 연결된 ${side}쪽 값은 자동으로 계산되므로 직접 입력할 수 없습니다.`,
+      '아래 회원의 PVP·좌·우 값을 입력해 주세요.',
     );
   } else if (!isConnected && !Object.hasOwn(cell, field)) {
     pushIssue(
       issues,
       'SELF_SIDE_ALLOCATION_MISSING',
       { ...baseLocation, side, field },
-      `SELF ${side} 방향에는 0을 포함한 직접 PV가 필요합니다.`,
+      `${side}쪽에 아래 회원이 없다면 PV 값을 입력해 주세요. 값이 없으면 0을 입력합니다.`,
     );
   }
 }
@@ -632,7 +632,7 @@ function validateAllocations(
         issues,
         'DATE_OUTSIDE_PERIOD',
         { ...baseLocation, field: 'date' },
-        `날짜 ${rawDate}는 대상 반월 밖입니다.`,
+        `날짜 ${rawDate}는 이번 계획 기간에 포함되지 않습니다.`,
       );
     }
 
@@ -705,7 +705,7 @@ function validateAllocations(
               memberKey,
               field: 'allocations',
             },
-            `날짜 ${date}, 회원 ${memberKey}의 정규 입력 셀이 없습니다.`,
+            `날짜 ${date}, 회원 ${memberKey}님의 입력칸이 빠져 있습니다.`,
           );
         }
       }
@@ -785,7 +785,7 @@ export function validatePeriod(input: unknown): ValidationReport {
       'INPUT_STRUCTURE_INVALID',
       { field: 'period' },
       '기간 입력은 연도, 월, 반기를 가진 객체여야 합니다.',
-      '정규 PeriodInput 구조로 입력을 다시 만들어 주세요.',
+      '연도, 월, 기간을 다시 선택해 주세요.',
     );
     return createValidationReport(issues);
   }
@@ -803,7 +803,7 @@ export function validateOrganizationSnapshot(input: unknown): ValidationReport {
       'INPUT_STRUCTURE_INVALID',
       { field: 'organization' },
       '조직 입력은 회원 배열과 회원별 시작값을 가진 객체여야 합니다.',
-      '정규 OrganizationSnapshotInput 구조로 입력을 다시 만들어 주세요.',
+      '회원과 시작값을 다시 확인해 주세요.',
     );
     return createValidationReport(issues);
   }
@@ -823,7 +823,7 @@ export function validatePlan(
       'INPUT_STRUCTURE_INVALID',
       { field: 'input' },
       '계산 입력은 기간, 조직, 시작값, 직접 입력 배열을 가진 객체여야 합니다.',
-      '정규 CalculatePlanInput 구조로 입력을 다시 만들어 주세요.',
+      '기간, 회원, 시작값과 계획표 입력을 다시 확인해 주세요.',
     );
     return createValidationReport(issues);
   }

@@ -25,10 +25,10 @@ const PV_FIELDS: readonly OpeningStateField[] = [
 ];
 
 const PV_MESSAGES = {
-  PV_INVALID: 'PV는 비어 있지 않은 유한 숫자여야 합니다.',
+  PV_INVALID: 'PV 숫자를 입력해 주세요.',
   PV_NEGATIVE: 'PV는 0 이상이어야 합니다.',
-  PV_NOT_INTEGER: 'PV는 1 PV 단위의 정수여야 합니다.',
-  PV_OUT_OF_RANGE: 'PV는 안전한 정수 범위 안이어야 합니다.',
+  PV_NOT_INTEGER: 'PV는 소수점 없이 숫자만 입력해 주세요.',
+  PV_OUT_OF_RANGE: '입력한 PV 숫자가 너무 큽니다.',
 } as const;
 
 export function parseDraftPv(value: string): DraftPvParseOutcome {
@@ -171,7 +171,7 @@ function validatePeriodFields(
         'PERIOD_YEAR_INVALID',
         'ERROR',
         { area: 'PROJECT', field: 'period.year' },
-        '대상 연도는 1부터 9999 사이의 정수여야 합니다.',
+        '연도는 네 자리 숫자로 입력해 주세요.',
       ),
     );
   }
@@ -181,7 +181,7 @@ function validatePeriodFields(
         'PERIOD_MONTH_INVALID',
         'ERROR',
         { area: 'PROJECT', field: 'period.month' },
-        '대상 월은 1부터 12 사이의 정수여야 합니다.',
+        '월은 1부터 12 사이의 숫자로 입력해 주세요.',
       ),
     );
   }
@@ -191,7 +191,7 @@ function validatePeriodFields(
         'PROJECT_TITLE_REQUIRED',
         'ERROR',
         { area: 'PROJECT', field: 'title' },
-        '프로젝트 제목을 입력해 주세요.',
+        '계획 이름을 입력해 주세요.',
       ),
     );
   }
@@ -230,7 +230,7 @@ function validateMember(
           'ROOT_PLACEMENT_INVALID',
           'ERROR',
           { ...location, field: 'parentMemberKey' },
-          '선택한 루트 회원은 부모와 방향을 가질 수 없습니다.',
+          '맨 위 회원은 다른 회원 아래에 놓을 수 없습니다.',
         ),
       );
     }
@@ -243,7 +243,7 @@ function validateMember(
         'PLACEMENT_INCOMPLETE',
         'ERROR',
         { ...location, field: 'parentMemberKey' },
-        '비루트 회원은 부모와 LEFT/RIGHT 방향을 함께 가져야 합니다.',
+        '맨 위 회원이 아니라면 바로 위 회원과 왼쪽·오른쪽 위치를 정해 주세요.',
       ),
     );
   }
@@ -257,7 +257,7 @@ function validateMember(
           'ERROR',
           { ...location, field },
           PV_MESSAGES[parsed.code],
-          '0 이상의 안전한 정수 PV를 입력해 주세요.',
+          '0 이상의 숫자를 소수점 없이 입력해 주세요.',
         ),
       );
     }
@@ -316,7 +316,7 @@ export function validateProjectSetupDraft(
         'SELECTED_ROOT_INVALID',
         'ERROR',
         { area: 'PROJECT', field: 'rootMemberKey' },
-        '활성 조직의 루트 회원을 한 명 지정해 주세요.',
+        '맨 위 회원을 한 명 정해 주세요.',
       ),
     );
   }
@@ -332,8 +332,8 @@ export function validateProjectSetupDraft(
         'REASSIGNMENT_REQUIRED',
         'ERROR',
         { area: 'QUEUE', memberKey: entry.memberKey, field: 'parentMemberKey' },
-        `서브트리 ${entry.memberName || entry.memberKey}을(를) 조직에 다시 연결해야 합니다.`,
-        '빈 좌·우 + 슬롯에 연결하거나, 루트가 없다면 새 루트로 지정해 주세요.',
+        `${entry.memberName || entry.memberKey}님과 아래 회원들의 새 위치를 정해 주세요.`,
+        '조직 그림의 빈 왼쪽·오른쪽 자리에 연결하거나, 맨 위 회원으로 정해 주세요.',
       ),
     );
   }

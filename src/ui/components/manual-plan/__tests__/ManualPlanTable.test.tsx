@@ -153,7 +153,7 @@ describe('WP4 manual planning worksheet', () => {
     await user.clear(pvp);
     await user.type(pvp, 'bad');
     expect(screen.getByText('⚠ 입력 확인 필요')).toBeDefined();
-    expect(screen.getAllByText(/부호·지수·공백 없는/)).toHaveLength(3);
+    expect(screen.getAllByText(/0 이상의 숫자만/)).toHaveLength(3);
     expect(screen.getByRole('heading', { name: '선택한 입력 확인' })).toBeDefined();
     expect(
       screen.getByLabelText(
@@ -164,7 +164,7 @@ describe('WP4 manual planning worksheet', () => {
       screen.queryByLabelText('7월 1일 (수) 1. 루트 · 회원 ID 1000 좌 조직 합계 600 PV'),
     ).toBeNull();
     expect(
-      screen.getByText('현재 입력을 수정하면 일일 결과를 다시 표시합니다.'),
+      screen.getByText('잘못 입력한 값을 고치면 오늘 결과가 다시 나타납니다.'),
     ).toBeDefined();
     expect(
       screen.getByText('현재 입력을 수정하면 보름 결과를 다시 표시합니다.'),

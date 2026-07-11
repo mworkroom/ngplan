@@ -61,7 +61,7 @@ describe('P2-NORM 정본 Setup Bundle', () => {
     expect(outcome.bundle).toEqual({
       project: {
         projectId: 'project-1',
-        title: '2026년 7월 상반기 직급 플랜',
+        title: '2026년 7월 상반기 수당 계획',
         period: { year: 2026, month: 7, half: 'FIRST_HALF' },
         timezone: 'Asia/Seoul',
         projectStatus: 'IN_PROGRESS',

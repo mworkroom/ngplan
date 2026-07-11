@@ -21,10 +21,10 @@ const NEGATIVE_NUMBER = /^-\d+(?:\.\d+)?$/;
 const FRACTION = /^\d+\.\d+$/;
 
 const PV_MESSAGES = {
-  PV_INVALID: 'PV는 부호·지수·공백 없는 0 이상의 정수로 입력해 주세요.',
+  PV_INVALID: 'PV는 0 이상의 숫자만 입력해 주세요.',
   PV_NEGATIVE: 'PV는 0 이상이어야 합니다.',
-  PV_NOT_INTEGER: 'PV는 1 PV 단위의 정수여야 합니다.',
-  PV_OUT_OF_RANGE: 'PV는 안전한 정수 범위 안이어야 합니다.',
+  PV_NOT_INTEGER: 'PV는 소수점 없이 숫자만 입력해 주세요.',
+  PV_OUT_OF_RANGE: '입력한 PV 숫자가 너무 큽니다.',
 } as const;
 
 export function parseManualPlanPv(value: string): ManualPlanPvParseOutcome {
@@ -109,7 +109,7 @@ function parseField(
           field,
         },
         PV_MESSAGES[parsed.code],
-        '0 이상의 안전한 정수 PV를 입력해 주세요.',
+        '0 이상의 숫자를 소수점 없이 입력해 주세요.',
       ),
     );
     return undefined;

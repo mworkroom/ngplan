@@ -77,7 +77,7 @@ function setupBundle(
   return Object.freeze({
     project: Object.freeze({
       projectId: 'project-1',
-      title: '2026년 7월 상반기 직급 플랜',
+      title: '2026년 7월 상반기 수당 계획',
       period: Object.freeze({ year: 2026, month: 7, half: 'FIRST_HALF' as const }),
       timezone: 'Asia/Seoul' as const,
       projectStatus: 'IN_PROGRESS' as const,

@@ -69,7 +69,7 @@ function findRoot(members: readonly MemberSnapshot[]): MemberSnapshot {
     (member) => member.parentMemberKey === null && member.sideAtParent === null,
   );
   if (roots.length !== 1) {
-    throw new Error('수동 계획표는 루트가 정확히 한 명인 설정 번들이 필요합니다.');
+    throw new Error('계획표를 만들려면 맨 위 회원이 한 명 있어야 합니다.');
   }
   return roots[0]!;
 }
@@ -95,7 +95,7 @@ function preorderMembers(members: readonly MemberSnapshot[]): readonly MemberSna
   }
 
   if (ordered.length !== members.length) {
-    throw new Error('수동 계획표 설정 번들의 모든 회원이 루트에 연결되어야 합니다.');
+    throw new Error('모든 회원을 맨 위 회원부터 이어지는 조직 그림에 연결해 주세요.');
   }
   return ordered;
 }

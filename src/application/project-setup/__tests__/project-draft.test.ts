@@ -58,7 +58,7 @@ describe('P2-PROJ 프로젝트 Draft', () => {
       year: '2026',
       month: '7',
       half: 'FIRST_HALF',
-      title: '2026년 7월 상반기 직급 플랜',
+      title: '2026년 7월 상반기 수당 계획',
       titleSource: 'DERIVED',
       timezone: 'Asia/Seoul',
       projectStatus: 'IN_PROGRESS',
@@ -107,15 +107,15 @@ describe('P2-PROJ 프로젝트 Draft', () => {
     const laterPeriod = editProjectPeriod(manual, { month: '3' });
     const restored = restoreDerivedProjectTitle(laterPeriod);
 
-    expect(changed.title).toBe('2028년 2월 하반기 직급 플랜');
+    expect(changed.title).toBe('2028년 2월 하반기 수당 계획');
     expect(laterPeriod.title).toBe('직접 정한 제목');
     expect(laterPeriod.titleSource).toBe('MANUAL');
     expect(restored).toMatchObject({
-      title: '2028년 3월 하반기 직급 플랜',
+      title: '2028년 3월 하반기 수당 계획',
       titleSource: 'DERIVED',
     });
     expect(deriveDefaultProjectTitle('2026', '11', 'FIRST_HALF')).toBe(
-      '2026년 11월 상반기 직급 플랜',
+      '2026년 11월 상반기 수당 계획',
     );
   });
 

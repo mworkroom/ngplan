@@ -237,7 +237,7 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
     if (
       draftHasMemberData(draft) &&
       !window.confirm(
-        '현재 회원과 조직, 시작값을 모두 버리고 새 프로젝트를 시작할까요?',
+        '지금 입력한 회원과 숫자를 모두 지우고 새로 시작할까요?',
       )
     ) {
       return;
@@ -254,13 +254,13 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
     setSlotAction(null);
     setCollapsedMemberKeys(new Set());
     setExcludedMemberKey(null);
-    setAnnouncement('새 프로젝트 초안을 만들었습니다. 이전 회원 데이터는 복사하지 않았습니다.');
+    setAnnouncement('새 계획을 시작했습니다. 이전에 입력한 회원 정보는 가져오지 않았습니다.');
   };
 
   const handleAddRoot = (): void => {
     applyTopologyOutcome(
       addRootMember(draft, generateId('MEMBER')),
-      '새 루트 회원을 만들었습니다.',
+      '맨 위 회원을 만들었습니다.',
     );
   };
 
@@ -275,7 +275,7 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
         slotAction.side,
         generateId('MEMBER'),
       ),
-      `${slotAction.side === 'LEFT' ? '왼쪽' : '오른쪽'} 슬롯에 새 회원을 추가했습니다.`,
+      `${slotAction.side === 'LEFT' ? '왼쪽' : '오른쪽'} 자리에 새 회원을 추가했습니다.`,
     );
     if (succeeded) {
       setSlotAction(null);
@@ -287,7 +287,7 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
     if (topology.reassignmentQueue.length === 0) {
       applyTopologyOutcome(
         addMemberToSlot(draft, parentMemberKey, side, generateId('MEMBER')),
-        `${side === 'LEFT' ? '왼쪽' : '오른쪽'} 슬롯에 새 회원을 추가했습니다.`,
+        `${side === 'LEFT' ? '왼쪽' : '오른쪽'} 자리에 새 회원을 추가했습니다.`,
       );
       return;
     }
@@ -312,7 +312,7 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
         slotAction.parentMemberKey,
         slotAction.side,
       ),
-      '재배치 대기 서브트리를 빈 슬롯에 연결했습니다.',
+      '기다리던 회원들을 빈 자리에 다시 연결했습니다.',
     );
     if (succeeded) {
       setSlotAction(null);
@@ -332,7 +332,7 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
     }
     setDraft(activateProjectSetupBundle(draft, outcome.bundle));
     setCommandError(null);
-    setAnnouncement('프로젝트 설정이 완료되어 Phase 3 전달 번들이 준비되었습니다.');
+    setAnnouncement('입력을 모두 확인했습니다. 계획표를 열 수 있습니다.');
   };
 
   const handleOpenManualPlan = (): void => {
@@ -387,11 +387,9 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
     >
       <header className="app-header">
         <div className="app-header__copy">
-          <p className="app-header__eyebrow">ngplan · Phase 2</p>
-          <h1>애터미 직급 플랜 설정</h1>
-          <p className="app-header__description">
-            여기에 팀 전용 COPY 쓸 예정
-          </p>
+          <p className="app-header__eyebrow">애터미 수당 계획표</p>
+          <h1>새 계획 만들기</h1>
+          <p className="app-header__description">기간과 회원 정보를 차례대로 입력해 주세요.</p>
         </div>
         <div className="app-header__actions">
           <span
@@ -401,7 +399,7 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
                 : 'status-badge--ready'
             }`}
           >
-            {draft.activeBundle === null ? 'EDITING · 편집 중' : 'READY · 설정 완료'}
+            {draft.activeBundle === null ? '입력 중' : '계획표 준비 완료'}
           </span>
           <label className="density-control">
             <select
@@ -415,10 +413,10 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
           </label>
 
           <button type="button" className="secondary-button" onClick={handleNewProject}>
-            새 프로젝트
+            새로 시작하기
           </button>
           <button type="button" className="primary-button" onClick={handleNormalize}>
-            설정 검증 및 완료
+            입력 확인하고 계획표 만들기
           </button>
         </div>
       </header>
@@ -426,9 +424,9 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
       <aside className="storage-notice" aria-label="저장 안내">
         <span aria-hidden="true">ⓘ</span>
         <div>
-          <strong>이 단계에는 저장 기능이 없습니다.</strong>
+          <strong>아직 자동 저장되지 않습니다.</strong>
           <div>
-            브라우저를 새로고침하거나 닫으면 현재 초안이 모두 사라집니다. 화면 크기 설정만 저장됩니다.
+            새로고침하거나 창을 닫으면 입력한 내용이 사라집니다. 화면 크기만 기억합니다.
           </div>
         </div>
       </aside>
@@ -439,7 +437,7 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
 
       {commandError === null ? null : (
         <section className="validation-summary validation-summary--error" role="alert">
-          <h2 className="validation-summary__title">조직 변경을 적용하지 못했습니다.</h2>
+          <h2 className="validation-summary__title">위치를 바꾸지 못했습니다.</h2>
           <p>{commandError}</p>
         </section>
       )}
@@ -449,13 +447,13 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
           <div className="panel__header">
             <div>
               <h2 id="bundle-summary-title" className="panel__title">
-                설정 번들 준비 완료
+                계획표를 만들 준비가 되었습니다
               </h2>
               <p className="panel__description">
-                이후 편집이 발생하면 이 READY 상태는 즉시 해제됩니다.
+                내용을 고치면 다시 한 번 입력 확인이 필요합니다.
               </p>
             </div>
-            <span className="status-badge status-badge--ready">READY</span>
+            <span className="status-badge status-badge--ready">준비 완료</span>
           </div>
           <dl>
             <dt>제목</dt>
@@ -468,7 +466,7 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
                 ? '상반기'
                 : '하반기'}
             </dd>
-            <dt>활성 회원</dt>
+            <dt>등록된 회원</dt>
             <dd>{draft.activeBundle.organization.members.length}명</dd>
           </dl>
           <div className="form-actions">
@@ -477,7 +475,7 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
               className="primary-button"
               onClick={handleOpenManualPlan}
             >
-              수동 계획표 열기
+              계획표 열기
             </button>
           </div>
         </section>
@@ -527,7 +525,7 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
               onSetRoot={(memberKey) =>
                 applyTopologyOutcome(
                   setRootMember(draft, memberKey),
-                  '재배치 대기 서브트리를 새 루트로 지정했습니다.',
+                  '선택한 회원을 맨 위 회원으로 정했습니다.',
                 )
               }
             />
@@ -540,9 +538,9 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
               <div>
                 <h3 id="slot-action-title">
                   {slotPanelParent.name.trim() || slotPanelParent.memberKey} ·{' '}
-                  {slotAction.side === 'LEFT' ? '왼쪽' : '오른쪽'} 빈 슬롯
+                  {slotAction.side === 'LEFT' ? '왼쪽' : '오른쪽'} 빈 자리
                 </h3>
-                <p className="help-text">새 회원을 만들거나 대기 중인 서브트리를 연결합니다.</p>
+                <p className="help-text">새 회원을 만들거나 위치를 기다리는 회원을 연결합니다.</p>
               </div>
               <div className="button-row">
                 <button ref={slotFirstActionRef} type="button" className="primary-button" onClick={handleAddMemberToOpenSlot}>
@@ -550,7 +548,7 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
                 </button>
                 {topology.reassignmentQueue.map((entry) => (
                   <button type="button" className="secondary-button" key={entry.memberKey} onClick={() => handleAttachQueuedSubtree(entry.memberKey)}>
-                    {entry.memberName.trim() || entry.memberKey} 서브트리 연결
+                    {entry.memberName.trim() || entry.memberKey}님과 아래 회원 연결
                   </button>
                 ))}
                 <button type="button" className="text-button" onClick={() => setSlotAction(null)}>
@@ -560,7 +558,7 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
             </section>
           )}
           {selectedMemberIssues.length === 0 ? null : (
-            <section className="member-error-summary" aria-label="현재 회원 검증 결과" role="alert">
+            <section className="member-error-summary" aria-label="현재 회원 입력 확인 결과" role="alert">
               <strong>현재 회원: 수정할 항목 {selectedMemberIssues.length}개</strong>
               <button type="button" className="text-button" onClick={() => focusIssue(selectedMemberIssues[0]!)}>
                 첫 항목으로 이동
@@ -595,13 +593,13 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
                       parentMemberKey,
                       side,
                     ),
-                    '선택한 서브트리를 새 빈 슬롯으로 이동했습니다.',
+                    '선택한 회원과 아래 회원들을 새 자리로 옮겼습니다.',
                   )
                 }
                 onDetach={() =>
                   applyTopologyOutcome(
                     detachSubtree(draft, selectedMember.memberKey),
-                    '선택한 서브트리를 재배치 대기 목록으로 분리했습니다.',
+                    '현재 위치에서 뺐습니다. 새 위치를 정해 주세요.',
                   )
                 }
                 onExclude={() => handleRequestExclude(selectedMember.memberKey)}
@@ -640,7 +638,7 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
             );
             const succeeded = applyTopologyOutcome(
               outcome,
-              '회원을 제외하고 살아 있는 하위 서브트리를 보존했습니다.',
+              '회원을 명단에서 뺐습니다. 아래 회원들의 연결은 그대로 유지했습니다.',
             );
             if (succeeded) {
               setExcludedMemberKey(null);

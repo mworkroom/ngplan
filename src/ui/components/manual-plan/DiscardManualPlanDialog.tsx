@@ -76,8 +76,8 @@ export function DiscardManualPlanDialog({
       >
         <h2 id="discard-manual-plan-title">수동 계획을 버릴까요?</h2>
         <p id="discard-manual-plan-description">
-          입력한 계획은 이 브라우저 세션에만 있으며, 설정으로 돌아가면 복구할 수
-          없습니다.
+          지금 입력한 계획은 아직 저장되지 않았습니다. 회원 설정으로 돌아가면
+          다시 불러올 수 없습니다.
         </p>
         <div className="dialog-panel__actions">
           <button

@@ -88,22 +88,22 @@ export function ExcludeMemberDialog({
         aria-labelledby="exclude-dialog-title"
         aria-describedby="exclude-dialog-description"
       >
-        <h2 id="exclude-dialog-title">{displayName} 회원 제외</h2>
+        <h2 id="exclude-dialog-title">{displayName}님을 명단에서 뺄까요?</h2>
         <p id="exclude-dialog-description">
-          회원 기록은 삭제하지 않고 현재 프로젝트의 활성 조직에서만 제외합니다.
+          저장된 이름과 숫자는 지우지 않고, 이번 계획의 조직 그림에서만 뺍니다.
         </p>
 
         {directChildren.length === 0 ? (
           <p>
             {isRoot
-              ? '직계 자식이 없어 현재 루트 지정만 해제됩니다.'
-              : '직계 자식이 없어 기존 부모의 슬롯만 비워집니다.'}
+              ? '아래에 연결된 회원이 없습니다. 맨 위 자리가 비게 됩니다.'
+              : '아래에 연결된 회원이 없습니다. 현재 자리만 비게 됩니다.'}
           </p>
         ) : null}
 
         {canPromote ? (
           <fieldset className="member-form__section">
-            <legend>한 개의 직계 자식 처리</legend>
+            <legend>바로 아래 회원은 어떻게 할까요?</legend>
             <label className="checkbox-field">
               <input
                 type="radio"
@@ -113,10 +113,10 @@ export function ExcludeMemberDialog({
                 onChange={() => setStrategy('PROMOTE_ONLY_CHILD')}
               />
               <span>
-                <strong>자식을 기존 슬롯으로 승격</strong>
+                <strong>아래 회원을 이 자리로 올리기</strong>
                 <span className="help-text">
-                  {directChildren[0]?.name.trim() || directChildren[0]?.memberKey} 서브트리가
-                  현재 회원의 자리를 이어받습니다.
+                  {directChildren[0]?.name.trim() || directChildren[0]?.memberKey}님과 그 아래
+                  회원들이 이 자리를 이어받습니다.
                 </span>
               </span>
             </label>
@@ -129,9 +129,9 @@ export function ExcludeMemberDialog({
                 onChange={() => setStrategy('DETACH_CHILDREN')}
               />
               <span>
-                <strong>서브트리를 재배치 대기로 이동</strong>
+                <strong>아래 회원들의 새 위치를 나중에 정하기</strong>
                 <span className="help-text">
-                  내부 연결은 유지하고 빈 좌·우 슬롯을 다시 선택합니다.
+                  서로 연결된 상태는 그대로 두고, 빈 왼쪽·오른쪽 자리를 다시 고릅니다.
                 </span>
               </span>
             </label>
@@ -140,22 +140,22 @@ export function ExcludeMemberDialog({
 
         {directChildren.length === 1 && !canPromote && !isRoot ? (
           <p className="storage-notice">
-            이 회원은 현재 부모 슬롯에 연결되지 않아 자식이 승격할 자리가 없습니다.
-            자식 서브트리는 재배치 대기 목록으로 이동합니다.
+            이 회원은 지금 조직 그림의 자리에 연결되어 있지 않습니다. 아래 회원들의
+            새 위치를 다시 정해야 합니다.
           </p>
         ) : null}
 
         {directChildren.length >= 2 ? (
           <p className="storage-notice">
-            두 직계 자식 중 어느 쪽도 자동 승격하지 않습니다. 두 서브트리 모두
-            재배치 대기 목록으로 이동합니다.
+            바로 아래 회원이 두 명이므로 한 명을 자동으로 올리지 않습니다. 두 회원의
+            새 위치를 각각 정해 주세요.
           </p>
         ) : null}
 
         {isRoot && directChildren.length > 0 ? (
           <p className="storage-notice">
-            루트를 제외하면 현재 루트 지정이 해제됩니다. 남은 서브트리 중 하나를
-            새 루트로 명시적으로 지정해야 합니다.
+            맨 위 회원을 빼면 맨 위 자리가 비게 됩니다. 남은 회원 중 한 명을
+            새 맨 위 회원으로 정해 주세요.
           </p>
         ) : null}
 
@@ -173,7 +173,7 @@ export function ExcludeMemberDialog({
             className="danger-button"
             onClick={() => onConfirm(strategy)}
           >
-            선택한 방식으로 제외
+            명단에서 빼기
           </button>
         </div>
       </section>

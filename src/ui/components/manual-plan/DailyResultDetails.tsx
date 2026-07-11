@@ -32,9 +32,9 @@ export function DailyResultDetails({ view, blocked }: DailyResultDetailsProps) {
     return (
       <section className="panel manual-result-panel" aria-labelledby="daily-audit-title">
         <h2 id="daily-audit-title" className="panel__title">
-          일일 계산 감사
+          오늘 계산 결과
         </h2>
-        <p className="manual-result-unavailable">현재 입력을 수정하면 일일 결과를 다시 표시합니다.</p>
+        <p className="manual-result-unavailable">잘못 입력한 값을 고치면 오늘 결과가 다시 나타납니다.</p>
       </section>
     );
   }
@@ -44,7 +44,7 @@ export function DailyResultDetails({ view, blocked }: DailyResultDetailsProps) {
       <div className="panel__header">
         <div>
           <h2 id="daily-audit-title" className="panel__title">
-            일일 계산 감사
+            오늘 계산 결과
           </h2>
           <p className="panel__description">
             {view.dateLabel} · {view.memberLabel}
@@ -57,11 +57,11 @@ export function DailyResultDetails({ view, blocked }: DailyResultDetailsProps) {
 
       <ol className="manual-audit-list">
         <li>
-          <strong>1. 이월 시작값</strong>
+          <strong>1. 전날에서 넘어온 값</strong>
           <BalanceValues {...view.carryIn} />
         </li>
         <li>
-          <strong>2. 오늘 원본 실적</strong>
+          <strong>2. 오늘 들어온 실적</strong>
           <span className="manual-result-values">
             <span>직접 PVP {pv(view.rawPerformance.directPvp)}</span>
             <span>조직 좌 {pv(view.rawPerformance.organizationLeft)}</span>
@@ -69,7 +69,7 @@ export function DailyResultDetails({ view, blocked }: DailyResultDetailsProps) {
           </span>
         </li>
         <li>
-          <strong>3. 정산 전 잔액</strong>
+          <strong>3. 오늘 계산에 사용할 합계</strong>
           <BalanceValues {...view.preSettlement} />
         </li>
         <li>
@@ -77,7 +77,7 @@ export function DailyResultDetails({ view, blocked }: DailyResultDetailsProps) {
           <span>{view.pvpApplicationLabel}</span>
         </li>
         <li>
-          <strong>5. 판정 좌·우</strong>
+          <strong>5. PVP를 더한 좌·우</strong>
           <span className="manual-result-values">
             <span>좌 {pv(view.assessedLeft)}</span>
             <span>우 {pv(view.assessedRight)}</span>
@@ -88,17 +88,17 @@ export function DailyResultDetails({ view, blocked }: DailyResultDetailsProps) {
           <span>{view.commissionLabel}</span>
         </li>
         <li>
-          <strong>7. 다음 이월</strong>
+          <strong>7. 다음 날로 넘어가는 값</strong>
           <BalanceValues {...view.carryOut} />
         </li>
         <li>
-          <strong>8. 이 날짜까지 보름 진행</strong>
+          <strong>8. 오늘까지의 보름 합계</strong>
           <span className="manual-result-values manual-result-values--wide">
             <span>개인 PVP {pv(view.running.personalPvpTotal)}</span>
             <span>목표 {pv(view.running.personalPvpTarget)}</span>
             <span>추가 필요 {pv(view.running.remainingPvp)}</span>
-            <span>원본 좌 {pv(view.running.rawLeftTotal)}</span>
-            <span>원본 우 {pv(view.running.rawRightTotal)}</span>
+            <span>누적 좌 {pv(view.running.rawLeftTotal)}</span>
+            <span>누적 우 {pv(view.running.rawRightTotal)}</span>
             <span>{view.runningPvpStatusLabel}</span>
           </span>
         </li>

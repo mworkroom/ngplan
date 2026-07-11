@@ -186,7 +186,7 @@ export function ManualPlanTable({
             날짜별 PVP와 직접 입력 가능한 좌·우 PV를 입력합니다.
           </p>
           <p className="help-text">
-            {schema.dates.length}일 · {schema.members.length}명 계획 세션
+            {schema.dates.length}일 · {schema.members.length}명 계획표
           </p>
         </div>
         <div className="manual-plan-jump-controls">

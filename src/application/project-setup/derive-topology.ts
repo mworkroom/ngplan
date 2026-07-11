@@ -79,7 +79,7 @@ export function deriveTopology(draft: ProjectSetupDraft): DerivedTopology {
       memberKey: member.memberKey,
       memberName: member.name,
       reason: 'ACTIVE_SUBTREE_UNPLACED' as const,
-      message: '활성 서브트리가 루트 또는 부모의 좌·우 슬롯에 연결되지 않았습니다.',
+      message: '이 회원과 아래 회원들의 새 위치를 정해 주세요.',
     }));
 
   return {

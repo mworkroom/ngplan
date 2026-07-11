@@ -16,7 +16,7 @@ function createBundle(): ProjectSetupBundle {
   return Object.freeze({
     project: Object.freeze({
       projectId: 'project-1',
-      title: '2026년 7월 상반기 직급 플랜',
+      title: '2026년 7월 상반기 수당 계획',
       period: Object.freeze({ year: 2026, month: 7, half: 'FIRST_HALF' as const }),
       timezone: 'Asia/Seoul' as const,
       projectStatus: 'IN_PROGRESS' as const,
@@ -133,11 +133,11 @@ describe('WP3 manual-plan workspace boundary', () => {
       />,
     );
 
-    expect(screen.getByRole('heading', { name: '2026년 7월 상반기 직급 플랜' }))
+    expect(screen.getByRole('heading', { name: '2026년 7월 상반기 수당 계획' }))
       .toBeDefined();
     expect(screen.getByText('2026년 7월 1일 ~ 15일')).toBeDefined();
     expect(screen.getByText('✓ 계산 완료')).toBeDefined();
-    expect(screen.getByText('15일 · 1명 계획 세션')).toBeDefined();
+    expect(screen.getByText('15일 · 1명 계획표')).toBeDefined();
     expect(document.getElementById('manual-plan-workspace')?.dataset.density).toBe(
       'compact',
     );

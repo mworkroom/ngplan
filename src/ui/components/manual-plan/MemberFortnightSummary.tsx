@@ -62,8 +62,8 @@ export function MemberFortnightSummary({
         <SummaryValue label="개인 PVP 목표" value={pv(selected.personalPvpTarget)} />
         <SummaryValue label="추가 필요 PVP" value={pv(selected.remainingPvp)} />
         <SummaryValue label="개인 PVP 상태" value={selected.personalPvpStatusLabel} />
-        <SummaryValue label="원본 좌" value={pv(selected.rawLeftTotal)} />
-        <SummaryValue label="원본 우" value={pv(selected.rawRightTotal)} />
+        <SummaryValue label="누적 좌" value={pv(selected.rawLeftTotal)} />
+        <SummaryValue label="누적 우" value={pv(selected.rawRightTotal)} />
         <SummaryValue label="마감 PVP 적용" value={`${pv(selected.periodPvpForSide)} · ${selected.pvpApplicationLabel}`} />
         <SummaryValue label="판정 좌" value={`${pv(selected.assessedLeft)} · ${selected.leftTargetLabel}`} />
         <SummaryValue label="판정 우" value={`${pv(selected.assessedRight)} · ${selected.rightTargetLabel}`} />
@@ -97,7 +97,7 @@ export function MemberFortnightSummary({
               <th scope="col">회원</th>
               <th scope="col">개인 PVP</th>
               <th scope="col">추가 필요</th>
-              <th scope="col">원본 좌 / 우</th>
+              <th scope="col">누적 좌 / 우</th>
               <th scope="col">목표 상태</th>
               <th scope="col">커미션</th>
               <th scope="col">권장 상태</th>

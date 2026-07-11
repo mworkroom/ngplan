@@ -52,20 +52,20 @@ export function ValidationSummary({
       className={`validation-summary${
         validation.errors.length > 0 ? ' validation-summary--error' : ''
       }`}
-      aria-label="설정 검증 결과"
+      aria-label="입력 확인 결과"
       role={validation.errors.length > 0 ? 'alert' : 'status'}
     >
       {validation.issues.length === 0 ? (
-        <p>현재 설정에서 발견된 오류나 경고가 없습니다.</p>
+        <p>모든 필수 입력을 확인했습니다.</p>
       ) : (
         <>
           <IssueList
-            title={`완료를 막는 오류 ${validation.errors.length}개`}
+            title={`고쳐야 할 내용 ${validation.errors.length}개`}
             issues={validation.errors}
             onNavigate={onNavigate}
           />
           <IssueList
-            title={`확인이 필요한 경고 ${validation.warnings.length}개`}
+            title={`확인해 볼 내용 ${validation.warnings.length}개`}
             issues={validation.warnings}
             onNavigate={onNavigate}
           />

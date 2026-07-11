@@ -129,12 +129,12 @@ describe('WP5 daily and fortnight result presentation', () => {
 
     const audit = screen.getByRole('list');
     expect(within(audit).getAllByRole('listitem')).toHaveLength(8);
-    expect(screen.getByText('1. 이월 시작값')).toBeDefined();
-    expect(screen.getByText('2. 오늘 원본 실적')).toBeDefined();
-    expect(screen.getByText('3. 정산 전 잔액')).toBeDefined();
+    expect(screen.getByText('1. 전날에서 넘어온 값')).toBeDefined();
+    expect(screen.getByText('2. 오늘 들어온 실적')).toBeDefined();
+    expect(screen.getByText('3. 오늘 계산에 사용할 합계')).toBeDefined();
     expect(screen.getByText('작은 쪽 좌에 PVP 적용')).toBeDefined();
     expect(screen.getByText('300 단계 · 커미션 발생')).toBeDefined();
-    expect(screen.getByText('8. 이 날짜까지 보름 진행')).toBeDefined();
+    expect(screen.getByText('8. 오늘까지의 보름 합계')).toBeDefined();
   });
 
   it('P3-RESULT-004 / P3-SUN-001 distinguishes no PVP and a skipped Sunday with null values', () => {
@@ -262,7 +262,7 @@ describe('WP5 daily and fortnight result presentation', () => {
         <MemberFortnightSummary selected={null} rows={null} blocked />
       </>,
     );
-    expect(screen.getByText('현재 입력을 수정하면 일일 결과를 다시 표시합니다.')).toBeDefined();
+    expect(screen.getByText('잘못 입력한 값을 고치면 오늘 결과가 다시 나타납니다.')).toBeDefined();
     expect(screen.getByText('현재 입력을 수정하면 보름 결과를 다시 표시합니다.')).toBeDefined();
   });
 });
