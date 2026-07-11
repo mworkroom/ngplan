@@ -211,11 +211,6 @@ function validateMember(
   issues: ProjectSetupIssue[],
 ): void {
   const location = { area: 'MEMBER' as const, memberKey: member.memberKey };
-  if (member.memberId.trim() === '') {
-    issues.push(
-      issue('MEMBER_ID_REQUIRED', 'ERROR', { ...location, field: 'memberId' }, '회사 회원 ID를 입력해 주세요.'),
-    );
-  }
   if (member.name.trim() === '') {
     issues.push(
       issue('MEMBER_NAME_REQUIRED', 'ERROR', { ...location, field: 'name' }, '회원 이름을 입력해 주세요.'),
@@ -309,7 +304,7 @@ function validateDuplicateNames(
         'MEMBER_NAME_DUPLICATE',
         'WARNING',
         { area: 'MEMBER', memberKey: member.memberKey, field: 'name' },
-        `회원 이름 ${name}이 회원 ${owner}와 같습니다. 회사 회원 ID로 구분합니다.`,
+        `회원 이름 ${name}이 회원 ${owner}와 같습니다. 필요하면 회사 회원 ID를 입력해 구분합니다.`,
       ),
     );
   }

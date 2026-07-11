@@ -705,12 +705,12 @@ describe('Phase 1 입력 스칼라와 오류 보고서', () => {
     ).toContain(code);
   });
 
-  it('빈 회원 식별자와 이름을 위치 정보와 함께 거부한다', () => {
+  it('빈 내부 키와 이름은 거부하고 빈 회사 회원 ID는 허용한다', () => {
     const member = root('', { memberId: '', name: '' });
     const codes = issueCodes(planFor([member], { allocations: [] }));
 
     expect(codes).toContain('MEMBER_KEY_REQUIRED');
-    expect(codes).toContain('MEMBER_ID_REQUIRED');
+    expect(codes).not.toContain('MEMBER_ID_REQUIRED');
     expect(codes).toContain('MEMBER_NAME_REQUIRED');
   });
 

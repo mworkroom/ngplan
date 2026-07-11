@@ -74,8 +74,8 @@ export function MemberCard({
         </span>
       </div>
 
-      <p className="member-card__opening" aria-label="일일 시작 잔액">
-        PVP {member.openingState.dailyCarryPvp || '0'}
+      <p className="member-card__opening" aria-label="현재 보유값">
+        PVP {member.openingState.fortnightPvpOpeningCredit || '0'}
         <span aria-hidden="true"> | </span>
         좌 {member.openingState.dailyCarryLeft || '0'}
         <span aria-hidden="true"> | </span>

@@ -167,6 +167,21 @@ describe('P2-NORM 정본 Setup Bundle', () => {
     expect(outcome.bundle.organization.members).toHaveLength(2);
   });
 
+  it('여러 회원의 회사 회원 ID가 비어 있어도 번들을 만든다', () => {
+    let draft = createSingleMemberDraft('A');
+    draft = addCompletedChild(draft, 'A', 'LEFT', 'B');
+    draft = editMemberIdentity(draft, 'A', { memberId: '' });
+    draft = editMemberIdentity(draft, 'B', { memberId: '' });
+
+    const outcome = expectNormalizeSuccess(normalizeProjectSetup(draft));
+
+    expect(outcome.bundle.organization.members.map(({ memberId }) => memberId)).toEqual([
+      '',
+      '',
+    ]);
+    expect(outcome.validation.isReady).toBe(true);
+  });
+
   it('제외 회원은 members와 openingStateByMember에서 모두 빠지고 후손은 남는다', () => {
     let draft = createSingleMemberDraft('A');
     draft = addCompletedChild(draft, 'A', 'LEFT', 'B');

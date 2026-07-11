@@ -147,7 +147,7 @@ describe('project and opening forms', () => {
       />,
     );
 
-    fireEvent.change(screen.getByLabelText('일일 좌 잔액'), { target: { value: '39' } });
+    fireEvent.change(screen.getByLabelText('현재 좌 잔액'), { target: { value: '39' } });
     fireEvent.click(
       screen.getByRole('checkbox', { name: /회사 시스템의 시작값을 확인했습니다/ }),
     );
@@ -224,7 +224,7 @@ describe('tree cards and child slots', () => {
     render(
       <MemberCard
         member={current}
-        issues={[issue('MEMBER_ID_REQUIRED', 'ERROR', 'memberId', current.memberKey)]}
+        issues={[issue('MEMBER_NAME_REQUIRED', 'ERROR', 'name', current.memberKey)]}
         leftSlot={getChildSlotState(topology, current.memberKey, 'LEFT')}
         rightSlot={getChildSlotState(topology, current.memberKey, 'RIGHT')}
         leftChildName={null}
@@ -239,7 +239,7 @@ describe('tree cards and child slots', () => {
       />,
     );
     expect(screen.getByText('입력 필요')).toBeTruthy();
-    expect(screen.getByLabelText('일일 시작 잔액').textContent).toContain('PVP 0');
+    expect(screen.getByLabelText('현재 보유값').textContent).toContain('PVP 0');
     expect(screen.getAllByText('스스로')).toHaveLength(2);
     const collapse = screen.getByRole('button', { name: '하위 조직 펼치기' });
     expect(collapse.getAttribute('aria-controls')).toBe('root-children');

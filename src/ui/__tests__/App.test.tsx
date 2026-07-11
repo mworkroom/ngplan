@@ -14,9 +14,8 @@ type User = ReturnType<typeof userEvent.setup>;
 const INITIAL_DATE = new Date(2026, 6, 10, 12, 0, 0);
 const OPENING_FIELD_LABELS = [
   '현재 보유 PVP',
-  '일일 PVP 잔액',
-  '일일 좌 잔액',
-  '일일 우 잔액',
+  '현재 좌 잔액',
+  '현재 우 잔액',
 ] as const;
 
 function createDeterministicIdGenerator(): NonNullable<AppProps['generateId']> {
@@ -152,10 +151,27 @@ function expectZeroOpeningDefaults(): void {
 
 afterEach(() => {
   cleanup();
+  window.localStorage.clear();
   vi.restoreAllMocks();
 });
 
 describe('App project setup flow', () => {
+  it('defaults to compact density and persists a comfortable preference', async () => {
+    const user = renderApp();
+    const app = document.getElementById('project-setup');
+
+    expect(app?.getAttribute('data-density')).toBe('compact');
+    await user.selectOptions(screen.getByLabelText('화면 크기'), 'COMFORTABLE');
+    expect(app?.getAttribute('data-density')).toBe('comfortable');
+    expect(window.localStorage.getItem('ngplan.display-density')).toBe('COMFORTABLE');
+
+    cleanup();
+    render(<App initialDate={INITIAL_DATE} />);
+    expect(document.getElementById('project-setup')?.getAttribute('data-density')).toBe(
+      'comfortable',
+    );
+  });
+
   it('uses Seoul time for the initial half and supports title/slot panel controls', async () => {
     const generated = createSessionIdGenerator('test session');
     expect(generated('PROJECT')).toBe('project-test_session-1');
@@ -275,14 +291,7 @@ describe('App project setup flow', () => {
       expect(document.activeElement).toBe(inputByLabel('프로젝트 제목'));
     });
 
-    await user.click(
-      screen.getByRole('button', {
-        name: '회사 회원 ID를 입력해 주세요.',
-      }),
-    );
-    await waitFor(() => {
-      expect(document.activeElement).toBe(inputByLabel('회사 회원 ID'));
-    });
+    expect(inputByLabel('회사 회원 ID').getAttribute('aria-invalid')).toBe('false');
   });
 
   it('focuses a queued subtree error and reattaches it through the parent slot', async () => {

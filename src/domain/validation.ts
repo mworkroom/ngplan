@@ -289,14 +289,14 @@ function validateOrganization(
       }
     }
 
-    if (typeof member.memberId !== 'string' || member.memberId.trim() === '') {
+    if (typeof member.memberId !== 'string') {
       pushIssue(
         issues,
         'MEMBER_ID_REQUIRED',
         { ...baseLocation, field: 'memberId' },
-        '회사 회원 ID는 비어 있지 않은 문자열이어야 합니다.',
+        '회사 회원 ID는 문자열이어야 합니다.',
       );
-    } else {
+    } else if (member.memberId.trim() !== '') {
       const owner = memberIdOwner.get(member.memberId);
       if (owner !== undefined) {
         pushIssue(

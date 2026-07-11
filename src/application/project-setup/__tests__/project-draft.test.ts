@@ -280,7 +280,6 @@ describe('Draft 검증, 준비 상태와 공개 위치 매핑', () => {
         'PERIOD_YEAR_INVALID',
         'PERIOD_MONTH_INVALID',
         'PROJECT_TITLE_REQUIRED',
-        'MEMBER_ID_REQUIRED',
         'MEMBER_NAME_REQUIRED',
         'LEVEL_NOT_INTEGER',
         'MEMBER_OPENING_STATE_UNCONFIRMED',

@@ -43,6 +43,19 @@ import { ReassignmentQueue } from './components/ReassignmentQueue';
 import { ValidationSummary } from './components/ValidationSummary';
 
 type Side = ChildSlotState['side'];
+type DisplayDensity = 'COMPACT' | 'COMFORTABLE';
+
+const DISPLAY_DENSITY_STORAGE_KEY = 'ngplan.display-density';
+
+function readDisplayDensity(): DisplayDensity {
+  try {
+    return window.localStorage.getItem(DISPLAY_DENSITY_STORAGE_KEY) === 'COMFORTABLE'
+      ? 'COMFORTABLE'
+      : 'COMPACT';
+  } catch {
+    return 'COMPACT';
+  }
+}
 
 let sessionSequence = 0;
 
@@ -112,6 +125,7 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
   );
   const [excludedMemberKey, setExcludedMemberKey] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState('');
+  const [displayDensity, setDisplayDensity] = useState<DisplayDensity>(readDisplayDensity);
   const slotFirstActionRef = useRef<HTMLButtonElement>(null);
   const excludeTriggerRef = useRef<HTMLElement | null>(null);
 
@@ -136,6 +150,14 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
   useEffect(() => {
     slotFirstActionRef.current?.focus();
   }, [slotAction]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(DISPLAY_DENSITY_STORAGE_KEY, displayDensity);
+    } catch {
+      // 화면 밀도 저장이 차단돼도 현재 세션의 선택은 유지합니다.
+    }
+  }, [displayDensity]);
 
   const focusTopologyMember = (memberKey: string | null): void => {
     window.setTimeout(() => {
@@ -305,7 +327,12 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
       : topology.memberByKey.get(slotAction.parentMemberKey);
 
   return (
-    <main id="project-setup" className="app-shell" tabIndex={-1}>
+    <main
+      id="project-setup"
+      className="app-shell"
+      data-density={displayDensity === 'COMPACT' ? 'compact' : 'comfortable'}
+      tabIndex={-1}
+    >
       <header className="app-header">
         <div className="app-header__copy">
           <p className="app-header__eyebrow">ngplan · Phase 2</p>
@@ -315,6 +342,17 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
           </p>
         </div>
         <div className="app-header__actions">
+          <label className="density-control">
+            <span>화면 크기</span>
+            <select
+              aria-label="화면 크기"
+              value={displayDensity}
+              onChange={(event) => setDisplayDensity(event.currentTarget.value as DisplayDensity)}
+            >
+              <option value="COMPACT">작게</option>
+              <option value="COMFORTABLE">편안하게</option>
+            </select>
+          </label>
           <span
             className={`status-badge ${
               draft.activeBundle === null
@@ -337,7 +375,9 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
         <span aria-hidden="true">ⓘ</span>
         <div>
           <strong>이 단계에는 저장 기능이 없습니다.</strong>
-          <div>브라우저를 새로고침하거나 닫으면 현재 초안이 모두 사라집니다.</div>
+          <div>
+            브라우저를 새로고침하거나 닫으면 현재 초안이 모두 사라집니다. 화면 크기 설정만 저장됩니다.
+          </div>
         </div>
       </aside>
 

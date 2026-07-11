@@ -75,6 +75,11 @@ a {
   padding: 24px;
 }
 
+.app-shell[data-density="compact"] {
+  width: min(111.111%, 1778px);
+  zoom: 0.9;
+}
+
 .app-header,
 .app-shell__header {
   display: flex;
@@ -145,6 +150,22 @@ a {
   grid-template-columns: minmax(0, 2fr) minmax(290px, 0.9fr);
   align-items: start;
   gap: 16px;
+}
+
+.density-control {
+  display: grid;
+  gap: 3px;
+  color: var(--color-muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.density-control select {
+  min-height: 34px;
+  padding: 5px 28px 5px 9px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-panel);
 }
 
 .project-period-row {
@@ -575,32 +596,6 @@ fieldset {
   gap: 16px;
 }
 
-.pvp-target-summary {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  margin: 0;
-}
-
-.pvp-target-summary > div {
-  padding: 10px 12px;
-  border: 1px solid var(--color-accent);
-  border-radius: var(--radius-control);
-  background: var(--color-accent-soft);
-}
-
-.pvp-target-summary dt {
-  color: var(--color-muted);
-  font-size: 0.78rem;
-  font-weight: 700;
-}
-
-.pvp-target-summary dd {
-  margin: 2px 0 0;
-  color: var(--color-accent-action);
-  font-size: 1.05rem;
-  font-weight: 800;
-}
 
 .member-form__section,
 .opening-state-form__section {
@@ -753,7 +748,9 @@ fieldset {
 
 @media (max-width: 820px) {
   .app-shell {
+    width: min(100%, 1600px);
     padding: 16px;
+    zoom: 1;
   }
 
   .app-header,
@@ -777,8 +774,7 @@ fieldset {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .project-period-row .form-grid,
-  .pvp-target-summary {
+  .project-period-row .form-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 }
