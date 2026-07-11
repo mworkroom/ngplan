@@ -284,6 +284,7 @@ a {
 legend {
   font-size: 0.88rem;
   font-weight: 700;
+  color: var(--color-muted);
 }
 
 .field input,
@@ -680,7 +681,7 @@ fieldset {
 
 .section-divider {
   width: 100%;
-  margin: 0;
+  margin: 20px 0;
   border: 0;
   border-top: 1px solid var(--color-line);
 }

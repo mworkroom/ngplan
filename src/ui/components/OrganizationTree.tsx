@@ -112,7 +112,7 @@ export function OrganizationTree({
 
       {errors.length === 0 ? null : (
         <div className="organization-error-bar" role="alert">
-          <span>⚠ 입력해야 할 항목이 {errors.length}개 있습니다</span>
+          <span>⚠ 미입력 항목이 {errors.length}개 있습니다</span>
           <button type="button" className="text-button" onClick={() => onNavigateIssue(errors[0]!)}>
             첫 번째 문제 보기
           </button>
@@ -128,7 +128,7 @@ export function OrganizationTree({
         {root === undefined ? (
           <div className="empty-state">
             <div>
-              <p>맨 위에 놓을 회원 카드를 먼저 만들어 주세요.</p>
+              <p>맨 위에 놓을 회원 카드를 만들어 주세요.</p>
               <button type="button" className="primary-button" onClick={onAddRoot}>
                 최상위 회원 만들기
               </button>

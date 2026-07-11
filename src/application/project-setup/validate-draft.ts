@@ -215,7 +215,6 @@ function validateMember(
         pvpTarget.code,
         'ERROR',
         { ...location, field: 'pvpTarget' },
-        '이번 보름 PVP 목표를 선택해 주세요.',
       ),
     );
   }
@@ -230,7 +229,7 @@ function validateMember(
           'ROOT_PLACEMENT_INVALID',
           'ERROR',
           { ...location, field: 'parentMemberKey' },
-          '맨 위 회원은 다른 회원 아래에 놓을 수 없습니다.',
+          '최상위 회원은 다른 회원 아래에 놓을 수 없습니다.',
         ),
       );
     }
@@ -243,7 +242,7 @@ function validateMember(
         'PLACEMENT_INCOMPLETE',
         'ERROR',
         { ...location, field: 'parentMemberKey' },
-        '맨 위 회원이 아니라면 바로 위 회원과 왼쪽·오른쪽 위치를 정해 주세요.',
+        '최상위 회원이 아니라면 바로 위 회원과 왼쪽·오른쪽 위치를 정해 주세요.',
       ),
     );
   }
@@ -268,7 +267,6 @@ function validateMember(
         'MEMBER_OPENING_STATE_UNCONFIRMED',
         'ERROR',
         { ...location, field: 'openingStateConfirmed' },
-        '회사 시스템에서 네 시작값을 확인해야 합니다.',
       ),
     );
   }
@@ -294,7 +292,7 @@ function validateDuplicateNames(
         'MEMBER_NAME_DUPLICATE',
         'WARNING',
         { area: 'MEMBER', memberKey: member.memberKey, field: 'name' },
-        `회원 이름 ${name}이 회원 ${owner}와 같습니다. 필요하면 회사 회원 ID를 입력해 구분합니다.`,
+        `회원 이름 ${name}이 회원 ${owner}와 같습니다. 필요하면 ID를 입력해 구분합니다.`,
       ),
     );
   }
@@ -316,7 +314,7 @@ export function validateProjectSetupDraft(
         'SELECTED_ROOT_INVALID',
         'ERROR',
         { area: 'PROJECT', field: 'rootMemberKey' },
-        '맨 위 회원을 한 명 정해 주세요.',
+        '최상위 회원을 한 명 정해 주세요.',
       ),
     );
   }
@@ -333,7 +331,7 @@ export function validateProjectSetupDraft(
         'ERROR',
         { area: 'QUEUE', memberKey: entry.memberKey, field: 'parentMemberKey' },
         `${entry.memberName || entry.memberKey}님과 아래 회원들의 새 위치를 정해 주세요.`,
-        '조직 그림의 빈 왼쪽·오른쪽 자리에 연결하거나, 맨 위 회원으로 정해 주세요.',
+        '조직도에 비어 있는 자리에 연결하거나, 최상위 회원으로 정해 주세요.',
       ),
     );
   }
