@@ -10,7 +10,7 @@ import { pvpTargetForLevel } from '../../domain/constants';
 const OPENING_FIELDS: readonly {
   readonly field: OpeningStateField;
   readonly label: string;
-  readonly help: string;
+  readonly help?: string;
 }[] = [
   {
     field: 'fortnightPvpOpeningCredit',
@@ -91,7 +91,7 @@ export function OpeningStateForm({
                 aria-describedby={fieldIssue === undefined ? undefined : errorId}
                 onChange={(event) => onChange({ [field]: event.currentTarget.value })}
               />
-              <p className="field-help">{help}</p>
+              {help === undefined ? null : <p className="field-help">{help}</p>}
               {fieldIssue !== undefined ? (
                 <p id={errorId} className="field-error">
                   {fieldIssue.message}
@@ -116,7 +116,7 @@ export function OpeningStateForm({
           }
         />
         <span>
-          <strong>시작값을 확인했습니다.</strong>
+          <strong>회사 시스템의 시작값을 확인했습니다.</strong>
         </span>
       </label>
       {confirmationIssue !== undefined ? (

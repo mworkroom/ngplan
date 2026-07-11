@@ -114,7 +114,7 @@ export function OrganizationTree({
         <div className="organization-error-bar" role="alert">
           <span>⚠ 완료 전 확인할 항목 {errors.length}개</span>
           <button type="button" className="text-button" onClick={() => onNavigateIssue(errors[0]!)}>
-            오류로 이동
+            첫 오류로 이동
           </button>
         </div>
       )}
@@ -128,8 +128,9 @@ export function OrganizationTree({
         {root === undefined ? (
           <div className="empty-state">
             <div>
+              <p>활성 루트 회원이 없습니다.</p>
               <button type="button" className="primary-button" onClick={onAddRoot}>
-                회원 추가하기
+                새 루트 회원 만들기
               </button>
             </div>
           </div>

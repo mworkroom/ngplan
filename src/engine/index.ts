@@ -1,4 +1,8 @@
-export { derivePeriod } from '../domain/period';
+export {
+  derivePeriod,
+  isSunday,
+  settlementModeForDate,
+} from '../domain/period';
 export {
   validateOrganizationSnapshot,
   validatePeriod,
@@ -22,6 +26,7 @@ export type {
   DerivedPeriod,
   FortnightAssessment,
   Half,
+  IsoDate,
   MemberSnapshot,
   NormalizedAllocationCell,
   OpeningStateInput,
@@ -32,6 +37,8 @@ export type {
   RawPerformance,
   RuleSet,
   RunningFortnightState,
+  SettlementMode,
+  SettlementStatus,
   Side,
   ValidationCode,
   ValidationIssue,

@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  mapProjectSetupIssueToManualPlanIssue,
+  type ManualPlanIssue,
+} from '../application/manual-plan';
+import {
   activateProjectSetupBundle,
   addMemberToSlot,
   addRootMember,
@@ -30,6 +34,7 @@ import {
   type IdKind,
   type MemberDraft,
   type ProjectSetupDraft,
+  type ProjectSetupBundle,
   type ProjectSetupIssue,
   type ProjectSetupValidation,
   type TopologyCommandOutcome,
@@ -40,9 +45,18 @@ import { OpeningStateForm } from './components/OpeningStateForm';
 import { OrganizationTree } from './components/OrganizationTree';
 import { ProjectPeriodForm } from './components/ProjectPeriodForm';
 import { ReassignmentQueue } from './components/ReassignmentQueue';
+import { ManualPlanWorkspace } from './components/manual-plan/ManualPlanWorkspace';
 
 type Side = ChildSlotState['side'];
 type DisplayDensity = 'COMPACT' | 'COMFORTABLE';
+
+type AppScreen =
+  | { readonly kind: 'SETUP' }
+  | {
+      readonly kind: 'MANUAL_PLAN';
+      readonly bundle: ProjectSetupBundle;
+      readonly setupWarnings: readonly ManualPlanIssue[];
+    };
 
 const DISPLAY_DENSITY_STORAGE_KEY = 'ngplan.display-density';
 
@@ -125,6 +139,7 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
   const [excludedMemberKey, setExcludedMemberKey] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState('');
   const [displayDensity, setDisplayDensity] = useState<DisplayDensity>(readDisplayDensity);
+  const [screenState, setScreenState] = useState<AppScreen>({ kind: 'SETUP' });
   const slotFirstActionRef = useRef<HTMLButtonElement>(null);
   const excludeTriggerRef = useRef<HTMLElement | null>(null);
 
@@ -320,6 +335,20 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
     setAnnouncement('프로젝트 설정이 완료되어 Phase 3 전달 번들이 준비되었습니다.');
   };
 
+  const handleOpenManualPlan = (): void => {
+    const activeBundle = draft.activeBundle;
+    if (activeBundle === null) {
+      return;
+    }
+    setScreenState({
+      kind: 'MANUAL_PLAN',
+      bundle: activeBundle,
+      setupWarnings: Object.freeze(
+        displayedValidation.warnings.map(mapProjectSetupIssueToManualPlanIssue),
+      ),
+    });
+  };
+
   const candidateParents = useMemo(() => {
     if (selectedMember === undefined) {
       return [];
@@ -336,6 +365,18 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
     slotAction === null
       ? undefined
       : topology.memberByKey.get(slotAction.parentMemberKey);
+
+  if (screenState.kind === 'MANUAL_PLAN') {
+    return (
+      <ManualPlanWorkspace
+        bundle={screenState.bundle}
+        setupWarnings={screenState.setupWarnings}
+        displayDensity={displayDensity}
+        onDisplayDensityChange={setDisplayDensity}
+        onReturnToSetup={() => setScreenState({ kind: 'SETUP' })}
+      />
+    );
+  }
 
   return (
     <main
@@ -368,8 +409,8 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
               value={displayDensity}
               onChange={(event) => setDisplayDensity(event.currentTarget.value as DisplayDensity)}
             >
-              <option value="COMPACT">작은 화면</option>
-              <option value="COMFORTABLE">큰 화면</option>
+              <option value="COMPACT">작게</option>
+              <option value="COMFORTABLE">편안하게</option>
             </select>
           </label>
 
@@ -430,6 +471,15 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
             <dt>활성 회원</dt>
             <dd>{draft.activeBundle.organization.members.length}명</dd>
           </dl>
+          <div className="form-actions">
+            <button
+              type="button"
+              className="primary-button"
+              onClick={handleOpenManualPlan}
+            >
+              수동 계획표 열기
+            </button>
+          </div>
         </section>
       )}
 
