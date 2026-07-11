@@ -120,8 +120,8 @@ export function MemberForm({
           <span className="status-badge">{isRoot ? '루트 회원' : '활성 회원'}</span>
         </div>
         <div className="form-grid form-grid--single">
-          {renderIdentityField('name', '회원 이름', nameIssue)}
-          {renderIdentityField('memberId', '회사 회원 ID', memberIdIssue)}
+          {renderIdentityField('name', '이름', nameIssue)}
+          {renderIdentityField('memberId', 'ID', memberIdIssue)}
           {renderIdentityField('level', '사업 레벨', levelIssue)}
         </div>
       </div>

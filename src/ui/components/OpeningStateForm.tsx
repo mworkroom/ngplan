@@ -15,17 +15,14 @@ const OPENING_FIELDS: readonly {
   {
     field: 'fortnightPvpOpeningCredit',
     label: '현재 보유 PVP',
-    help: '회사 시스템에 이미 있는 값으로, 개인 PVP 목표에서 차감합니다.',
   },
   {
     field: 'dailyCarryLeft',
     label: '현재 좌 잔액',
-    help: '회사 시스템에서 확인한 시작 시점의 왼쪽 잔액입니다.',
   },
   {
     field: 'dailyCarryRight',
     label: '현재 우 잔액',
-    help: '회사 시스템에서 확인한 시작 시점의 오른쪽 잔액입니다.',
   },
 ];
 
@@ -78,7 +75,6 @@ export function OpeningStateForm({
             readOnly
             aria-readonly="true"
           />
-          <p className="field-help">사업 레벨에 따라 자동 표시됩니다.</p>
         </div>
         {OPENING_FIELDS.map(({ field, label, help }) => {
           const fieldIssue = issueFor(issues, member.memberKey, field);
@@ -120,7 +116,7 @@ export function OpeningStateForm({
           }
         />
         <span>
-          <strong>회사 시스템의 시작값을 확인했습니다.</strong>
+          <strong>시작값을 확인했습니다.</strong>
         </span>
       </label>
       {confirmationIssue !== undefined ? (

@@ -353,17 +353,6 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
           </p>
         </div>
         <div className="app-header__actions">
-          <label className="density-control">
-            <span>화면 크기</span>
-            <select
-              aria-label="화면 크기"
-              value={displayDensity}
-              onChange={(event) => setDisplayDensity(event.currentTarget.value as DisplayDensity)}
-            >
-              <option value="COMPACT">작게</option>
-              <option value="COMFORTABLE">편안하게</option>
-            </select>
-          </label>
           <span
             className={`status-badge ${
               draft.activeBundle === null
@@ -373,6 +362,17 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
           >
             {draft.activeBundle === null ? 'EDITING · 편집 중' : 'READY · 설정 완료'}
           </span>
+          <label className="density-control">
+            <select
+              aria-label="화면 크기"
+              value={displayDensity}
+              onChange={(event) => setDisplayDensity(event.currentTarget.value as DisplayDensity)}
+            >
+              <option value="COMPACT">작은 화면</option>
+              <option value="COMFORTABLE">큰 화면</option>
+            </select>
+          </label>
+
           <button type="button" className="secondary-button" onClick={handleNewProject}>
             새 프로젝트
           </button>

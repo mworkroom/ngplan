@@ -104,9 +104,6 @@ export function OrganizationTree({
           <h2 id="organization-title" className="panel__title">
             조직 구조
           </h2>
-          <p className="panel__description">
-            카드의 왼쪽·오른쪽 + 버튼으로 회원을 추가하거나 서브트리를 연결합니다.
-          </p>
         </div>
         <span className="status-badge">
           활성 회원 {topology.activeMembers.length}명
@@ -117,7 +114,7 @@ export function OrganizationTree({
         <div className="organization-error-bar" role="alert">
           <span>⚠ 완료 전 확인할 항목 {errors.length}개</span>
           <button type="button" className="text-button" onClick={() => onNavigateIssue(errors[0]!)}>
-            첫 오류로 이동
+            오류로 이동
           </button>
         </div>
       )}
