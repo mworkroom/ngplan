@@ -237,7 +237,7 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
     if (
       draftHasMemberData(draft) &&
       !window.confirm(
-        '지금 입력한 회원과 숫자를 모두 지우고 새로 시작할까요?',
+        '지금까지 입력한 회원과 숫자를 모두 지우고 새로 시작할까요?',
       )
     ) {
       return;
@@ -254,13 +254,13 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
     setSlotAction(null);
     setCollapsedMemberKeys(new Set());
     setExcludedMemberKey(null);
-    setAnnouncement('새 계획을 시작했습니다. 이전에 입력한 회원 정보는 가져오지 않았습니다.');
+    setAnnouncement('새 플랜을 시작했습니다. 이전에 입력한 회원 정보는 가져오지 않았습니다.');
   };
 
   const handleAddRoot = (): void => {
     applyTopologyOutcome(
       addRootMember(draft, generateId('MEMBER')),
-      '맨 위 회원을 만들었습니다.',
+      '최상위 회원을 만들었습니다.',
     );
   };
 
@@ -388,7 +388,7 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
       <header className="app-header">
         <div className="app-header__copy">
           <p className="app-header__eyebrow">애터미 수당 계획표</p>
-          <h1>새 계획 만들기</h1>
+          <h1>애터미 직급 플랜 설정</h1>
           <p className="app-header__description">기간과 회원 정보를 차례대로 입력해 주세요.</p>
         </div>
         <div className="app-header__actions">
@@ -407,16 +407,16 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
               value={displayDensity}
               onChange={(event) => setDisplayDensity(event.currentTarget.value as DisplayDensity)}
             >
-              <option value="COMPACT">작게</option>
-              <option value="COMFORTABLE">편안하게</option>
+              <option value="COMPACT">글씨 작게</option>
+              <option value="COMFORTABLE">글씨 크게</option>
             </select>
           </label>
 
           <button type="button" className="secondary-button" onClick={handleNewProject}>
-            새로 시작하기
+            초기화
           </button>
           <button type="button" className="primary-button" onClick={handleNormalize}>
-            입력 확인하고 계획표 만들기
+            플래너 생성
           </button>
         </div>
       </header>
@@ -447,7 +447,7 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
           <div className="panel__header">
             <div>
               <h2 id="bundle-summary-title" className="panel__title">
-                계획표를 만들 준비가 되었습니다
+                플랜을 만들 준비가 되었습니다
               </h2>
               <p className="panel__description">
                 내용을 고치면 다시 한 번 입력 확인이 필요합니다.
@@ -475,7 +475,7 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
               className="primary-button"
               onClick={handleOpenManualPlan}
             >
-              계획표 열기
+              플랜 열기
             </button>
           </div>
         </section>
@@ -525,7 +525,7 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
               onSetRoot={(memberKey) =>
                 applyTopologyOutcome(
                   setRootMember(draft, memberKey),
-                  '선택한 회원을 맨 위 회원으로 정했습니다.',
+                  '선택한 회원을 최상위 회원으로 정했습니다.',
                 )
               }
             />
@@ -548,7 +548,7 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
                 </button>
                 {topology.reassignmentQueue.map((entry) => (
                   <button type="button" className="secondary-button" key={entry.memberKey} onClick={() => handleAttachQueuedSubtree(entry.memberKey)}>
-                    {entry.memberName.trim() || entry.memberKey}님과 아래 회원 연결
+                    {entry.memberName.trim() || entry.memberKey}님과 하위 회원 연결
                   </button>
                 ))}
                 <button type="button" className="text-button" onClick={() => setSlotAction(null)}>
@@ -567,7 +567,7 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
           )}
           {selectedMember === undefined ? (
             <section className="panel empty-state">
-              <p>회원 카드를 클릭하면 상세 입력을 편집할 수 있습니다.</p>
+              <p>회원 카드를 클릭하면 상세 내용을 편집할 수 있습니다.</p>
             </section>
           ) : (
             <section className="panel">
@@ -593,7 +593,7 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
                       parentMemberKey,
                       side,
                     ),
-                    '선택한 회원과 아래 회원들을 새 자리로 옮겼습니다.',
+                    '선택한 회원과 하위 회원들을 새 자리로 옮겼습니다.',
                   )
                 }
                 onDetach={() =>
@@ -638,7 +638,7 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
             );
             const succeeded = applyTopologyOutcome(
               outcome,
-              '회원을 명단에서 뺐습니다. 아래 회원들의 연결은 그대로 유지했습니다.',
+              '선택한 회원을 화면에서 뺐습니다. 하위 회원들의 연결은 그대로 유지됩니다.',
             );
             if (succeeded) {
               setExcludedMemberKey(null);

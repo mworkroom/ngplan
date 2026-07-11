@@ -112,7 +112,7 @@ export function OrganizationTree({
 
       {errors.length === 0 ? null : (
         <div className="organization-error-bar" role="alert">
-          <span>⚠ 완료 전 확인할 항목 {errors.length}개</span>
+          <span>⚠ 입력해야 할 항목이 {errors.length}개 있습니다</span>
           <button type="button" className="text-button" onClick={() => onNavigateIssue(errors[0]!)}>
             첫 번째 문제 보기
           </button>
@@ -122,15 +122,15 @@ export function OrganizationTree({
       <div
         id={projectFieldId('rootMemberKey')}
         className="organization-tree__viewport"
-        aria-label="좌우 조직 그림"
+        aria-label="좌우 조직도"
         tabIndex={0}
       >
         {root === undefined ? (
           <div className="empty-state">
             <div>
-              <p>맨 위에 놓을 회원을 먼저 만들어 주세요.</p>
+              <p>맨 위에 놓을 회원 카드를 먼저 만들어 주세요.</p>
               <button type="button" className="primary-button" onClick={onAddRoot}>
-                맨 위 회원 만들기
+                최상위 회원 만들기
               </button>
             </div>
           </div>

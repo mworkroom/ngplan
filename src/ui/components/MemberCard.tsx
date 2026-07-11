@@ -48,7 +48,7 @@ export function MemberCard({
       issue.severity === 'ERROR' && issue.location.memberKey === member.memberKey,
   );
   const complete = !hasError;
-  const baseName = member.name.trim() || '이름 미입력 회원';
+  const baseName = member.name.trim() || '이름 없는 회원';
   const displayName = markedMemberName(baseName, member.sheetMarker);
 
   return (
@@ -118,7 +118,7 @@ export function MemberCard({
             aria-controls={childrenContainerId}
             onClick={() => onToggleCollapsed(member.memberKey)}
           >
-            {collapsed ? '하위 조직 펼치기' : '하위 조직 접기'}
+            {collapsed ? '펼치기' : '접기'}
           </button>
         </div>
       ) : null}

@@ -44,7 +44,7 @@ export function ProjectPeriodForm({
       <div className="panel__header">
         <div>
           <h2 id="project-period-title" className="panel__title">
-            계획 기간
+            직급 기간
           </h2>
         </div>
         <span className="status-badge status-badge--editing">입력 중</span>
@@ -52,7 +52,7 @@ export function ProjectPeriodForm({
 
       <div className="form-grid">
         <div className="field">
-          <label htmlFor={projectFieldId('period.year')}>몇 년도인가요?</label>
+          <label htmlFor={projectFieldId('period.year')}>연도</label>
           <input
             id={projectFieldId('period.year')}
             inputMode="numeric"
@@ -69,7 +69,7 @@ export function ProjectPeriodForm({
         </div>
 
         <div className="field">
-          <label htmlFor={projectFieldId('period.month')}>몇 월인가요?</label>
+          <label htmlFor={projectFieldId('period.month')}>월</label>
           <input
             id={projectFieldId('period.month')}
             inputMode="numeric"
@@ -86,7 +86,7 @@ export function ProjectPeriodForm({
         </div>
 
         <div className="field field--full">
-          <label htmlFor={projectFieldId('period.half')}>어느 기간인가요?</label>
+          <label htmlFor={projectFieldId('period.half')}>기간</label>
           <select
             id={projectFieldId('period.half')}
             value={draft.half}
@@ -103,12 +103,12 @@ export function ProjectPeriodForm({
 
         <div className="field field--full project-title-field">
           <label htmlFor={projectFieldId('title')}>
-            계획 이름 <span className="field-label__hint">원하면 바꿀 수 있습니다</span>
+            프로젝트명 <span className="field-label__hint">수정 가능</span>
           </label>
           <div className="project-title-control">
             <input
               id={projectFieldId('title')}
-              aria-label="계획 이름"
+              aria-label="프로젝트명"
               value={draft.title}
               aria-invalid={titleIssue !== undefined}
               aria-describedby={titleIssue === undefined ? undefined : titleErrorId}

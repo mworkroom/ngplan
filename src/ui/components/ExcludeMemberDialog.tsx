@@ -140,22 +140,19 @@ export function ExcludeMemberDialog({
 
         {directChildren.length === 1 && !canPromote && !isRoot ? (
           <p className="storage-notice">
-            이 회원은 지금 조직 그림의 자리에 연결되어 있지 않습니다. 아래 회원들의
-            새 위치를 다시 정해야 합니다.
+            이 회원은 현재 조직도에 들어가 있지 않습니다. 아래 회원들을 어디에 둘지 다시 정해야 합니다.
           </p>
         ) : null}
 
         {directChildren.length >= 2 ? (
           <p className="storage-notice">
-            바로 아래 회원이 두 명이므로 한 명을 자동으로 올리지 않습니다. 두 회원의
-            새 위치를 각각 정해 주세요.
+            바로 아래 회원이 두 명이므로 한 명을 자동으로 올릴 수 없습니다. 두 회원의 새 위치를 각각 정해 주세요.
           </p>
         ) : null}
 
         {isRoot && directChildren.length > 0 ? (
           <p className="storage-notice">
-            맨 위 회원을 빼면 맨 위 자리가 비게 됩니다. 남은 회원 중 한 명을
-            새 맨 위 회원으로 정해 주세요.
+            최상위 회원을 빼면 맨 위 자리가 비게 됩니다. 남은 회원 중 한 명을 새로운 최상위 회원으로 정해 주세요.
           </p>
         ) : null}
 

@@ -115,14 +115,14 @@ export function MemberForm({
             </h2>
             <p className="panel__description">이 회원의 정보를 입력해 주세요.</p>
           </div>
-          <span className="status-badge">{isRoot ? '맨 위 회원' : '등록된 회원'}</span>
+          <span className="status-badge">{isRoot ? '최상위 회원' : '등록된 회원'}</span>
         </div>
         <div className="form-grid form-grid--single">
-          {renderIdentityField('name', '회원 이름', nameIssue)}
-          {renderIdentityField('memberId', '회사 회원 ID', memberIdIssue)}
+          {renderIdentityField('name', '이름', nameIssue)}
+          {renderIdentityField('memberId', 'ID', memberIdIssue)}
           <div className="field">
             <label htmlFor={memberFieldId(member.memberKey, 'sheetMarker')}>
-              이름에 표지판 붙이기
+              이름 강조
             </label>
             <select
               id={memberFieldId(member.memberKey, 'sheetMarker')}
@@ -139,16 +139,13 @@ export function MemberForm({
                 </option>
               ))}
             </select>
-            <p className="field-help">
-              긴 계획표에서 사람을 빨리 찾기 위한 표시입니다. 계산에는 사용되지 않습니다.
-            </p>
           </div>
         </div>
       </div>
 
       {!isRoot && isPlaced ? (
         <fieldset className="member-form__section">
-          <legend>이 회원의 위치 바꾸기</legend>
+          <legend>위치 바꾸기</legend>
           <p className="help-text">
             이 회원과 아래에 연결된 회원들을 함께 옮깁니다.
           </p>
@@ -218,16 +215,11 @@ export function MemberForm({
 
       {!isRoot && !isPlaced ? (
         <p className="storage-notice">
-          이 회원과 아래 회원들의 새 위치를 정해야 합니다. 조직 그림의 빈
-          왼쪽·오른쪽 자리에서 다시 연결해 주세요.
+          이 회원과 아래 회원들의 새 위치를 정해야 합니다. 조직도의 빈 자리에 다시 연결해 주세요.
         </p>
       ) : null}
 
-      <div className="form-actions">
-        <button type="button" className="danger-button" onClick={onExclude}>
-          이 명단에서 빼기
-        </button>
-      </div>
+
     </section>
   );
 }

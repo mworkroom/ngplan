@@ -24,8 +24,7 @@ export function ReassignmentQueue({
             새 위치를 정해야 하는 회원
           </h2>
           <p className="panel__description">
-            아래에 연결된 회원들은 그대로 유지됩니다. 조직 그림의 빈 왼쪽·오른쪽
-            자리에서 다시 연결해 주세요.
+            아래에 연결된 회원들은 그대로 유지됩니다. 조직도의 비어있는 자리에서 다시 연결해 주세요.
           </p>
         </div>
         <span className="status-badge status-badge--warning">

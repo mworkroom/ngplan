@@ -69,13 +69,13 @@ export function OpeningStateForm({
   return (
     <section className="opening-state-form" aria-labelledby="opening-state-title">
       <div>
-        <h3 id="opening-state-title">시작값</h3>
+        <h2 id="opening-state-title">시작값</h2>
       </div>
 
       <div className="form-grid opening-state-form__fields">
         <div className="field">
           <label htmlFor={memberFieldId(member.memberKey, 'pvpTarget')}>
-            이번 보름 PVP 목표
+            이번 기간 PVP 목표
           </label>
           <select
             id={memberFieldId(member.memberKey, 'pvpTarget')}
@@ -128,11 +128,7 @@ export function OpeningStateForm({
         })}
       </div>
 
-      {remainingPvp === null ? null : (
-        <p className="opening-state-form__remaining" role="status">
-          추가로 필요한 PVP <strong>{remainingPvp.toLocaleString('ko-KR')} PV</strong>
-        </p>
-      )}
+
 
       <label className="confirmation-field" htmlFor={confirmationId}>
         <input
@@ -148,7 +144,7 @@ export function OpeningStateForm({
           }
         />
         <span>
-          <strong>회사 시스템의 시작값을 확인했습니다.</strong>
+          <strong>시작값이 맞게 입력되었으면 확인 버튼을 클릭해주세요.</strong>
         </span>
       </label>
       {confirmationIssue !== undefined ? (
