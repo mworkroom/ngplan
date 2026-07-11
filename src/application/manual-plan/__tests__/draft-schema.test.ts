@@ -121,6 +121,24 @@ describe('WP1 manual-plan draft and worksheet schema', () => {
     expect(draft.cells).toHaveLength(16 * 4);
   });
 
+  it('places every member between its own left and right organizations', () => {
+    const setup = bundle([
+      member('root', null, null),
+      member('branch', 'root', 'LEFT'),
+      member('branch-left', 'branch', 'LEFT'),
+      member('branch-right', 'branch', 'RIGHT'),
+      member('root-right', 'root', 'RIGHT'),
+    ]);
+
+    expect(deriveManualPlanSchema(setup).members.map((item) => item.memberKey)).toEqual([
+      'branch-left',
+      'branch',
+      'branch-right',
+      'root',
+      'root-right',
+    ]);
+  });
+
   it('P3-DRAFT-003: SELF fields exist while connected fields are absent', () => {
     const setup = treeBundle();
     const schema = deriveManualPlanSchema(setup);
