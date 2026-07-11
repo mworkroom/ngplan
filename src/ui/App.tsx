@@ -40,7 +40,6 @@ import { OpeningStateForm } from './components/OpeningStateForm';
 import { OrganizationTree } from './components/OrganizationTree';
 import { ProjectPeriodForm } from './components/ProjectPeriodForm';
 import { ReassignmentQueue } from './components/ReassignmentQueue';
-import { ValidationSummary } from './components/ValidationSummary';
 
 type Side = ChildSlotState['side'];
 type DisplayDensity = 'COMPACT' | 'COMFORTABLE';
@@ -136,6 +135,11 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
     draft.selectedMemberKey === null
       ? undefined
       : topology.memberByKey.get(draft.selectedMemberKey);
+  const selectedMemberIssues = selectedMember === undefined
+    ? []
+    : displayedValidation.issues.filter(
+        (issue) => issue.location.memberKey === selectedMember.memberKey,
+      );
   const memberPendingExclusion =
     excludedMemberKey === null
       ? undefined
@@ -273,6 +277,13 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
       return;
     }
     setSlotAction({ parentMemberKey, side });
+  };
+
+  const handleRequestExclude = (memberKey: string): void => {
+    excludeTriggerRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setDraft(selectMember(draft, memberKey));
+    setExcludedMemberKey(memberKey);
   };
 
   const handleAttachQueuedSubtree = (memberKey: string): void => {
@@ -454,6 +465,8 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
               })
             }
             onOpenSlot={handleOpenSlot}
+            onNavigateIssue={focusIssue}
+            onRemoveMember={handleRequestExclude}
           />
 
           {topology.reassignmentQueue.length === 0 ? null : (
@@ -496,10 +509,14 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
               </div>
             </section>
           )}
-          <ValidationSummary
-            validation={displayedValidation}
-            onNavigate={focusIssue}
-          />
+          {selectedMemberIssues.length === 0 ? null : (
+            <section className="member-error-summary" aria-label="현재 회원 검증 결과" role="alert">
+              <strong>현재 회원: 수정할 항목 {selectedMemberIssues.length}개</strong>
+              <button type="button" className="text-button" onClick={() => focusIssue(selectedMemberIssues[0]!)}>
+                첫 항목으로 이동
+              </button>
+            </section>
+          )}
           {selectedMember === undefined ? (
             <section className="panel empty-state">
               <p>카드에서 회원을 선택하면 상세 입력을 편집할 수 있습니다.</p>
@@ -537,13 +554,7 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
                     '선택한 서브트리를 재배치 대기 목록으로 분리했습니다.',
                   )
                 }
-                onExclude={() => {
-                  excludeTriggerRef.current =
-                    document.activeElement instanceof HTMLElement
-                      ? document.activeElement
-                      : null;
-                  setExcludedMemberKey(selectedMember.memberKey);
-                }}
+                onExclude={() => handleRequestExclude(selectedMember.memberKey)}
               />
               <OpeningStateForm
                 member={selectedMember}

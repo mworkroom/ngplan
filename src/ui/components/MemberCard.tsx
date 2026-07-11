@@ -20,6 +20,7 @@ export interface MemberCardProps {
   readonly onSelect: (memberKey: string) => void;
   readonly onToggleCollapsed: (memberKey: string) => void;
   readonly onOpenSlot: (parentMemberKey: string, side: ChildSlotState['side']) => void;
+  readonly onRemoveChild: (memberKey: string) => void;
 }
 
 export function MemberCard({
@@ -36,6 +37,7 @@ export function MemberCard({
   onSelect,
   onToggleCollapsed,
   onOpenSlot,
+  onRemoveChild,
 }: MemberCardProps) {
   const hasError = issues.some(
     (issue) =>
@@ -70,7 +72,7 @@ export function MemberCard({
             complete ? 'status-badge--complete' : 'status-badge--incomplete'
           }`}
         >
-          {complete ? '입력 완료' : '입력 필요'}
+          {complete ? '완료' : '확인'}
         </span>
       </div>
 
@@ -88,14 +90,14 @@ export function MemberCard({
           parentName={displayName}
           childName={leftChildName}
           onOpen={() => onOpenSlot(member.memberKey, 'LEFT')}
-          onSelectChild={onSelect}
+          onRemoveChild={onRemoveChild}
         />
         <ChildSlot
           slot={rightSlot}
           parentName={displayName}
           childName={rightChildName}
           onOpen={() => onOpenSlot(member.memberKey, 'RIGHT')}
-          onSelectChild={onSelect}
+          onRemoveChild={onRemoveChild}
         />
       </div>
 

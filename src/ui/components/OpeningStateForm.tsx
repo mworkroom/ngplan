@@ -5,6 +5,7 @@ import {
   type OpeningStateField,
   type ProjectSetupIssue,
 } from '../../application/project-setup';
+import { pvpTargetForLevel } from '../../domain/constants';
 
 const OPENING_FIELDS: readonly {
   readonly field: OpeningStateField;
@@ -50,6 +51,8 @@ export function OpeningStateForm({
   issues,
   onChange,
 }: OpeningStateFormProps) {
+  const level = Number(member.level);
+  const pvpTarget = Number.isInteger(level) && level > 0 ? pvpTargetForLevel(level) : '';
   const confirmationIssue = issueFor(
     issues,
     member.memberKey,
@@ -67,6 +70,16 @@ export function OpeningStateForm({
       </div>
 
       <div className="form-grid opening-state-form__fields">
+        <div className="field">
+          <label htmlFor={memberFieldId(member.memberKey, 'pvpTarget')}>PVP 목표값</label>
+          <input
+            id={memberFieldId(member.memberKey, 'pvpTarget')}
+            value={pvpTarget}
+            readOnly
+            aria-readonly="true"
+          />
+          <p className="field-help">사업 레벨에 따라 자동 표시됩니다.</p>
+        </div>
         {OPENING_FIELDS.map(({ field, label, help }) => {
           const fieldIssue = issueFor(issues, member.memberKey, field);
           const fieldId = memberFieldId(member.memberKey, field);

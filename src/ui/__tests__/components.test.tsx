@@ -116,7 +116,7 @@ describe('project and opening forms', () => {
         onRestoreDerivedTitle={onRestore}
       />,
     );
-    fireEvent.click(screen.getByRole('button', { name: '기간 기준 제목으로 되돌리기' }));
+    fireEvent.click(screen.getByRole('button', { name: '제목 초기화' }));
     expect(onRestore).toHaveBeenCalledOnce();
   });
 
@@ -147,6 +147,8 @@ describe('project and opening forms', () => {
       />,
     );
 
+    expect((screen.getByLabelText('PVP 목표값') as HTMLInputElement).value).toBe('700');
+
     fireEvent.change(screen.getByLabelText('현재 좌 잔액'), { target: { value: '39' } });
     fireEvent.click(
       screen.getByRole('checkbox', { name: /회사 시스템의 시작값을 확인했습니다/ }),
@@ -160,7 +162,7 @@ describe('project and opening forms', () => {
 describe('tree cards and child slots', () => {
   it('operates SELF and CHILD slots with explicit labels', () => {
     const onOpen = vi.fn();
-    const onSelectChild = vi.fn();
+    const onRemoveChild = vi.fn();
     const selfSlot = {
       parentMemberKey: 'parent',
       side: 'LEFT' as const,
@@ -173,7 +175,7 @@ describe('tree cards and child slots', () => {
         parentName="부모"
         childName={null}
         onOpen={onOpen}
-        onSelectChild={onSelectChild}
+        onRemoveChild={onRemoveChild}
       />,
     );
     expect(screen.getByText('스스로')).toBeTruthy();
@@ -190,11 +192,11 @@ describe('tree cards and child slots', () => {
         parentName="부모"
         childName="자식"
         onOpen={onOpen}
-        onSelectChild={onSelectChild}
+        onRemoveChild={onRemoveChild}
       />,
     );
-    fireEvent.click(screen.getByRole('button', { name: '자식 보기' }));
-    expect(onSelectChild).toHaveBeenCalledWith('child');
+    fireEvent.click(screen.getByRole('button', { name: '자식 제외 또는 재배치' }));
+    expect(onRemoveChild).toHaveBeenCalledWith('child');
 
     rerender(
       <ChildSlot
@@ -202,11 +204,11 @@ describe('tree cards and child slots', () => {
         parentName="부모"
         childName={null}
         onOpen={onOpen}
-        onSelectChild={onSelectChild}
+        onRemoveChild={onRemoveChild}
       />,
     );
-    fireEvent.click(screen.getByRole('button', { name: '하위 회원 보기' }));
-    expect(onSelectChild).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: '하위 회원 제외 또는 재배치' }));
+    expect(onRemoveChild).toHaveBeenCalledTimes(1);
   });
 
   it('shows card completion, selection, collapse controls, and slot actions', () => {
@@ -236,9 +238,10 @@ describe('tree cards and child slots', () => {
         onSelect={onSelect}
         onToggleCollapsed={onToggle}
         onOpenSlot={onOpenSlot}
+        onRemoveChild={vi.fn()}
       />,
     );
-    expect(screen.getByText('입력 필요')).toBeTruthy();
+    expect(screen.getByText('확인')).toBeTruthy();
     expect(screen.getByLabelText('현재 보유값').textContent).toContain('PVP 0');
     expect(screen.getAllByText('스스로')).toHaveLength(2);
     const collapse = screen.getByRole('button', { name: '하위 조직 펼치기' });
@@ -266,6 +269,8 @@ describe('tree cards and child slots', () => {
       onSelectMember: vi.fn(),
       onToggleCollapsed: vi.fn(),
       onOpenSlot: vi.fn(),
+      onNavigateIssue: vi.fn(),
+      onRemoveMember: vi.fn(),
     };
     const { rerender } = render(
       <OrganizationTree draft={draft} topology={deriveTopology(draft)} {...sharedProps} />,
@@ -283,7 +288,7 @@ describe('tree cards and child slots', () => {
       <OrganizationTree draft={draft} topology={deriveTopology(draft)} {...sharedProps} />,
     );
     expect(screen.getByLabelText('좌우 조직 트리 스크롤 영역')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'right-child 보기' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'right-child 제외 또는 재배치' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '하위 조직 접기' }));
     expect(sharedProps.onToggleCollapsed).toHaveBeenCalledWith('root-tree');
   });

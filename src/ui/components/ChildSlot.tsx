@@ -15,7 +15,7 @@ export interface ChildSlotProps {
   readonly parentName: string;
   readonly childName: string | null;
   readonly onOpen: () => void;
-  readonly onSelectChild: (memberKey: string) => void;
+  readonly onRemoveChild: (memberKey: string) => void;
 }
 
 export function ChildSlot({
@@ -23,7 +23,7 @@ export function ChildSlot({
   parentName,
   childName,
   onOpen,
-  onSelectChild,
+  onRemoveChild,
 }: ChildSlotProps) {
   const sideLabel = SIDE_LABEL[slot.side];
   return (
@@ -47,14 +47,16 @@ export function ChildSlot({
       ) : (
         <button
           type="button"
-          className="child-slot__action"
+          className="child-slot__action child-slot__action--remove"
+          aria-label={`${childName ?? slot.childMemberKey ?? '하위 회원'} 제외 또는 재배치`}
+          title={`${childName ?? slot.childMemberKey ?? '하위 회원'} 제외 또는 재배치`}
           onClick={() => {
             if (slot.childMemberKey !== null) {
-              onSelectChild(slot.childMemberKey);
+              onRemoveChild(slot.childMemberKey);
             }
           }}
         >
-          {childName ?? slot.childMemberKey ?? '하위 회원'} 보기
+          −
         </button>
       )}
     </div>

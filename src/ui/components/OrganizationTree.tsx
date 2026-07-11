@@ -20,6 +20,8 @@ export interface OrganizationTreeProps {
   readonly onSelectMember: (memberKey: string) => void;
   readonly onToggleCollapsed: (memberKey: string) => void;
   readonly onOpenSlot: (parentMemberKey: string, side: Side) => void;
+  readonly onNavigateIssue: (issue: ProjectSetupIssue) => void;
+  readonly onRemoveMember: (memberKey: string) => void;
 }
 
 export function OrganizationTree({
@@ -31,7 +33,10 @@ export function OrganizationTree({
   onSelectMember,
   onToggleCollapsed,
   onOpenSlot,
+  onNavigateIssue,
+  onRemoveMember,
 }: OrganizationTreeProps) {
+  const errors = issues.filter((issue) => issue.severity === 'ERROR');
   const root =
     draft.rootMemberKey === null
       ? undefined
@@ -72,6 +77,7 @@ export function OrganizationTree({
           onSelect={onSelectMember}
           onToggleCollapsed={onToggleCollapsed}
           onOpenSlot={onOpenSlot}
+          onRemoveChild={onRemoveMember}
         />
         {hasChildren ? (
           <div id={childrenContainerId} className="tree-children" hidden={collapsed}>
@@ -106,6 +112,15 @@ export function OrganizationTree({
           활성 회원 {topology.activeMembers.length}명
         </span>
       </div>
+
+      {errors.length === 0 ? null : (
+        <div className="organization-error-bar" role="alert">
+          <span>⚠ 완료 전 확인할 항목 {errors.length}개</span>
+          <button type="button" className="text-button" onClick={() => onNavigateIssue(errors[0]!)}>
+            첫 오류로 이동
+          </button>
+        </div>
+      )}
 
       <div
         id={projectFieldId('rootMemberKey')}

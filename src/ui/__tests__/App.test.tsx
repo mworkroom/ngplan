@@ -192,7 +192,7 @@ describe('App project setup flow', () => {
     await replaceInput(user, '대상 월', '8');
     expect(inputByLabel('프로젝트 제목').value).toBe('직접 관리 제목');
     await user.click(
-      screen.getByRole('button', { name: '기간 기준 제목으로 되돌리기' }),
+      screen.getByRole('button', { name: '제목 초기화' }),
     );
     expect(inputByLabel('프로젝트 제목').value).toBe(
       '2027년 8월 하반기 직급 플랜',
@@ -243,7 +243,7 @@ describe('App project setup flow', () => {
     expectZeroOpeningDefaults();
 
     expect(within(memberCard('Root')).queryByText('스스로')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Left 보기' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Left 제외 또는 재배치' })).toBeDefined();
   });
 
   it('publishes a valid READY bundle and invalidates it on the next real edit', async () => {
@@ -270,7 +270,7 @@ describe('App project setup flow', () => {
     ).toBeNull();
   });
 
-  it('blocks invalid completion and lets summary links focus project and member fields', async () => {
+  it('blocks invalid completion and lets the compact summary focus the first error', async () => {
     const user = renderApp();
     await addRootWithKeyboard(user);
     await replaceInput(user, '프로젝트 제목', '');
@@ -281,14 +281,15 @@ describe('App project setup flow', () => {
 
     expect(screen.getByText(/설정을 완료하지 못했습니다/)).toBeDefined();
     expect(screen.getByText('EDITING · 편집 중')).toBeDefined();
+    expect(screen.getByText(/완료 전 확인할 항목 4개/)).toBeDefined();
+    expect(screen.getByLabelText('현재 회원 검증 결과')).toBeDefined();
 
+    const organizationPanel = screen.getByRole('region', { name: '조직 구조' });
     await user.click(
-      screen.getByRole('button', {
-        name: '프로젝트 제목을 입력해 주세요.',
-      }),
+      within(organizationPanel).getByRole('button', { name: '첫 오류로 이동' }),
     );
     await waitFor(() => {
-      expect(document.activeElement).toBe(inputByLabel('프로젝트 제목'));
+      expect(document.activeElement?.getAttribute('aria-invalid')).toBe('true');
     });
 
     expect(inputByLabel('회사 회원 ID').getAttribute('aria-invalid')).toBe('false');
@@ -311,11 +312,7 @@ describe('App project setup flow', () => {
     await user.click(screen.getByRole('button', { name: '서브트리 선택' }));
     expect(inputByLabel('회원 이름').value).toBe('Child');
 
-    await user.click(
-      screen.getByRole('button', {
-        name: /서브트리 Child.*조직에 다시 연결해야 합니다/,
-      }),
-    );
+    await user.click(screen.getByRole('button', { name: '첫 항목으로 이동' }));
     const queueEntry = document.getElementById('queue-member-2');
     expect(queueEntry).not.toBeNull();
     await waitFor(() => {
@@ -336,7 +333,7 @@ describe('App project setup flow', () => {
     expect(
       screen.queryByRole('heading', { name: '재배치 대기 서브트리' }),
     ).toBeNull();
-    expect(screen.getByRole('button', { name: 'Child 보기' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Child 제외 또는 재배치' })).toBeDefined();
   });
 
   it('explicitly promotes the only child when excluding a one-child member', async () => {
@@ -344,10 +341,9 @@ describe('App project setup flow', () => {
     await createNamedRoot(user);
     await addNamedChild(user, 'Root', '왼쪽', 'Middle', '1001');
     await addNamedChild(user, 'Middle', '왼쪽', 'Leaf', '1002');
-    await selectMember(user, 'Middle');
 
     const excludeButton = screen.getByRole('button', {
-      name: '현재 프로젝트에서 회원 제외',
+      name: 'Middle 제외 또는 재배치',
     });
     await user.click(excludeButton);
 
@@ -376,7 +372,7 @@ describe('App project setup flow', () => {
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).toBeNull();
     });
-    expect(screen.getByRole('button', { name: 'Leaf 보기' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Leaf 제외 또는 재배치' })).toBeDefined();
     expect(
       screen.queryByRole('button', { name: 'Middle 회원 상세 편집' }),
     ).toBeNull();
@@ -559,6 +555,6 @@ describe('App project setup flow', () => {
         name: 'Root의 왼쪽 빈 슬롯에 회원 추가 또는 서브트리 연결',
       }),
     ).toBeDefined();
-    expect(within(memberCard('B')).getByRole('button', { name: 'A 보기' })).toBeDefined();
+    expect(within(memberCard('B')).getByRole('button', { name: 'A 제외 또는 재배치' })).toBeDefined();
   });
 });

@@ -181,6 +181,22 @@ a {
   grid-column: auto;
 }
 
+.field-label__hint {
+  color: var(--color-muted);
+  font-size: 0.76rem;
+  font-weight: 500;
+}
+
+.project-title-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  gap: 8px;
+}
+
+.project-title-control .secondary-button {
+  white-space: nowrap;
+}
+
 .workspace-grid__sidebar,
 .setup-layout__sidebar {
   display: grid;
@@ -521,6 +537,36 @@ fieldset {
   overflow-wrap: anywhere;
 }
 
+.member-card .status-badge {
+  min-height: 22px;
+  padding: 2px 6px;
+  font-size: 0.68rem;
+}
+
+.organization-error-bar,
+.member-error-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 7px 10px;
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-control);
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.organization-error-bar .text-button,
+.member-error-summary .text-button {
+  min-height: 30px;
+  padding: 4px 7px;
+  color: var(--color-danger);
+  white-space: nowrap;
+}
+
 .member-card__opening {
   margin: 7px 0 0;
   color: var(--color-muted);
@@ -578,6 +624,16 @@ fieldset {
 
 .child-slot__action:hover {
   background: var(--color-accent-soft);
+}
+
+.child-slot__action--remove {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+  font-size: 1rem;
+}
+
+.child-slot__action--remove:hover {
+  background: var(--color-danger-soft);
 }
 
 .slot-action-panel {
@@ -775,6 +831,10 @@ fieldset {
   }
 
   .project-period-row .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .project-title-control {
     grid-template-columns: minmax(0, 1fr);
   }
 }

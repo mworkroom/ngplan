@@ -101,33 +101,33 @@ export function ProjectPeriodForm({
           </select>
         </div>
 
-        <div className="field field--full">
-          <label htmlFor={projectFieldId('title')}>프로젝트 제목</label>
-          <input
-            id={projectFieldId('title')}
-            value={draft.title}
-            aria-invalid={titleIssue !== undefined}
-            aria-describedby={titleIssue === undefined ? undefined : titleErrorId}
-            onChange={(event) => onTitleChange(event.currentTarget.value)}
-          />
+        <div className="field field--full project-title-field">
+          <label htmlFor={projectFieldId('title')}>
+            프로젝트 제목 <span className="field-label__hint">수정 가능</span>
+          </label>
+          <div className="project-title-control">
+            <input
+              id={projectFieldId('title')}
+              aria-label="프로젝트 제목"
+              value={draft.title}
+              aria-invalid={titleIssue !== undefined}
+              aria-describedby={titleIssue === undefined ? undefined : titleErrorId}
+              onChange={(event) => onTitleChange(event.currentTarget.value)}
+            />
+            {draft.titleSource === 'MANUAL' ? (
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={onRestoreDerivedTitle}
+              >
+                제목 초기화
+              </button>
+            ) : null}
+          </div>
           {titleIssue !== undefined ? (
             <p id={titleErrorId} className="field-error">
               {titleIssue.message}
             </p>
-          ) : null}
-          <p className="field-help">
-            {draft.titleSource === 'DERIVED'
-              ? '기간을 바꾸면 제목도 함께 갱신됩니다.'
-              : '직접 수정한 제목은 기간을 바꿔도 유지됩니다.'}
-          </p>
-          {draft.titleSource === 'MANUAL' ? (
-            <button
-              type="button"
-              className="text-button"
-              onClick={onRestoreDerivedTitle}
-            >
-              기간 기준 제목으로 되돌리기
-            </button>
           ) : null}
         </div>
       </div>
