@@ -90,13 +90,13 @@ function treeBundle(half: 'FIRST_HALF' | 'SECOND_HALF' = 'FIRST_HALF') {
 }
 
 describe('WP1 manual-plan draft and worksheet schema', () => {
-  it('P3-DRAFT-001: first half creates one date/member cell in tree preorder', () => {
+  it('P3-DRAFT-001: first half centers the root between its left and right organizations', () => {
     const setup = treeBundle();
     const schema = deriveManualPlanSchema(setup);
     const draft = createManualPlanDraft(setup);
 
     expect(schema.dates).toHaveLength(15);
-    expect(schema.members.map((item) => item.memberKey)).toEqual(['A', 'B', 'D', 'C']);
+    expect(schema.members.map((item) => item.memberKey)).toEqual(['D', 'B', 'A', 'C']);
     expect(draft.cells).toHaveLength(15 * 4);
     expect(new Set(draft.cells.map((cell) => manualPlanCellKey(cell.date, cell.memberKey))).size)
       .toBe(15 * 4);

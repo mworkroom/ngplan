@@ -175,17 +175,17 @@ describe('WP3 manual-plan workspace boundary', () => {
 
     expect(
       screen.getByRole('textbox', {
-        name: '7월 1일 (수) 1. 민지 · 동명이인 1 PVP 계획 PV',
+        name: '1 (수) 1. 민지 · 동명이인 2 PVP 계획 PV',
       }),
     ).toBeDefined();
     expect(
       screen.getByRole('textbox', {
-        name: '7월 1일 (수) 2. 민지 · 동명이인 2 PVP 계획 PV',
+        name: '1 (수) 2. 민지 · 동명이인 1 PVP 계획 PV',
       }),
     ).toBeDefined();
     expect(
       screen.getByRole('textbox', {
-        name: '7월 1일 (수) 민지 · 회원 ID 1004 PVP 계획 PV',
+        name: '1 (수) 민지 · 회원 ID 1004 PVP 계획 PV',
       }),
     ).toBeDefined();
     expect(container.textContent).not.toContain('__proto__');

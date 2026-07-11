@@ -99,38 +99,48 @@ describe('WP4 manual planning worksheet', () => {
     const headers = within(table).getAllByRole('columnheader');
     expect(headers.map((header) => header.textContent)).toEqual([
       '날짜',
-      '1. 루트목표 700 PV · ID 1000',
       '하위목표 700 PV',
-      'PVP시작 0',
-      '좌시작 0',
-      '우시작 0',
-      'PVP시작 0',
-      '좌시작 0',
-      '우시작 0',
+      '1. 루트목표 700 PV · ID 1000',
+      'PVP0',
+      '좌0',
+      '우0',
+      'PVP0',
+      '좌0',
+      '우0',
     ]);
 
-    expect(pvInput('7월 1일 (수) 1. 루트 · 회원 ID 1000 PVP 계획 PV').disabled).toBe(false);
-    expect(pvInput('7월 1일 (수) 1. 루트 · 회원 ID 1000 우 계획 PV').disabled).toBe(false);
+    expect(pvInput('1 (수) 1. 루트 · 회원 ID 1000 PVP 계획 PV').disabled).toBe(false);
+    expect(pvInput('1 (수) 1. 루트 · 회원 ID 1000 우 계획 PV').disabled).toBe(false);
     expect(
       screen.queryByRole('textbox', {
-        name: '7월 1일 (수) 1. 루트 · 회원 ID 1000 좌 계획 PV',
+        name: '1 (수) 1. 루트 · 회원 ID 1000 좌 계획 PV',
       }),
     ).toBeNull();
     expect(
-      screen.getByLabelText('7월 1일 (수) 1. 루트 · 회원 ID 1000 좌 조직 합계 0 PV'),
+      screen.getByLabelText('1 (수) 1. 루트 · 회원 ID 1000 좌 조직 합계 0 PV'),
     ).toBeDefined();
 
-    expect(screen.getAllByText('일요일 · 정산 제외')).toHaveLength(2);
+    expect(screen.queryByText('일요일 · 정산 제외')).toBeNull();
     expect(
       screen.queryByRole('textbox', {
-        name: '7월 5일 (일) 하위 PVP 계획 PV',
+        name: '5 (일) 하위 PVP 계획 PV',
       }),
     ).toBeNull();
-    expect(screen.getAllByLabelText(/7월 5일 \(일\).*정산 제외 0/)).toHaveLength(6);
+    expect(screen.getAllByLabelText(/5 \(일\).*정산 제외 0/)).toHaveLength(6);
     expect(document.querySelectorAll('.manual-plan-scroll')).toHaveLength(1);
     expect(document.querySelectorAll('.manual-plan-table thead tr')).toHaveLength(2);
+    expect(within(table).getByText('하위').closest('th')?.className).toContain(
+      'manual-plan-table__member-heading--left',
+    );
+    expect(within(table).getByText('1. 루트').closest('th')?.className).toContain(
+      'manual-plan-table__member-heading--root',
+    );
+    expect(HTMLElement.prototype.scrollIntoView).toHaveBeenCalledWith({
+      block: 'nearest',
+      inline: 'center',
+    });
 
-    const input = pvInput('7월 1일 (수) 하위 PVP 계획 PV');
+    const input = pvInput('1 (수) 하위 PVP 계획 PV');
     const parent = input.closest('td');
     expect(parent?.getAttribute('headers')).toContain('manual-plan-date-');
     expect(parent?.getAttribute('headers')).toContain('manual-plan-member-');
@@ -139,15 +149,15 @@ describe('WP4 manual planning worksheet', () => {
 
   it('P3-UI-001 updates ancestors, removes stale results, and focuses the exact first error', async () => {
     const { user } = renderWorkspace();
-    const pvp = pvInput('7월 1일 (수) 하위 PVP 계획 PV');
-    const left = pvInput('7월 1일 (수) 하위 좌 계획 PV');
-    const right = pvInput('7월 1일 (수) 하위 우 계획 PV');
+    const pvp = pvInput('1 (수) 하위 PVP 계획 PV');
+    const left = pvInput('1 (수) 하위 좌 계획 PV');
+    const right = pvInput('1 (수) 하위 우 계획 PV');
     await user.type(pvp, '100');
     await user.type(left, '200');
     await user.type(right, '300');
 
     expect(
-      screen.getByLabelText('7월 1일 (수) 1. 루트 · 회원 ID 1000 좌 조직 합계 600 PV'),
+      screen.getByLabelText('1 (수) 1. 루트 · 회원 ID 1000 좌 조직 합계 600 PV'),
     ).toBeDefined();
 
     await user.clear(pvp);
@@ -157,11 +167,11 @@ describe('WP4 manual planning worksheet', () => {
     expect(screen.getByRole('heading', { name: '선택한 입력 확인' })).toBeDefined();
     expect(
       screen.getByLabelText(
-        '7월 1일 (수) 1. 루트 · 회원 ID 1000 좌 조직 합계 현재 결과 없음',
+        '1 (수) 1. 루트 · 회원 ID 1000 좌 조직 합계 현재 결과 없음',
       ),
     ).toBeDefined();
     expect(
-      screen.queryByLabelText('7월 1일 (수) 1. 루트 · 회원 ID 1000 좌 조직 합계 600 PV'),
+      screen.queryByLabelText('1 (수) 1. 루트 · 회원 ID 1000 좌 조직 합계 600 PV'),
     ).toBeNull();
     expect(
       screen.getByText('잘못 입력한 값을 고치면 오늘 결과가 다시 나타납니다.'),
@@ -179,33 +189,37 @@ describe('WP4 manual planning worksheet', () => {
     expect(screen.getByText('✓ 계산 완료')).toBeDefined();
     expect(screen.queryByRole('heading', { name: '선택한 입력 확인' })).toBeNull();
     expect(
-      screen.getByLabelText('7월 1일 (수) 1. 루트 · 회원 ID 1000 좌 조직 합계 501 PV'),
+      screen.getByLabelText('1 (수) 1. 루트 · 회원 ID 1000 좌 조직 합계 501 PV'),
     ).toBeDefined();
   });
 
   it('P3-GRID-003 moves Enter vertically and skips Sunday in both directions', async () => {
     const { user } = renderWorkspace();
-    const firstPvp = pvInput('7월 1일 (수) 1. 루트 · 회원 ID 1000 PVP 계획 PV');
-    const rootRight = pvInput('7월 1일 (수) 1. 루트 · 회원 ID 1000 우 계획 PV');
-    const childPvp = pvInput('7월 1일 (수) 하위 PVP 계획 PV');
-    firstPvp.focus();
+    const childPvp = pvInput('1 (수) 하위 PVP 계획 PV');
+    const childLeft = pvInput('1 (수) 하위 좌 계획 PV');
+    const childRight = pvInput('1 (수) 하위 우 계획 PV');
+    const firstPvp = pvInput('1 (수) 1. 루트 · 회원 ID 1000 PVP 계획 PV');
+    const rootRight = pvInput('1 (수) 1. 루트 · 회원 ID 1000 우 계획 PV');
+    childPvp.focus();
     await user.tab();
-    expect(document.activeElement).toBe(rootRight);
+    expect(document.activeElement).toBe(childLeft);
     await user.tab();
-    expect(document.activeElement).toBe(childPvp);
-    await user.tab({ shift: true });
+    expect(document.activeElement).toBe(childRight);
+    await user.tab();
+    expect(document.activeElement).toBe(firstPvp);
+    await user.tab();
     expect(document.activeElement).toBe(rootRight);
 
-    const julyEleven = pvInput('7월 11일 (토) 하위 PVP 계획 PV');
+    const julyEleven = pvInput('11 (토) 하위 PVP 계획 PV');
     julyEleven.focus();
     await user.keyboard('{Enter}');
     expect(document.activeElement).toBe(
-      pvInput('7월 13일 (월) 하위 PVP 계획 PV'),
+      pvInput('13 (월) 하위 PVP 계획 PV'),
     );
     await user.keyboard('{Shift>}{Enter}{/Shift}');
     expect(document.activeElement).toBe(julyEleven);
 
-    const julyOne = pvInput('7월 1일 (수) 하위 PVP 계획 PV');
+    const julyOne = pvInput('1 (수) 하위 PVP 계획 PV');
     julyOne.focus();
     await user.keyboard('{ArrowLeft}');
     expect(document.activeElement).toBe(julyOne);
@@ -216,11 +230,11 @@ describe('WP4 manual planning worksheet', () => {
     await user.selectOptions(screen.getByLabelText('회원으로 이동'), 'child');
     await waitFor(() => {
       expect(document.activeElement).toBe(
-        pvInput('7월 1일 (수) 하위 PVP 계획 PV'),
+        pvInput('1 (수) 하위 PVP 계획 PV'),
       );
     });
     expect(HTMLElement.prototype.scrollIntoView).toHaveBeenCalled();
-    expect(screen.getByText('선택: 7월 1일 (수) · 하위')).toBeDefined();
+    expect(screen.getByText('선택: 1 (수) · 하위')).toBeDefined();
   });
 
   it('selects and focuses a locked Sunday audit context using only the keyboard', async () => {
@@ -230,9 +244,9 @@ describe('WP4 manual planning worksheet', () => {
     await user.selectOptions(dateSelect, '2026-07-05');
 
     await waitFor(() => {
-      expect(document.activeElement?.textContent).toContain('7월 5일 (일)');
+      expect(document.activeElement?.textContent).toContain('5 (일)');
     });
-    expect(screen.getByText('선택: 7월 5일 (일) · 1. 루트 · 회원 ID 1000')).toBeDefined();
+    expect(screen.getByText('선택: 5 (일) · 하위')).toBeDefined();
     expect(screen.getAllByText('정산 제외').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('정산 제외 · 커미션 없음')).toBeDefined();
   });
@@ -240,7 +254,7 @@ describe('WP4 manual planning worksheet', () => {
   it('requires explicit discard after an edit, preserves on cancel, and confirms removal', async () => {
     const onReturnToSetup = vi.fn();
     const { user } = renderWorkspace(onReturnToSetup);
-    const input = pvInput('7월 1일 (수) 하위 PVP 계획 PV');
+    const input = pvInput('1 (수) 하위 PVP 계획 PV');
     await user.type(input, '1');
     const back = screen.getByRole('button', { name: '설정으로 돌아가기' });
     await user.click(back);
@@ -267,7 +281,7 @@ describe('WP4 manual planning worksheet', () => {
     const { user } = renderWorkspace(vi.fn(), [warning]);
     expect(screen.getByText('설정에서 확인한 동명이인 안내')).toBeDefined();
 
-    const input = pvInput('7월 1일 (수) 하위 PVP 계획 PV');
+    const input = pvInput('1 (수) 하위 PVP 계획 PV');
     await user.type(input, 'bad');
     expect(screen.getByText('입력 확인 필요 1개 · 안내 1개')).toBeDefined();
     expect(screen.getByText('설정에서 확인한 동명이인 안내')).toBeDefined();

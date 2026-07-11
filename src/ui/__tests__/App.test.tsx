@@ -190,7 +190,7 @@ describe('App project setup flow', () => {
       'SECOND_HALF',
     );
     await replaceInput(user, '연도', '2027');
-    expect(inputByLabel('프로젝트명').value).toContain('2027년');
+    expect(inputByLabel('프로젝트명').value).toBe('202707B');
     await replaceInput(user, '프로젝트명', '직접 관리 제목');
     await replaceInput(user, '월', '8');
     expect(inputByLabel('프로젝트명').value).toBe('직접 관리 제목');
@@ -198,7 +198,7 @@ describe('App project setup flow', () => {
       screen.getByRole('button', { name: '제목 초기화' }),
     );
     expect(inputByLabel('프로젝트명').value).toBe(
-      '2027년 8월 하반기 수당 계획',
+      '202708B',
     );
 
     await createNamedRoot(user, 'Root', '1000');
@@ -217,7 +217,7 @@ describe('App project setup flow', () => {
     expect(inputByLabel('연도').value).toBe('2026');
     expect(inputByLabel('월').value).toBe('7');
     expect(inputByLabel('프로젝트명').value).toBe(
-      '2026년 7월 상반기 수당 계획',
+      '202607A',
     );
 
     await addRootWithKeyboard(user);

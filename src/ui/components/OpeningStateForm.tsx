@@ -76,11 +76,6 @@ export function OpeningStateForm({
             id={memberFieldId(member.memberKey, 'pvpTarget')}
             value={member.pvpTarget}
             aria-invalid={pvpTargetIssue !== undefined}
-            aria-describedby={
-              pvpTargetIssue === undefined
-                ? undefined
-                : `${memberFieldId(member.memberKey, 'pvpTarget')}-error`
-            }
             onChange={(event) => onPvpTargetChange(event.currentTarget.value)}
           >
             <option value="">선택해 주세요</option>
@@ -88,14 +83,6 @@ export function OpeningStateForm({
             <option value="1500">1,500 PV</option>
             <option value="700">700 PV</option>
           </select>
-          {pvpTargetIssue === undefined ? null : (
-            <p
-              id={`${memberFieldId(member.memberKey, 'pvpTarget')}-error`}
-              className="field-error"
-            >
-              {pvpTargetIssue.message}
-            </p>
-          )}
         </div>
         {OPENING_FIELDS.map(({ field, label, help }) => {
           const fieldIssue = issueFor(issues, member.memberKey, field);
@@ -131,9 +118,6 @@ export function OpeningStateForm({
           type="checkbox"
           checked={member.openingState.openingStateConfirmed}
           aria-invalid={confirmationIssue !== undefined}
-          aria-describedby={
-            confirmationIssue === undefined ? undefined : `${confirmationId}-error`
-          }
           onChange={(event) =>
             onChange({ openingStateConfirmed: event.currentTarget.checked })
           }
@@ -142,11 +126,6 @@ export function OpeningStateForm({
           <strong>시작값이 맞게 입력되었으면 확인 버튼을 클릭해주세요.</strong>
         </span>
       </label>
-      {confirmationIssue !== undefined ? (
-        <p id={`${confirmationId}-error`} className="field-error">
-          {confirmationIssue.message}
-        </p>
-      ) : null}
     </section>
   );
 }

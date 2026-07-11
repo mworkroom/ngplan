@@ -454,10 +454,10 @@ describe('WP5 pure result view models', () => {
     ]);
     const { schema, result } = currentResult(setup);
     expect(deriveAllManualPlanMemberSummaryRows(result, schema)?.map((row) => row.memberKey))
-      .toEqual(['__proto__', 'child']);
+      .toEqual(['child', '__proto__']);
     expect(deriveManualPlanMemberJumpOptions(schema).map((option) => option.label)).toEqual([
-      '특수 회원',
       'child',
+      '특수 회원',
     ]);
     expect(deriveManualPlanWorksheetCellView(result, '2099-01-01', '__proto__')).toBeNull();
     expect(deriveManualPlanDailyAuditView(result, schema, '2026-07-01', 'missing')).toBeNull();
@@ -494,7 +494,7 @@ describe('WP5 pure result view models', () => {
     ];
     const items = deriveManualPlanValidationSummaryItems(issues, schema);
     expect(items[0]).toMatchObject({
-      contextLabel: '7월 1일 (수) · A · 좌',
+      contextLabel: '1 (수) · A · 좌',
       targetId: expect.stringContaining('manual-plan-field-'),
     });
     expect(items[1]).toMatchObject({

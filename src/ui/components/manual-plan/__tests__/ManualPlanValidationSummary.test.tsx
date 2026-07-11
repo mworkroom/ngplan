@@ -157,7 +157,7 @@ describe('WP6 manual-plan validation and focus', () => {
     );
 
     await user.click(
-      screen.getByRole('button', { name: '7월 1일 (수) · 루트 · 좌 문제 위치로 이동' }),
+      screen.getByRole('button', { name: '1 (수) · 루트 · 좌 문제 위치로 이동' }),
     );
     expect(document.activeElement?.id).toBe(manualPlanCellDomId(date, 'root'));
     await user.click(

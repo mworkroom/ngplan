@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
   deriveManualPlanMemberJumpOptions,
   deriveManualPlanWorksheetCellView,
@@ -15,7 +15,11 @@ import {
   type ManualPlanMemberDescriptor,
   type ManualPlanSchema,
 } from '../../../application/manual-plan';
-import { ManualPlanCell, type ManualPlanCellMode } from './ManualPlanCell';
+import {
+  ManualPlanCell,
+  type ManualPlanCellMode,
+  type ManualPlanMemberRegion,
+} from './ManualPlanCell';
 import {
   markedMemberName,
   sheetMarkerClassName,
@@ -113,6 +117,15 @@ export function ManualPlanTable({
     () => deriveManualPlanMemberJumpOptions(schema),
     [schema],
   );
+  const rootMemberIndex = schema.members.findIndex(
+    (member) => member.memberKey === schema.rootMemberKey,
+  );
+  const memberRegion = (memberIndex: number): ManualPlanMemberRegion =>
+    memberIndex < rootMemberIndex
+      ? 'LEFT'
+      : memberIndex === rootMemberIndex
+        ? 'ROOT'
+        : 'RIGHT';
   const cellByKey = useMemo(
     () =>
       new Map(
@@ -120,6 +133,13 @@ export function ManualPlanTable({
       ),
     [draft],
   );
+
+  useEffect(() => {
+    document.getElementById(manualPlanMemberGroupDomId(schema.rootMemberKey))?.scrollIntoView?.({
+      block: 'nearest',
+      inline: 'center',
+    });
+  }, [schema.rootMemberKey]);
 
   const focusMember = (memberKey: string): void => {
     const date = firstEditableDate;
@@ -129,7 +149,7 @@ export function ManualPlanTable({
     onSelect({ date: date.date, memberKey });
     document.getElementById(manualPlanMemberGroupDomId(memberKey))?.scrollIntoView?.({
       block: 'nearest',
-      inline: 'start',
+      inline: 'center',
     });
     window.setTimeout(() => {
       document.getElementById(manualPlanFieldDomId(date.date, memberKey, 'pvp'))?.focus();
@@ -199,7 +219,6 @@ export function ManualPlanTable({
               {schema.dates.map((date) => (
                 <option key={date.date} value={date.date}>
                   {date.displayLabel}
-                  {date.settlementMode === 'SKIP_NO_INPUT' ? ' · 정산 제외' : ''}
                 </option>
               ))}
             </select>
@@ -227,10 +246,10 @@ export function ManualPlanTable({
               <th className="manual-plan-table__date-heading" scope="col" rowSpan={2}>
                 날짜
               </th>
-              {schema.members.map((member) => (
+              {schema.members.map((member, memberIndex) => (
                 <th
                   id={manualPlanMemberGroupDomId(member.memberKey)}
-                  className={`manual-plan-table__member-heading ${sheetMarkerClassName(member.sheetMarker)}`}
+                  className={`manual-plan-table__member-heading manual-plan-table__member-heading--${memberRegion(memberIndex).toLowerCase()} ${sheetMarkerClassName(member.sheetMarker)}`}
                   key={member.memberKey}
                   scope="colgroup"
                   colSpan={3}
@@ -246,7 +265,7 @@ export function ManualPlanTable({
               ))}
             </tr>
             <tr>
-              {schema.members.flatMap((member) =>
+              {schema.members.flatMap((member, memberIndex) =>
                 FIELD_DEFINITIONS.map(({ field, label }) => {
                   const openingValue =
                     field === 'pvp'
@@ -257,11 +276,12 @@ export function ManualPlanTable({
                   return (
                   <th
                     id={manualPlanColumnHeaderDomId(member.memberKey, field)}
+                    className={`manual-plan-table__column-heading--${memberRegion(memberIndex).toLowerCase()}`}
                     key={`${member.memberKey}-${field}`}
                     scope="col"
                   >
                     <span>{label}</span>
-                    <small>시작 {openingValue.toLocaleString('ko-KR')}</small>
+                    <small>{openingValue.toLocaleString('ko-KR')}</small>
                   </th>
                   );
                 }),
@@ -285,11 +305,8 @@ export function ManualPlanTable({
                   tabIndex={-1}
                 >
                   <span>{date.displayLabel}</span>
-                  {date.settlementMode === 'SKIP_NO_INPUT' ? (
-                    <small>일요일 · 정산 제외</small>
-                  ) : null}
                 </th>
-                {schema.members.flatMap((member) => {
+                {schema.members.flatMap((member, memberIndex) => {
                   const cell =
                     cellByKey.get(manualPlanCellKey(date.date, member.memberKey)) ??
                     draftCell(schema, draft, date.date, member.memberKey);
@@ -327,6 +344,7 @@ export function ManualPlanTable({
                         selected={selected}
                         issue={issueFor(issues, date.date, member.memberKey, field)}
                         anchorCell={fieldIndex === 0}
+                        memberRegion={memberRegion(memberIndex)}
                         onChange={(value) => onEdit(date.date, member.memberKey, field, value)}
                         onSelect={() => onSelect({ date: date.date, memberKey: member.memberKey })}
                         onNavigateVertical={(direction) =>

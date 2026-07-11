@@ -35,8 +35,6 @@ export function ProjectPeriodForm({
   const yearIssue = issueFor(issues, 'period.year');
   const monthIssue = issueFor(issues, 'period.month');
   const titleIssue = issueFor(issues, 'title');
-  const yearErrorId = `${projectFieldId('period.year')}-error`;
-  const monthErrorId = `${projectFieldId('period.month')}-error`;
   const titleErrorId = `${projectFieldId('title')}-error`;
 
   return (
@@ -56,16 +54,11 @@ export function ProjectPeriodForm({
           <input
             id={projectFieldId('period.year')}
             inputMode="numeric"
+            placeholder="예: 2026"
             value={draft.year}
             aria-invalid={yearIssue !== undefined}
-            aria-describedby={yearIssue === undefined ? undefined : yearErrorId}
             onChange={(event) => onPeriodChange({ year: event.currentTarget.value })}
           />
-          {yearIssue !== undefined ? (
-            <p id={yearErrorId} className="field-error">
-              {yearIssue.message}
-            </p>
-          ) : null}
         </div>
 
         <div className="field">
@@ -73,16 +66,11 @@ export function ProjectPeriodForm({
           <input
             id={projectFieldId('period.month')}
             inputMode="numeric"
+            placeholder="1~12"
             value={draft.month}
             aria-invalid={monthIssue !== undefined}
-            aria-describedby={monthIssue === undefined ? undefined : monthErrorId}
             onChange={(event) => onPeriodChange({ month: event.currentTarget.value })}
           />
-          {monthIssue !== undefined ? (
-            <p id={monthErrorId} className="field-error">
-              {monthIssue.message}
-            </p>
-          ) : null}
         </div>
 
         <div className="field field--full">

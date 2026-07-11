@@ -70,7 +70,7 @@ function issue(
 }
 
 describe('project and opening forms', () => {
-  it('edits period/title and restores a derived title while linking field errors', () => {
+  it('edits period/title, shows compact hints, and restores a derived title', () => {
     const draft = createProjectDraft({
       year: 2026,
       month: 7,
@@ -106,7 +106,11 @@ describe('project and opening forms', () => {
     expect(onPeriodChange).toHaveBeenCalledWith({ month: '8' });
     expect(onPeriodChange).toHaveBeenCalledWith({ half: 'SECOND_HALF' });
     expect(onTitleChange).toHaveBeenCalledWith('직접 제목');
-    expect(screen.getByText('period.year 문제')).toBeTruthy();
+    expect(screen.queryByText('period.year 문제')).toBeNull();
+    expect(screen.queryByText('period.month 문제')).toBeNull();
+    expect(screen.getByPlaceholderText('예: 2026')).toBeTruthy();
+    expect(screen.getByPlaceholderText('1~12')).toBeTruthy();
+    expect(screen.getByLabelText('연도').getAttribute('aria-invalid')).toBe('true');
 
     rerender(
       <ProjectPeriodForm

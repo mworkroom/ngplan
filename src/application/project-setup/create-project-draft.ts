@@ -41,8 +41,8 @@ export function deriveDefaultProjectTitle(
   month: string,
   half: Half,
 ): string {
-  const halfLabel = half === 'FIRST_HALF' ? '상반기' : '하반기';
-  return `${year}년 ${month}월 ${halfLabel} 수당 계획`;
+  const halfCode = half === 'FIRST_HALF' ? 'A' : 'B';
+  return `${year}${month.padStart(2, '0')}${halfCode}`;
 }
 
 export function createProjectDraft(input: CreateProjectDraftInput): ProjectSetupDraft {

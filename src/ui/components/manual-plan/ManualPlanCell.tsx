@@ -7,6 +7,7 @@ import {
 } from '../../../application/manual-plan';
 
 export type ManualPlanCellMode = 'EDITABLE' | 'CONNECTED' | 'SKIPPED';
+export type ManualPlanMemberRegion = 'LEFT' | 'ROOT' | 'RIGHT';
 
 export interface ManualPlanCellProps {
   readonly date: string;
@@ -23,6 +24,7 @@ export interface ManualPlanCellProps {
   readonly selected: boolean;
   readonly issue: ManualPlanIssue | undefined;
   readonly anchorCell: boolean;
+  readonly memberRegion: ManualPlanMemberRegion;
   readonly onChange: (value: string) => void;
   readonly onSelect: () => void;
   readonly onNavigateVertical: (direction: -1 | 1) => void;
@@ -45,6 +47,7 @@ export function ManualPlanCell({
   selected,
   issue,
   anchorCell,
+  memberRegion,
   onChange,
   onSelect,
   onNavigateVertical,
@@ -54,6 +57,7 @@ export function ManualPlanCell({
   const className = [
     'manual-plan-cell',
     `manual-plan-cell--${mode.toLowerCase()}`,
+    `manual-plan-cell--member-${memberRegion.toLowerCase()}`,
     selected ? 'manual-plan-cell--selected' : '',
     issue === undefined ? '' : 'manual-plan-cell--error',
   ]
@@ -100,7 +104,6 @@ export function ManualPlanCell({
       ) : mode === 'SKIPPED' ? (
         <span className="manual-plan-cell__locked" aria-label={`${accessibleContext} 정산 제외 0`}>
           <span aria-hidden="true">0</span>
-          <small>정산 제외</small>
         </span>
       ) : (
         <span
@@ -116,7 +119,6 @@ export function ManualPlanCell({
               ? '—'
               : PV_FORMATTER.format(connectedValue)}
           </span>
-          <small>{calculationBlocked ? '현재 결과 없음' : '조직 합계'}</small>
         </span>
       )}
     </td>

@@ -249,8 +249,8 @@ describe('WP5 daily and fortnight result presentation', () => {
 
     const overview = screen.getByRole('table');
     expect(within(overview).getAllByRole('rowheader').map((cell) => cell.textContent)).toEqual([
-      'A',
       'B',
+      'A',
       'C',
     ]);
   });

@@ -95,7 +95,8 @@ describe('WP7 manual-plan engineering scale smoke', () => {
       expect(schema.period.endDate).toBe('2026-07-31');
       expect(schema.dates).toHaveLength(DATE_COUNT);
       expect(schema.members).toHaveLength(MEMBER_COUNT);
-      expect(schema.members[0]?.memberKey).toBe('member-1');
+      expect(schema.members[0]?.memberKey).toBe('member-16');
+      expect(schema.members[15]?.memberKey).toBe('member-1');
       expect(draft.cells).toHaveLength(DRAFT_CELL_COUNT);
 
       const directFieldSlotCount = draft.cells.reduce(

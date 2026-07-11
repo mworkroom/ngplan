@@ -58,7 +58,7 @@ function createDateDescriptor(date: string): ManualPlanDateDescriptor {
 
   return Object.freeze({
     date,
-    displayLabel: `${month}월 ${day}일 (${weekday})`,
+    displayLabel: `${day} (${weekday})`,
     weekdayLabel: weekday,
     settlementMode: settlementModeForDate(date as IsoDate),
   });
@@ -74,25 +74,28 @@ function findRoot(members: readonly MemberSnapshot[]): MemberSnapshot {
   return roots[0]!;
 }
 
-function preorderMembers(members: readonly MemberSnapshot[]): readonly MemberSnapshot[] {
+function centeredMembers(members: readonly MemberSnapshot[]): readonly MemberSnapshot[] {
   const root = findRoot(members);
   const organization = buildOrganizationIndex(members);
+  const rootChildren = organization.childrenByMemberKey.get(root.memberKey)!;
   const ordered: MemberSnapshot[] = [];
-  const stack = [root.memberKey];
 
-  while (stack.length > 0) {
-    const memberKey = stack.pop()!;
-    const member = organization.membersByKey.get(memberKey)!;
-    ordered.push(member);
-
+  const appendPostorder = (memberKey: string): void => {
     const children = organization.childrenByMemberKey.get(memberKey)!;
-    if (children.right !== null) {
-      stack.push(children.right);
-    }
-    if (children.left !== null) {
-      stack.push(children.left);
-    }
-  }
+    if (children.left !== null) appendPostorder(children.left);
+    if (children.right !== null) appendPostorder(children.right);
+    ordered.push(organization.membersByKey.get(memberKey)!);
+  };
+  const appendPreorder = (memberKey: string): void => {
+    ordered.push(organization.membersByKey.get(memberKey)!);
+    const children = organization.childrenByMemberKey.get(memberKey)!;
+    if (children.left !== null) appendPreorder(children.left);
+    if (children.right !== null) appendPreorder(children.right);
+  };
+
+  if (rootChildren.left !== null) appendPostorder(rootChildren.left);
+  ordered.push(root);
+  if (rootChildren.right !== null) appendPreorder(rootChildren.right);
 
   if (ordered.length !== members.length) {
     throw new Error('모든 회원을 맨 위 회원부터 이어지는 조직 그림에 연결해 주세요.');
@@ -181,7 +184,8 @@ export function deriveManualPlanSchema(bundle: ProjectSetupBundle): ManualPlanSc
     ...derivedPeriod,
     dates: Object.freeze([...derivedPeriod.dates]),
   });
-  const orderedMembers = preorderMembers(bundle.organization.members);
+  const orderedMembers = centeredMembers(bundle.organization.members);
+  const rootMemberKey = findRoot(bundle.organization.members).memberKey;
   const members = Object.freeze(createMemberDescriptors(bundle, orderedMembers));
   const dates = Object.freeze(period.dates.map(createDateDescriptor));
   const memberByKey = new Map(members.map((member) => [member.memberKey, member] as const));
@@ -197,7 +201,7 @@ export function deriveManualPlanSchema(bundle: ProjectSetupBundle): ManualPlanSc
 
   return Object.freeze({
     period,
-    rootMemberKey: orderedMembers[0]!.memberKey,
+    rootMemberKey,
     dates,
     members,
     memberByKey: Object.freeze(memberByKey),

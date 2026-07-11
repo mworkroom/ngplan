@@ -77,6 +77,7 @@ export function MemberForm({
   ) => {
     const fieldId = memberFieldId(member.memberKey, field);
     const errorId = `${fieldId}-error`;
+    const showMessage = field !== 'name' && issue !== undefined;
     return (
       <div className="field">
         <label htmlFor={fieldId}>{label}</label>
@@ -84,9 +85,10 @@ export function MemberForm({
           id={fieldId}
           inputMode={field === 'memberId' ? 'numeric' : undefined}
           pattern={field === 'memberId' ? '[0-9]*' : undefined}
+          placeholder={field === 'name' ? '이름' : undefined}
           value={member[field]}
           aria-invalid={issue !== undefined}
-          aria-describedby={issue === undefined ? undefined : errorId}
+          aria-describedby={showMessage ? errorId : undefined}
           onChange={(event) =>
             onIdentityChange({
               [field]:
@@ -96,7 +98,7 @@ export function MemberForm({
             })
           }
         />
-        {issue === undefined ? null : (
+        {!showMessage ? null : (
           <p id={errorId} className="field-error">
             {issue.message}
           </p>

@@ -173,8 +173,21 @@ a {
 }
 
 .project-period-row .form-grid {
-  grid-template-columns: minmax(110px, 0.45fr) minmax(90px, 0.35fr) minmax(180px, 0.7fr) minmax(280px, 1.5fr);
-  align-items: start;
+  grid-template-columns: minmax(190px, 0.45fr) minmax(150px, 0.35fr) minmax(230px, 0.55fr) minmax(360px, 1.5fr);
+  align-items: center;
+}
+
+.project-period-row .field {
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
+}
+
+.project-period-row .field > label {
+  white-space: nowrap;
+}
+
+.project-period-row .project-title-control {
+  min-width: 0;
 }
 
 .project-period-row .field--full {
@@ -883,6 +896,10 @@ fieldset {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .project-period-row .field {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .project-title-control {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -1089,6 +1106,32 @@ fieldset {
 
 .manual-plan-table__member-heading {
   border-left: 2px solid #c9d2dc;
+  border-right: 2px solid #c9d2dc;
+}
+
+.manual-plan-table thead tr:nth-child(2) th:nth-child(3n + 1),
+.manual-plan-table tbody td:nth-child(3n + 2) {
+  border-left: 2px solid #c9d2dc;
+}
+
+.manual-plan-table thead tr:nth-child(2) th:nth-child(3n),
+.manual-plan-table tbody td:nth-child(3n + 1) {
+  border-right: 2px solid #c9d2dc;
+}
+
+.manual-plan-table__column-heading--left,
+.manual-plan-cell--member-left {
+  background: #f8fbff;
+}
+
+.manual-plan-table__column-heading--right,
+.manual-plan-cell--member-right {
+  background: #fffaf5;
+}
+
+.manual-plan-table__column-heading--root,
+.manual-plan-cell--member-root {
+  background: #f8fafc;
 }
 
 .manual-plan-table__skipped-row > * {
