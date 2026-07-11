@@ -111,9 +111,8 @@ export function MemberForm({
         <div className="panel__header">
           <div>
             <h2 id="member-form-title" className="panel__title">
-              회원 상세
+              회원 정보 입력
             </h2>
-            <p className="panel__description">이 회원의 정보를 입력해 주세요.</p>
           </div>
           <span className="status-badge">{isRoot ? '최상위 회원' : '등록된 회원'}</span>
         </div>
@@ -152,7 +151,7 @@ export function MemberForm({
           <div className="form-grid">
             <div className="field">
               <label htmlFor={memberFieldId(member.memberKey, 'parentMemberKey')}>
-                새로 연결할 위 회원
+                상위 회원 선택
               </label>
               <select
                 id={memberFieldId(member.memberKey, 'parentMemberKey')}
@@ -173,7 +172,7 @@ export function MemberForm({
             </div>
             <div className="field">
               <label htmlFor={memberFieldId(member.memberKey, 'sideAtParent')}>
-                어느 쪽에 놓을까요?
+                위치 선택
               </label>
               <select
                 id={memberFieldId(member.memberKey, 'sideAtParent')}
@@ -204,10 +203,10 @@ export function MemberForm({
                 }
               }}
             >
-              선택한 자리로 옮기기
+              이동
             </button>
             <button type="button" className="text-button" onClick={onDetach}>
-              현재 위치에서 빼기
+              보관함에 넣기
             </button>
           </div>
         </fieldset>
