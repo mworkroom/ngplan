@@ -147,7 +147,7 @@ a {
 .workspace-grid,
 .setup-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 25%);
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 23%);
   align-items: start;
   gap: 16px;
 }
@@ -843,7 +843,7 @@ fieldset {
 @media (max-width: 1180px) {
   .workspace-grid,
   .setup-layout {
-    grid-template-columns: minmax(0, 1fr) minmax(320px, 34%);
+    grid-template-columns: minmax(0, 1fr) minmax(240px, 28%);
   }
 
   .project-period-row .form-grid {

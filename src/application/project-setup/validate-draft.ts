@@ -215,6 +215,7 @@ function validateMember(
         pvpTarget.code,
         'ERROR',
         { ...location, field: 'pvpTarget' },
+        '이번 기간 PVP 목표를 선택해 주세요.',
       ),
     );
   }
@@ -267,6 +268,7 @@ function validateMember(
         'MEMBER_OPENING_STATE_UNCONFIRMED',
         'ERROR',
         { ...location, field: 'openingStateConfirmed' },
+        '시작값이 맞는지 확인해 주세요.',
       ),
     );
   }

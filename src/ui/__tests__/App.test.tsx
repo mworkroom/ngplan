@@ -284,7 +284,7 @@ describe('App project setup flow', () => {
 
     expect(screen.getByText(/설정을 완료하지 못했습니다/)).toBeDefined();
     expect(screen.getAllByText('입력 중').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText(/입력해야 할 항목이 4개 있습니다/)).toBeDefined();
+    expect(screen.getByText(/미입력 항목이 4개 있습니다/)).toBeDefined();
     expect(screen.getByLabelText('현재 회원 입력 확인 결과')).toBeDefined();
 
     const organizationPanel = screen.getByRole('region', { name: '조직 구조' });
@@ -445,7 +445,7 @@ describe('App project setup flow', () => {
       screen.getByRole('button', { name: '명단에서 빼기' }),
     );
 
-    expect(screen.getByText('맨 위에 놓을 회원 카드를 먼저 만들어 주세요.')).toBeDefined();
+    expect(screen.getByText('맨 위에 놓을 회원 카드를 만들어 주세요.')).toBeDefined();
     expect(screen.getByText('2개 대기')).toBeDefined();
     const setRootButtons = screen.getAllByRole('button', {
       name: '맨 위 회원으로 정하기',
@@ -489,7 +489,7 @@ describe('App project setup flow', () => {
     expect(
       screen.queryByRole('button', { name: 'Legacy 회원 상세 편집' }),
     ).toBeNull();
-    expect(screen.getByText('맨 위에 놓을 회원 카드를 먼저 만들어 주세요.')).toBeDefined();
+    expect(screen.getByText('맨 위에 놓을 회원 카드를 만들어 주세요.')).toBeDefined();
     expect(
       screen.getByText(
         '새 플랜을 시작했습니다. 이전에 입력한 회원 정보는 가져오지 않았습니다.',
