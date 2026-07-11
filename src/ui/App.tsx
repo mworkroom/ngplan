@@ -519,7 +519,7 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
           )}
           {selectedMember === undefined ? (
             <section className="panel empty-state">
-              <p>카드에서 회원을 선택하면 상세 입력을 편집할 수 있습니다.</p>
+              <p>회원 카드를 클릭하면 상세 입력을 편집할 수 있습니다.</p>
             </section>
           ) : (
             <section className="panel">

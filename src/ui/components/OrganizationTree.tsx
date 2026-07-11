@@ -128,9 +128,8 @@ export function OrganizationTree({
         {root === undefined ? (
           <div className="empty-state">
             <div>
-              <p>활성 루트 회원이 없습니다.</p>
               <button type="button" className="primary-button" onClick={onAddRoot}>
-                새 루트 회원 만들기
+                회원 추가하기
               </button>
             </div>
           </div>
