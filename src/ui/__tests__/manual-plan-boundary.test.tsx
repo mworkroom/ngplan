@@ -37,25 +37,25 @@ afterEach(() => {
 describe('WP3 App setup handoff', () => {
   it('does not offer manual planning before an active setup bundle exists', () => {
     render(<App generateId={createIdGenerator()} initialDate={INITIAL_DATE} />);
-    expect(screen.queryByRole('button', { name: '계획표 열기' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '플랜 열기' })).toBeNull();
   });
 
   it('P3-BOUNDARY-002 invalidates READY and removes the start action after a setup edit', async () => {
     const user = userEvent.setup();
     render(<App generateId={createIdGenerator()} initialDate={INITIAL_DATE} />);
 
-    const treeViewport = screen.getByLabelText('좌우 조직 그림');
+    const treeViewport = screen.getByLabelText('좌우 조직도');
     await user.click(within(treeViewport).getByRole('button'));
     await user.type(inputById('member-member-1-name'), '루트 회원');
     await user.selectOptions(selectById('member-member-1-pvpTarget'), '700');
     await user.click(inputById('member-member-1-openingStateConfirmed'));
-    await user.click(screen.getByRole('button', { name: '입력 확인하고 계획표 만들기' }));
+    await user.click(screen.getByRole('button', { name: '플래너 생성' }));
     expect(
-      await screen.findByRole('button', { name: '계획표 열기' }),
+      await screen.findByRole('button', { name: '플랜 열기' }),
     ).toBeDefined();
 
-    await user.type(screen.getByRole('textbox', { name: '계획 이름' }), ' 수정');
-    expect(screen.queryByRole('button', { name: '계획표 열기' })).toBeNull();
+    await user.type(screen.getByRole('textbox', { name: '프로젝트명' }), ' 수정');
+    expect(screen.queryByRole('button', { name: '플랜 열기' })).toBeNull();
     expect(screen.queryByText('계획표 준비 완료')).toBeNull();
   });
 
@@ -63,15 +63,15 @@ describe('WP3 App setup handoff', () => {
     const user = userEvent.setup();
     render(<App generateId={createIdGenerator()} initialDate={INITIAL_DATE} />);
 
-    const treeViewport = screen.getByLabelText('좌우 조직 그림');
+    const treeViewport = screen.getByLabelText('좌우 조직도');
     await user.click(within(treeViewport).getByRole('button'));
     await user.type(inputById('member-member-1-name'), '루트 회원');
     await user.selectOptions(selectById('member-member-1-pvpTarget'), '700');
     await user.click(inputById('member-member-1-openingStateConfirmed'));
-    await user.click(screen.getByRole('button', { name: '입력 확인하고 계획표 만들기' }));
+    await user.click(screen.getByRole('button', { name: '플래너 생성' }));
 
     const openButton = await screen.findByRole('button', {
-      name: '계획표 열기',
+      name: '플랜 열기',
     });
     await user.click(openButton);
 
@@ -83,7 +83,7 @@ describe('WP3 App setup handoff', () => {
     await user.click(screen.getByRole('button', { name: '설정으로 돌아가기' }));
     expect(screen.queryByRole('dialog')).toBeNull();
     await waitFor(() => expect(document.getElementById('project-setup')).not.toBeNull());
-    expect(screen.getByRole('button', { name: '계획표 열기' })).toBeDefined();
+    expect(screen.getByRole('button', { name: '플랜 열기' })).toBeDefined();
     expect(screen.getByText('계획표 준비 완료')).toBeDefined();
   });
 });

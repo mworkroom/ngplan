@@ -147,7 +147,7 @@ a {
 .workspace-grid,
 .setup-layout {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(290px, 0.9fr);
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 25%);
   align-items: start;
   gap: 16px;
 }
@@ -678,6 +678,35 @@ fieldset {
   gap: 12px;
 }
 
+.section-divider {
+  width: 100%;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--color-line);
+}
+
+.member-move-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(100px, 0.8fr) max-content;
+  align-items: end;
+  gap: 10px;
+}
+
+.member-move-row__button {
+  min-height: 44px;
+  white-space: nowrap;
+}
+
+.member-storage-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.member-storage-actions--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .reassignment-queue {
   display: grid;
   gap: 10px;
@@ -813,7 +842,7 @@ fieldset {
 @media (max-width: 1180px) {
   .workspace-grid,
   .setup-layout {
-    grid-template-columns: minmax(0, 1.7fr) minmax(260px, 0.8fr);
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 34%);
   }
 
   .project-period-row .form-grid {
@@ -855,6 +884,14 @@ fieldset {
 
   .project-title-control {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .member-move-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .member-move-row__button {
+    width: 100%;
   }
 }
 

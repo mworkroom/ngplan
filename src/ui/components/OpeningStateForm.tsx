@@ -50,12 +50,6 @@ export function OpeningStateForm({
   onPvpTargetChange,
 }: OpeningStateFormProps) {
   const pvpTargetIssue = issueFor(issues, member.memberKey, 'pvpTarget');
-  const openingCredit = Number(member.openingState.fortnightPvpOpeningCredit);
-  const target = Number(member.pvpTarget);
-  const remainingPvp =
-    Number.isFinite(openingCredit) && Number.isFinite(target)
-      ? Math.max(0, target - openingCredit)
-      : null;
   const confirmationIssue = issueFor(
     issues,
     member.memberKey,
@@ -69,6 +63,7 @@ export function OpeningStateForm({
   return (
     <section className="opening-state-form" aria-labelledby="opening-state-title">
       <div>
+        <hr className="section-divider" />
         <h2 id="opening-state-title">시작값</h2>
       </div>
 

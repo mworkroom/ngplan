@@ -94,12 +94,12 @@ describe('project and opening forms', () => {
       />,
     );
 
-    fireEvent.change(screen.getByLabelText('몇 년도인가요?'), { target: { value: '2027' } });
-    fireEvent.change(screen.getByLabelText('몇 월인가요?'), { target: { value: '8' } });
-    fireEvent.change(screen.getByLabelText('어느 기간인가요?'), {
+    fireEvent.change(screen.getByLabelText('연도'), { target: { value: '2027' } });
+    fireEvent.change(screen.getByLabelText('월'), { target: { value: '8' } });
+    fireEvent.change(screen.getByLabelText('기간'), {
       target: { value: 'SECOND_HALF' },
     });
-    fireEvent.change(screen.getByLabelText('계획 이름'), {
+    fireEvent.change(screen.getByLabelText('프로젝트명'), {
       target: { value: '직접 제목' },
     });
     expect(onPeriodChange).toHaveBeenCalledWith({ year: '2027' });
@@ -150,14 +150,14 @@ describe('project and opening forms', () => {
       />,
     );
 
-    expect((screen.getByLabelText('이번 보름 PVP 목표') as HTMLSelectElement).value).toBe('700');
+    expect((screen.getByLabelText('이번 기간 PVP 목표') as HTMLSelectElement).value).toBe('700');
 
-    fireEvent.change(screen.getByLabelText('이번 보름 PVP 목표'), {
+    fireEvent.change(screen.getByLabelText('이번 기간 PVP 목표'), {
       target: { value: '1500' },
     });
     fireEvent.change(screen.getByLabelText('현재 좌 잔액'), { target: { value: '39' } });
     fireEvent.click(
-      screen.getByRole('checkbox', { name: /회사 시스템의 시작값을 확인했습니다/ }),
+      screen.getByRole('checkbox', { name: /시작값이 맞게 입력되었으면 확인 버튼을 클릭해주세요/ }),
     );
     expect(onChange).toHaveBeenCalledWith({ dailyCarryLeft: '39' });
     expect(onPvpTargetChange).toHaveBeenCalledWith('1500');
@@ -214,7 +214,7 @@ describe('tree cards and child slots', () => {
         onRemoveChild={onRemoveChild}
       />,
     );
-    fireEvent.click(screen.getByRole('button', { name: '아래 회원 위치 바꾸기 또는 명단에서 빼기' }));
+    fireEvent.click(screen.getByRole('button', { name: '하위 회원 위치 바꾸기 또는 명단에서 빼기' }));
     expect(onRemoveChild).toHaveBeenCalledTimes(1);
   });
 
@@ -251,7 +251,7 @@ describe('tree cards and child slots', () => {
     expect(screen.getByText('확인')).toBeTruthy();
     expect(screen.getByLabelText('현재 보유값').textContent).toContain('PVP 0');
     expect(screen.getAllByText('스스로')).toHaveLength(2);
-    const collapse = screen.getByRole('button', { name: '하위 조직 펼치기' });
+    const collapse = screen.getByRole('button', { name: '펼치기' });
     expect(collapse.getAttribute('aria-controls')).toBe('root-children');
     fireEvent.click(collapse);
     fireEvent.click(screen.getByRole('button', { name: 'root 회원 상세 편집' }));
@@ -282,7 +282,7 @@ describe('tree cards and child slots', () => {
     const { rerender } = render(
       <OrganizationTree draft={draft} topology={deriveTopology(draft)} {...sharedProps} />,
     );
-    fireEvent.click(screen.getByRole('button', { name: '맨 위 회원 만들기' }));
+    fireEvent.click(screen.getByRole('button', { name: '최상위 회원 만들기' }));
     expect(onAddRoot).toHaveBeenCalledOnce();
 
     const rootOutcome = addRootMember(draft, 'root-tree');
@@ -294,9 +294,9 @@ describe('tree cards and child slots', () => {
     rerender(
       <OrganizationTree draft={draft} topology={deriveTopology(draft)} {...sharedProps} />,
     );
-    expect(screen.getByLabelText('좌우 조직 그림')).toBeTruthy();
+    expect(screen.getByLabelText('좌우 조직도')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'right-child 위치 바꾸기 또는 명단에서 빼기' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: '하위 조직 접기' }));
+    fireEvent.click(screen.getByRole('button', { name: '접기' }));
     expect(sharedProps.onToggleCollapsed).toHaveBeenCalledWith('root-tree');
   });
 });
@@ -325,21 +325,21 @@ describe('member topology controls', () => {
       />,
     );
 
-    fireEvent.change(screen.getByLabelText('회사 회원 ID'), { target: { value: '12a34' } });
-    fireEvent.change(screen.getByLabelText('회원 이름'), { target: { value: '새 이름' } });
-    fireEvent.change(screen.getByLabelText('이름에 표지판 붙이기'), {
+    fireEvent.change(screen.getByLabelText('ID'), { target: { value: '12a34' } });
+    fireEvent.change(screen.getByLabelText('이름'), { target: { value: '새 이름' } });
+    fireEvent.change(screen.getByLabelText('이름 강조'), {
       target: { value: 'GREEN_2' },
     });
-    fireEvent.change(screen.getByLabelText('새로 연결할 위 회원'), {
+    fireEvent.change(screen.getByLabelText('상위 회원 선택'), {
       target: { value: '' },
     });
-    fireEvent.change(screen.getByLabelText('새로 연결할 위 회원'), {
+    fireEvent.change(screen.getByLabelText('상위 회원 선택'), {
       target: { value: 'parent' },
     });
-    fireEvent.change(screen.getByLabelText('어느 쪽에 놓을까요?'), { target: { value: 'RIGHT' } });
-    fireEvent.click(screen.getByRole('button', { name: '선택한 자리로 옮기기' }));
-    fireEvent.click(screen.getByRole('button', { name: '현재 위치에서 빼기' }));
-    fireEvent.click(screen.getByRole('button', { name: '이 명단에서 빼기' }));
+    fireEvent.change(screen.getByLabelText('위치 선택'), { target: { value: 'RIGHT' } });
+    fireEvent.click(screen.getByRole('button', { name: '이동' }));
+    fireEvent.click(screen.getByRole('button', { name: '보관함에 넣기' }));
+    fireEvent.click(screen.getByRole('button', { name: '삭제하기' }));
     expect(onIdentityChange).toHaveBeenCalledWith({ memberId: '1234' });
     expect(onIdentityChange).toHaveBeenCalledWith({ name: '새 이름' });
     expect(onIdentityChange).toHaveBeenCalledWith({ sheetMarker: 'GREEN_2' });
@@ -478,7 +478,7 @@ describe('queue, dialog, and validation feedback', () => {
       />,
     );
     expect(screen.getByText(/두 회원의 새 위치를 각각 정해 주세요/)).toBeTruthy();
-    expect(screen.getByText(/새 맨 위 회원으로 정해 주세요/)).toBeTruthy();
+    expect(screen.getByText(/새로운 최상위 회원으로 정해 주세요/)).toBeTruthy();
     rerender(
       <ExcludeMemberDialog
         member={member('queued')}
@@ -489,7 +489,7 @@ describe('queue, dialog, and validation feedback', () => {
       />,
     );
     expect(screen.queryByLabelText(/아래 회원을 이 자리로 올리기/)).toBeNull();
-    expect(screen.getByText(/새 위치를 다시 정해야 합니다/)).toBeTruthy();
+    expect(screen.getByText(/어디에 둘지 다시 정해야 합니다/)).toBeTruthy();
   });
 
   it('navigates errors and warnings or reports an empty validation', () => {

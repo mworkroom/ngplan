@@ -143,12 +143,13 @@ export function MemberForm({
       </div>
 
       {!isRoot && isPlaced ? (
-        <fieldset className="member-form__section">
-          <legend>위치 바꾸기</legend>
+        <section className="member-form__section" aria-labelledby="member-move-title">
+          <hr className="section-divider" />
+          <h2 id="member-move-title" className="panel__title">위치 바꾸기</h2>
           <p className="help-text">
             이 회원과 아래에 연결된 회원들을 함께 옮깁니다.
           </p>
-          <div className="form-grid">
+          <div className="member-move-row">
             <div className="field">
               <label htmlFor={memberFieldId(member.memberKey, 'parentMemberKey')}>
                 상위 회원 선택
@@ -162,7 +163,6 @@ export function MemberForm({
                 }
                 onChange={(event) => setTargetParentMemberKey(event.currentTarget.value)}
               >
-                <option value="">위 회원 선택</option>
                 {candidateParents.map((candidate) => (
                   <option key={candidate.memberKey} value={candidate.memberKey}>
                     {candidate.name.trim() || candidate.memberKey}
@@ -183,19 +183,9 @@ export function MemberForm({
                 <option value="RIGHT">오른쪽</option>
               </select>
             </div>
-          </div>
-          {placementIssue === undefined ? null : (
-            <p id={placementErrorId} className="field-error">
-              {placementIssue.message}
-            </p>
-          )}
-          {targetParentMemberKey !== '' && !targetAvailable && !isCurrentPlacement ? (
-            <p className="field-error">선택한 자리는 이미 다른 회원이 사용하고 있습니다.</p>
-          ) : null}
-          <div className="form-actions">
             <button
               type="button"
-              className="secondary-button"
+              className="secondary-button member-move-row__button"
               disabled={!canMove}
               onClick={() => {
                 if (canMove) {
@@ -205,20 +195,46 @@ export function MemberForm({
             >
               이동
             </button>
+          </div>
+          {placementIssue === undefined ? null : (
+            <p id={placementErrorId} className="field-error">
+              {placementIssue.message}
+            </p>
+          )}
+          {targetParentMemberKey !== '' && !targetAvailable && !isCurrentPlacement ? (
+            <p className="field-error">선택한 자리는 이미 다른 회원이 사용하고 있습니다.</p>
+          ) : null}
+          <div className="member-storage-actions">
             <button type="button" className="text-button" onClick={onDetach}>
               보관함에 넣기
             </button>
+            <button type="button" className="danger-button" onClick={onExclude}>
+              삭제하기
+            </button>
           </div>
-        </fieldset>
+        </section>
       ) : null}
 
       {!isRoot && !isPlaced ? (
-        <p className="storage-notice">
-          이 회원과 아래 회원들의 새 위치를 정해야 합니다. 조직도의 빈 자리에 다시 연결해 주세요.
-        </p>
+        <>
+          <p className="storage-notice">
+            이 회원과 아래 회원들의 새 위치를 정해야 합니다. 조직도의 빈 자리에 다시 연결해 주세요.
+          </p>
+          <div className="member-storage-actions member-storage-actions--single">
+            <button type="button" className="danger-button" onClick={onExclude}>
+              삭제하기
+            </button>
+          </div>
+        </>
       ) : null}
 
-
+      {isRoot ? (
+        <div className="member-storage-actions member-storage-actions--single">
+          <button type="button" className="danger-button" onClick={onExclude}>
+            삭제하기
+          </button>
+        </div>
+      ) : null}
     </section>
   );
 }
