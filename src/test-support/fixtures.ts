@@ -6,6 +6,7 @@ import type {
   NormalizedAllocationCell,
   OpeningStateInput,
   PeriodInput,
+  PvpTarget,
   Side,
 } from '../domain/types';
 
@@ -20,13 +21,14 @@ export function member(
   memberKey: string,
   parentMemberKey: string | null = null,
   sideAtParent: Side | null = null,
-  level = 3,
+  pvpTarget: PvpTarget = 700,
 ): MemberSnapshot {
   return {
     memberKey,
     memberId: `ID-${memberKey}`,
     name: `회원 ${memberKey}`,
-    level,
+    pvpTarget,
+    sheetMarker: 'NONE',
     parentMemberKey,
     sideAtParent,
   };

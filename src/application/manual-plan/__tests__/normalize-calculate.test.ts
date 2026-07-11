@@ -4,6 +4,7 @@ import type {
   MemberSnapshot,
   OpeningStateInput,
   OrganizationSnapshotInput,
+  PvpTarget,
   ValidationIssue,
 } from '../../../engine';
 import type {
@@ -40,13 +41,14 @@ function member(
   memberKey: string,
   parentMemberKey: string | null,
   sideAtParent: 'LEFT' | 'RIGHT' | null,
-  level = 3,
+  pvpTarget: PvpTarget = 700,
 ): MemberSnapshot {
   return Object.freeze({
     memberKey,
     memberId: '',
     name: memberKey,
-    level,
+    pvpTarget,
+    sheetMarker: 'NONE',
     parentMemberKey,
     sideAtParent,
   });

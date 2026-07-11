@@ -9,6 +9,7 @@ import type {
   RawPerformance,
   RunningFortnightState,
   SettlementMode,
+  SheetMarker,
   Side,
   ValidationCode,
 } from '../../engine';
@@ -35,7 +36,8 @@ export interface ManualPlanMemberDescriptor {
   readonly memberId: string | null;
   readonly displayLabel: string;
   readonly duplicateLabel: string | null;
-  readonly level: number;
+  readonly pvpTarget: number;
+  readonly sheetMarker: SheetMarker;
   readonly openingState: OpeningStateInput;
   readonly leftMode: ManualPlanDirectionMode;
   readonly rightMode: ManualPlanDirectionMode;
@@ -172,7 +174,8 @@ export interface ManualPlanDailyAuditView {
 export interface ManualPlanMemberSummaryView {
   readonly memberKey: string;
   readonly memberLabel: string;
-  readonly level: number;
+  readonly pvpTarget: number;
+  readonly sheetMarker: SheetMarker;
   readonly fortnightPvpOpeningCredit: number;
   readonly newPvpTotal: number;
   readonly personalPvpTotal: number;

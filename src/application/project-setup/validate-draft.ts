@@ -5,7 +5,7 @@ import type {
 } from '../../engine';
 import { deriveTopology } from './derive-topology';
 import type {
-  DraftLevelParseOutcome,
+  DraftPvpTargetParseOutcome,
   DraftPvParseOutcome,
   MemberDraft,
   OpeningStateField,
@@ -55,19 +55,11 @@ export function parseDraftPv(value: string): DraftPvParseOutcome {
   return { ok: true, value: numeric };
 }
 
-export function parseDraftLevel(value: string): DraftLevelParseOutcome {
-  const trimmed = value.trim();
-  if (trimmed === '') {
-    return { ok: false, code: 'LEVEL_NOT_INTEGER' };
-  }
-  const numeric = Number(trimmed);
-  if (!Number.isFinite(numeric) || !Number.isInteger(numeric)) {
-    return { ok: false, code: 'LEVEL_NOT_INTEGER' };
-  }
-  if (!Number.isSafeInteger(numeric) || numeric < 1) {
-    return { ok: false, code: 'LEVEL_OUT_OF_RANGE' };
-  }
-  return { ok: true, value: numeric };
+export function parseDraftPvpTarget(value: string): DraftPvpTargetParseOutcome {
+  const numeric = Number(value);
+  return value !== '' && (numeric === 2400 || numeric === 1500 || numeric === 700)
+    ? { ok: true, value: numeric as 2400 | 1500 | 700 }
+    : { ok: false, code: 'PVP_TARGET_INVALID' };
 }
 
 function parsePeriodInteger(
@@ -216,16 +208,14 @@ function validateMember(
       issue('MEMBER_NAME_REQUIRED', 'ERROR', { ...location, field: 'name' }, '회원 이름을 입력해 주세요.'),
     );
   }
-  const level = parseDraftLevel(member.level);
-  if (!level.ok) {
+  const pvpTarget = parseDraftPvpTarget(member.pvpTarget);
+  if (!pvpTarget.ok) {
     issues.push(
       issue(
-        level.code,
+        pvpTarget.code,
         'ERROR',
-        { ...location, field: 'level' },
-        level.code === 'LEVEL_OUT_OF_RANGE'
-          ? '레벨은 1 이상의 안전한 정수여야 합니다.'
-          : '레벨은 정수여야 합니다.',
+        { ...location, field: 'pvpTarget' },
+        '이번 보름 PVP 목표를 선택해 주세요.',
       ),
     );
   }

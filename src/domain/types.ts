@@ -8,6 +8,8 @@ export type Half = 'FIRST_HALF' | 'SECOND_HALF';
 export type SettlementMode = 'SETTLE' | 'SKIP_NO_INPUT';
 export type SettlementStatus = 'SETTLED' | 'SKIPPED';
 export type CommissionTier = 300 | 700 | 1500 | 2400 | 6000 | 20000 | 60000;
+export type PvpTarget = 700 | 1500 | 2400;
+export type SheetMarker = 'NONE' | 'PINK_1' | 'GREEN_2' | 'BLUE_3';
 export type PvpApplicationReason = 'SMALLER_LEFT' | 'SMALLER_RIGHT' | 'TIE_LEFT';
 export type RecommendationStatus =
   | 'NOT_APPLICABLE'
@@ -30,7 +32,8 @@ export interface MemberSnapshot {
   readonly memberKey: string;
   readonly memberId: string;
   readonly name: string;
-  readonly level: number;
+  readonly pvpTarget: PvpTarget;
+  readonly sheetMarker: SheetMarker;
   readonly parentMemberKey: string | null;
   readonly sideAtParent: Side | null;
 }
@@ -63,19 +66,15 @@ export interface CalculatePlanInput {
 }
 
 export interface RuleSet {
-  readonly rulesetVersion: '1.0.0';
+  readonly rulesetVersion: '2.0.0';
   readonly commissionTiers: readonly CommissionTier[];
-  readonly pvpTargetByLevel: {
-    readonly level1: Pv;
-    readonly level2: Pv;
-    readonly level3OrAbove: Pv;
-  };
+  readonly allowedPvpTargets: readonly PvpTarget[];
   readonly fortnightSideTarget: Pv;
   readonly businessCalendarPolicy: 'SUNDAY_SKIP_NO_INPUT';
   readonly pvpTiePolicy: 'LEFT';
   readonly fortnightPvpSourcePolicy: 'OPENING_PLUS_NEW_EXCLUDING_DAILY_CARRY';
-  readonly lowerLevelCommissionPreference: {
-    readonly minimumLevel: 4;
+  readonly target700CommissionPreference: {
+    readonly eligiblePvpTarget: 700;
     readonly recommendedDays: 8;
   };
 }
@@ -134,7 +133,7 @@ export interface CommissionOccurrence {
 
 export interface FortnightAssessment extends FortnightRawTotals {
   readonly memberKey: string;
-  readonly level: number;
+  readonly pvpTarget: PvpTarget;
   readonly fortnightPvpOpeningCredit: Pv;
   readonly personalPvpTotal: Pv;
   readonly personalPvpTarget: Pv;
@@ -182,8 +181,8 @@ export type ValidationCode =
   | 'MEMBER_ID_REQUIRED'
   | 'MEMBER_ID_DUPLICATE'
   | 'MEMBER_NAME_REQUIRED'
-  | 'LEVEL_NOT_INTEGER'
-  | 'LEVEL_OUT_OF_RANGE'
+  | 'PVP_TARGET_INVALID'
+  | 'SHEET_MARKER_INVALID'
   | 'PLACEMENT_INCOMPLETE'
   | 'ROOT_PLACEMENT_INVALID'
   | 'PARENT_NOT_FOUND'

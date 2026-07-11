@@ -78,7 +78,7 @@ async function addRootWithKeyboard(user: User): Promise<void> {
 interface SelectedMemberValues {
   readonly memberId: string;
   readonly name: string;
-  readonly level?: string;
+  readonly pvpTarget?: string;
   readonly confirmed?: boolean;
 }
 
@@ -88,7 +88,10 @@ async function fillSelectedMember(
 ): Promise<void> {
   await replaceInput(user, '회사 회원 ID', values.memberId);
   await replaceInput(user, '회원 이름', values.name);
-  await replaceInput(user, '사업 레벨', values.level ?? '1');
+  await user.selectOptions(
+    screen.getByLabelText('이번 보름 PVP 목표'),
+    values.pvpTarget ?? '700',
+  );
   if (values.confirmed ?? true) {
     const confirmation = inputByLabel(/회사 시스템의 시작값을 확인했습니다/);
     if (!confirmation.checked) {

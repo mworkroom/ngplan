@@ -14,7 +14,7 @@ Phase 2 creates the first usable application screen. It allows the operator to d
 - the target half-month project;
 - the active members for that project;
 - the binary left/right organization topology;
-- each member's business level;
+- each member's directly selected PVP target and optional sheet marker;
 - each member's four independent opening values.
 
 The editing UI must allow incomplete intermediate states. Phase 1 calculation types do not. Therefore Phase 2 must keep these two layers separate:
@@ -32,7 +32,7 @@ Phase 2 is successful when all of the following are true:
 - A default project title is derived from the selected period and remains editable.
 - The in-memory project has status `IN_PROGRESS` and references the current organization snapshot ID.
 - A root member and additional members can be created from explicit left/right add buttons.
-- Every member card shows member ID, name, business level, and completion state.
+- Every member card shows member ID, marker-prefixed name, selected PVP target, and completion state.
 - Every member card has two explicit child slots: left and right.
 - An empty child slot is displayed as `SELF` and offers a `+` action.
 - An occupied child slot is displayed as `CHILD` and points to exactly one direct child.
@@ -144,7 +144,7 @@ Usage rules:
 ### 4.2 Member Draft Data
 
 - Stable in-session `memberKey` that is not derived from array order, name, or company member ID.
-- Company member ID, member name, and integer business level greater than or equal to 1.
+- Company member ID, member name, selected PVP target (`2400 | 1500 | 700`), and optional sheet marker (`NONE | PINK_1 | GREEN_2 | BLUE_3`).
 - Active or excluded project participation state.
 - Parent member key and `LEFT/RIGHT` placement for active placed members.
 - Four independent opening value strings and per-member confirmation state.
@@ -266,7 +266,7 @@ UI components import application APIs. They do not import private validation hel
 | Contract | Required content |
 |---|---|
 | `ProjectSetupDraft` | Project fields, title source state, members, selected member, root key, active bundle reference |
-| `MemberDraft` | Stable key, active/excluded state, identity fields, level string, placement, opening draft |
+| `MemberDraft` | Stable key, active/excluded state, identity fields, PVP-target string, sheet marker, placement, opening draft |
 | `OpeningStateDraft` | Four numeric strings defaulted to `'0'` plus `openingStateConfirmed` |
 | `PlacementDraft` | Parent key and side; a temporary unplaced state is allowed only in the draft |
 | `ReassignmentQueueEntry` | Active disconnected subtree root and context explaining why reassignment is required |
@@ -309,7 +309,7 @@ Do not add a router in Phase 2.
 |---|---|
 | `src/application/project-setup/types.ts` | Define drafts, topology states, outcomes, summaries, project core, and bundle. |
 | `src/application/project-setup/create-project-draft.ts` | Create fresh projects with zeroed/unconfirmed openings and no previous input. |
-| `src/application/project-setup/edit-member.ts` | Edit identity, level, opening values, and confirmation. |
+| `src/application/project-setup/edit-member.ts` | Edit identity, PVP target, sheet marker, opening values, and confirmation. |
 | `src/application/project-setup/edit-topology.ts` | Atomic add, attach, move, exclude, detach, and promote commands. |
 | `src/application/project-setup/derive-topology.ts` | Derive child indexes, `SELF/CHILD`, traversal, and reassignment queue. |
 | `src/application/project-setup/validate-draft.ts` | Validate incomplete strings, confirmations, and queue readiness. |
@@ -333,9 +333,9 @@ Do not add a router in Phase 2.
 | `src/ui/App.tsx` | Compose project setup flow. |
 | `src/ui/components/ProjectPeriodForm.tsx` | Period and derived/manual title. |
 | `src/ui/components/OrganizationTree.tsx` | Render tree from parent/side relationships. |
-| `src/ui/components/MemberCard.tsx` | Identity, level, confirmation, errors, and two child slots. |
+| `src/ui/components/MemberCard.tsx` | Marker-prefixed identity, PVP target, confirmation, errors, and two child slots. |
 | `src/ui/components/ChildSlot.tsx` | `SELF/CHILD` and left/right `+` actions. |
-| `src/ui/components/MemberForm.tsx` | Identity, level, parent, and side. |
+| `src/ui/components/MemberForm.tsx` | Identity, optional sheet marker, parent, and side. |
 | `src/ui/components/OpeningStateForm.tsx` | Four zero-defaulted values and confirmation. |
 | `src/ui/components/ReassignmentQueue.tsx` | Detached subtree roots and attach actions. |
 | `src/ui/components/ExcludeMemberDialog.tsx` | Explain exclusion consequences before mutation. |
@@ -653,7 +653,7 @@ Phase 2 is complete only when:
 - The themed React app renders at `/ngplan/`.
 - A half-month `PlanProject` can be created in memory.
 - A multi-level organization can be built through left/right `+` controls.
-- Identity, level, placement, four opening values, and confirmation are editable.
+- Identity, PVP target, optional sheet marker, placement, four opening values, and confirmation are editable.
 - Openings default to zero and require separate confirmation.
 - `SELF/CHILD` is derived and updates after structural commands.
 - No-child, one-child, two-child, and root exclusions preserve all surviving data and follow their defined reassignment behavior.

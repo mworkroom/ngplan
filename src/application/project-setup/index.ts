@@ -42,7 +42,7 @@ export {
 } from './map-validation-issues';
 export { normalizeProjectSetup } from './normalize-project-setup';
 export {
-  parseDraftLevel,
+  parseDraftPvpTarget,
   parseDraftPeriod,
   parseDraftPv,
   parseMemberOpeningState,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { MemberSnapshot, OpeningStateInput } from '../../../engine';
+import type { MemberSnapshot, OpeningStateInput, PvpTarget } from '../../../engine';
 import type { ProjectSetupBundle } from '../../project-setup';
 import {
   calculateManualPlan,
@@ -29,13 +29,14 @@ function member(
   memberKey: string,
   parentMemberKey: string | null = null,
   sideAtParent: 'LEFT' | 'RIGHT' | null = null,
-  level = 3,
+  pvpTarget: PvpTarget = 700,
 ): MemberSnapshot {
   return {
     memberKey,
     memberId: '',
     name: memberKey === '__proto__' ? '특수 회원' : memberKey,
-    level,
+    pvpTarget,
+    sheetMarker: 'NONE',
     parentMemberKey,
     sideAtParent,
   };
@@ -194,7 +195,8 @@ describe('WP5 pure result view models', () => {
     });
     const summary = deriveManualPlanMemberSummaryView(result, schema, 'A');
     expect(summary).toMatchObject({
-      level: 3,
+      pvpTarget: 700,
+      sheetMarker: 'NONE',
       newPvpTotal: 400,
       personalPvpTotal: 400,
       personalPvpTarget: 700,
@@ -213,7 +215,7 @@ describe('WP5 pure result view models', () => {
       sideTargetsMet: true,
       allTargetsMet: false,
       allTargetsLabel: '추가 계획 필요',
-      recommendationLabel: '권장 대상 아님',
+      recommendationLabel: '8회 권장 미달',
     });
   });
 
@@ -349,14 +351,14 @@ describe('WP5 pure result view models', () => {
   });
 
   it('COUNT-003 exposes below/met recommendation states as soft labels', () => {
-    const below = currentResult(bundle([member('A', null, null, 4)]));
+    const below = currentResult(bundle([member('A', null, null, 700)]));
     expect(deriveManualPlanMemberSummaryView(below.result, below.schema, 'A')).toMatchObject({
       recommendationStatus: 'BELOW_RECOMMENDED',
       recommendedCommissionDays: 8,
       recommendationLabel: '8회 권장 미달',
     });
 
-    const met = currentResult(bundle([member('A', null, null, 4)]), (schema, initial) => {
+    const met = currentResult(bundle([member('A', null, null, 700)]), (schema, initial) => {
       let draft = initial;
       for (const date of schema.dates.filter((item) => item.settlementMode === 'SETTLE').slice(0, 8)) {
         draft = edit(schema, draft, date.date, 'A', 'pvp', 100);
@@ -373,7 +375,7 @@ describe('WP5 pure result view models', () => {
   });
 
   it('does not invent a recommendation threshold when engine metadata is inconsistent', () => {
-    const current = currentResult(bundle([member('A', null, null, 4)]));
+    const current = currentResult(bundle([member('A', null, null, 700)]));
     const assessment = current.result.finalAssessmentByMember.A!;
     for (const recommendationStatus of [
       'BELOW_RECOMMENDED',
@@ -399,7 +401,7 @@ describe('WP5 pure result view models', () => {
   it('COUNT-001 preserves one dated occurrence for each canonical tier', () => {
     const tiers = [300, 300, 700, 1500, 2400, 6000, 20000, 60000] as const;
     const { schema, result } = currentResult(
-      bundle([member('A', null, null, 4)]),
+      bundle([member('A', null, null, 700)]),
       (schema, initial) => {
         let draft = initial;
         const dates = schema.dates
@@ -420,7 +422,7 @@ describe('WP5 pure result view models', () => {
 
   it('COUNT-003 keeps six commission days as a soft miss after required goals pass', () => {
     const { schema, result } = currentResult(
-      bundle([member('A', null, null, 4)]),
+      bundle([member('A', null, null, 700)]),
       (schema, initial) => {
         let draft = initial;
         const dates = schema.dates

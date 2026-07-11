@@ -237,7 +237,7 @@ Derive one immutable schema from the setup bundle:
 - `period.dates` from `derivePeriod` supplies row order.
 - Member order is deterministic, root-first and left-before-right, derived from the authoritative root/child relationships rather than UI array order.
 - The current engine `orderedMemberKeys` is a stable member-key sort used by calculation output; it is not the required user-facing tree preorder. Derive the worksheet preorder from the root and `childrenByMemberKey`, and lock it with application tests.
-- Each member descriptor contains its stable key, display label, level, optional company ID, opening values, and left/right `SELF | CHILD` modes.
+- Each member descriptor contains its stable key, display label, selected PVP target, optional sheet marker, optional company ID, opening values, and left/right `SELF | CHILD` modes.
 - Each date descriptor contains its ISO date, Korean display label, and settlement mode.
 - Re-export or consume the existing `settlementModeForDate`/`isSunday` domain helper. Do not duplicate Sunday detection in the application or UI.
 
@@ -340,7 +340,7 @@ The Phase 2 ready state gains a primary `수동 계획표 열기` action. The ac
 
 The manual-plan screen keeps its own reference to that frozen bundle. It must not read changing values from the setup form. Returning to setup discards the Phase 3 session. If any editable planning value differs from the initial blank/zero plan, require an explicit discard confirmation and restore focus to the triggering control when canceled.
 
-Do not add in-place member, topology, level, or opening-value editing to the planning screen.
+Do not add in-place member, topology, PVP-target, sheet-marker, or opening-value editing to the planning screen.
 
 ### 7.2 Workspace Header
 
@@ -362,7 +362,7 @@ Use one semantic `<table>` inside one dedicated scroll container.
 - Two sticky header rows: member group, then `PVP / 좌 / 우`.
 - Sticky first date column.
 - Member groups follow deterministic organization order.
-- Each member header shows the plain display label and optional compact level/ID context.
+- Each member header shows the optional numbered color marker, display label, selected PVP target, optional company ID, and opening PVP/left/right values above the corresponding columns.
 - Editable cells use a compact text input with `inputMode="numeric"` and an exact accessible name containing date, member display label, and field.
 - Read-only connected directions show the current organization aggregate and a concise `조직 합계` cue or tooltip.
 - Sunday rows have a visible `일요일 · 정산 제외` cue and no enabled edit control.
@@ -418,7 +418,7 @@ The daily carry PVP is a calculated ledger value here. It must not be reintroduc
 
 For the selected member, and in a compact all-member overview where space permits, show:
 
-- level;
+- directly selected PVP target and optional sheet marker;
 - current/opening PVP credit;
 - new PVP total;
 - personal PVP total;
@@ -430,9 +430,9 @@ For the selected member, and in a compact all-member overview where space permit
 - left/right target status;
 - all-target status;
 - commission days and occurrences;
-- level-4-or-above recommendation status and recommended days when applicable.
+- target-700 recommendation status and recommended days when applicable.
 
-Use the `RuleSet`/engine result as authority. Do not restate the ambiguous prose phrase “level 3 or below” as a formula. The current approved contract is the tested `level3OrAbove` target bucket, with level 4+ also subject to the recommendation rule.
+Use the `RuleSet`/engine result as authority. The approved contract has no business-level field: each member directly selects `2400 | 1500 | 700`; target 700 is subject to the soft approximately-eight-day recommendation; the optional sheet marker is display-only.
 
 ### 7.8 Accessibility and Density
 
@@ -505,7 +505,7 @@ Tasks:
   - duplicate names are legal and use stable internal keys;
   - actual differences and resimulation highlighting belong to Phase 5;
   - storage and export belong to Phase 6;
-  - level targets come from the tested `RuleSet`, not ambiguous prose.
+  - PVP targets come directly from the member snapshot and must be one of the tested `RuleSet.allowedPvpTargets` values.
 - If the authoritative documents still contradict these completed decisions, update the relevant source documents before production code and explain the reconciliation in the Korean devlog.
 
 Exit gate:

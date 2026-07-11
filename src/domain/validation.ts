@@ -318,19 +318,28 @@ function validateOrganization(
         '회원 이름은 비어 있지 않은 문자열이어야 합니다.',
       );
     }
-    if (typeof member.level !== 'number' || !Number.isInteger(member.level)) {
+    if (
+      typeof member.pvpTarget !== 'number' ||
+      !DEFAULT_RULE_SET.allowedPvpTargets.includes(member.pvpTarget)
+    ) {
       pushIssue(
         issues,
-        'LEVEL_NOT_INTEGER',
-        { ...baseLocation, field: 'level' },
-        '레벨은 정수여야 합니다.',
+        'PVP_TARGET_INVALID',
+        { ...baseLocation, field: 'pvpTarget' },
+        'PVP 목표는 2,400, 1,500, 700 중 하나여야 합니다.',
       );
-    } else if (!Number.isSafeInteger(member.level) || member.level < 1) {
+    }
+    if (
+      member.sheetMarker !== 'NONE' &&
+      member.sheetMarker !== 'PINK_1' &&
+      member.sheetMarker !== 'GREEN_2' &&
+      member.sheetMarker !== 'BLUE_3'
+    ) {
       pushIssue(
         issues,
-        'LEVEL_OUT_OF_RANGE',
-        { ...baseLocation, field: 'level' },
-        '레벨은 1 이상의 안전한 정수여야 합니다.',
+        'SHEET_MARKER_INVALID',
+        { ...baseLocation, field: 'sheetMarker' },
+        '이름 표지판 값이 올바르지 않습니다.',
       );
     }
 
@@ -728,18 +737,18 @@ function hasCanonicalRuleSetBody(rules: RuleSet): boolean {
       rules.commissionTiers.every(
         (tier, index) => tier === expected.commissionTiers[index],
       ) &&
-      rules.pvpTargetByLevel.level1 === expected.pvpTargetByLevel.level1 &&
-      rules.pvpTargetByLevel.level2 === expected.pvpTargetByLevel.level2 &&
-      rules.pvpTargetByLevel.level3OrAbove ===
-        expected.pvpTargetByLevel.level3OrAbove &&
+      rules.allowedPvpTargets.length === expected.allowedPvpTargets.length &&
+      rules.allowedPvpTargets.every(
+        (target, index) => target === expected.allowedPvpTargets[index],
+      ) &&
       rules.fortnightSideTarget === expected.fortnightSideTarget &&
       rules.businessCalendarPolicy === expected.businessCalendarPolicy &&
       rules.pvpTiePolicy === expected.pvpTiePolicy &&
       rules.fortnightPvpSourcePolicy === expected.fortnightPvpSourcePolicy &&
-      rules.lowerLevelCommissionPreference.minimumLevel ===
-        expected.lowerLevelCommissionPreference.minimumLevel &&
-      rules.lowerLevelCommissionPreference.recommendedDays ===
-        expected.lowerLevelCommissionPreference.recommendedDays
+      rules.target700CommissionPreference.eligiblePvpTarget ===
+        expected.target700CommissionPreference.eligiblePvpTarget &&
+      rules.target700CommissionPreference.recommendedDays ===
+        expected.target700CommissionPreference.recommendedDays
     );
   } catch {
     return false;
@@ -839,8 +848,8 @@ export function validatePlan(
       issues,
       'RULESET_BODY_MISMATCH',
       { snapshotId, field: 'ruleset' },
-      '규칙 버전 1.0.0의 본문이 확정된 규칙과 일치하지 않습니다.',
-      '내보낸 기본 RuleSet 1.0.0을 변경하지 않고 사용해 주세요.',
+      '규칙 버전 2.0.0의 본문이 확정된 규칙과 일치하지 않습니다.',
+      '내보낸 기본 RuleSet 2.0.0을 변경하지 않고 사용해 주세요.',
     );
   }
 

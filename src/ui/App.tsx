@@ -612,6 +612,11 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
                 onChange={(patch) =>
                   commitDraft(editOpeningState(draft, selectedMember.memberKey, patch))
                 }
+                onPvpTargetChange={(pvpTarget) =>
+                  commitDraft(
+                    editMemberIdentity(draft, selectedMember.memberKey, { pvpTarget }),
+                  )
+                }
               />
             </section>
           )}

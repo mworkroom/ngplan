@@ -1,6 +1,10 @@
 import { cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import type { MemberSnapshot, OpeningStateInput } from '../../../../engine';
+import type {
+  MemberSnapshot,
+  OpeningStateInput,
+  PvpTarget,
+} from '../../../../engine';
 import {
   calculateManualPlan,
   createManualPlanDraft,
@@ -28,13 +32,14 @@ function member(
   memberKey: string,
   parentMemberKey: string | null = null,
   sideAtParent: 'LEFT' | 'RIGHT' | null = null,
-  level = 3,
+  pvpTarget: PvpTarget = 700,
 ): MemberSnapshot {
   return {
     memberKey,
     memberId: '',
     name: memberKey,
-    level,
+    pvpTarget,
+    sheetMarker: 'NONE',
     parentMemberKey,
     sideAtParent,
   };
@@ -197,7 +202,7 @@ describe('WP5 daily and fortnight result presentation', () => {
   it('COUNT-001 renders every commission occurrence date and tier plus the day count', () => {
     const tiers = [300, 300, 700, 1500, 2400, 6000, 20000, 60000] as const;
     const { schema, result } = currentResult(
-      bundle([member('A', null, null, 4)]),
+      bundle([member('A', null, null, 700)]),
       (schema, initial) => {
         let draft = initial;
         const dates = schema.dates

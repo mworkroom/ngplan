@@ -7,6 +7,7 @@ import type {
   NormalizedAllocationCell,
   Pv,
   PvBalance,
+  PvpTarget,
 } from '../../domain/types';
 import { settleDaily } from '../daily-ledger';
 import {
@@ -27,12 +28,13 @@ const member = (
   memberKey: string,
   parentMemberKey: string | null,
   sideAtParent: 'LEFT' | 'RIGHT' | null,
-  level = 3,
+  pvpTarget: PvpTarget = 700,
 ): MemberSnapshot => ({
   memberKey,
   memberId: `ID-${memberKey}`,
   name: memberKey,
-  level,
+  pvpTarget,
+  sheetMarker: 'NONE',
   parentMemberKey,
   sideAtParent,
 });

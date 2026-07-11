@@ -2,6 +2,8 @@ import type {
   Half,
   OrganizationSnapshotInput,
   PeriodInput,
+  PvpTarget,
+  SheetMarker,
   Side,
   ValidationCode,
   ValidationLocation,
@@ -33,7 +35,8 @@ export interface MemberDraft {
   readonly participation: MemberParticipation;
   readonly memberId: string;
   readonly name: string;
-  readonly level: string;
+  readonly pvpTarget: string;
+  readonly sheetMarker: SheetMarker;
   readonly placement: PlacementDraft;
   readonly openingState: OpeningStateDraft;
 }
@@ -192,10 +195,10 @@ export type DraftPvParseOutcome =
       readonly code: 'PV_INVALID' | 'PV_NEGATIVE' | 'PV_NOT_INTEGER' | 'PV_OUT_OF_RANGE';
     };
 
-export type DraftLevelParseOutcome =
-  | { readonly ok: true; readonly value: number }
+export type DraftPvpTargetParseOutcome =
+  | { readonly ok: true; readonly value: PvpTarget }
   | {
       readonly ok: false;
-      readonly code: 'LEVEL_NOT_INTEGER' | 'LEVEL_OUT_OF_RANGE';
+      readonly code: 'PVP_TARGET_INVALID';
     };
 

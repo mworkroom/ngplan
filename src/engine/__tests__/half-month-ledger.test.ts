@@ -10,6 +10,7 @@ import type {
   OpeningStateInput,
   Pv,
   PvBalance,
+  PvpTarget,
   RawPerformance,
 } from '../../domain/types';
 import { settleDaily } from '../daily-ledger';
@@ -25,11 +26,12 @@ const SUNDAY = '2026-07-12' as IsoDate;
 const D2 = '2026-07-13' as IsoDate;
 const pv = (value: number): Pv => value as Pv;
 
-const member = (level: number, memberKey = 'A'): MemberSnapshot => ({
+const member = (pvpTarget: PvpTarget, memberKey = 'A'): MemberSnapshot => ({
   memberKey,
   memberId: `ID-${memberKey}`,
   name: memberKey,
-  level,
+  pvpTarget,
+  sheetMarker: 'NONE',
   parentMemberKey: null,
   sideAtParent: null,
 });
@@ -79,21 +81,21 @@ const occurrences = (tiers: readonly CommissionTier[]): CommissionOccurrence[] =
     tier,
   }));
 const assess = (
-  level: number,
+  pvpTarget: PvpTarget,
   openingCredit: number,
   newPvp: number,
   left: number,
   right: number,
   commissionOccurrences: readonly CommissionOccurrence[] = [],
 ) => evaluateFortnight({
-  member: member(level),
+  member: member(pvpTarget),
   openingState: opening(openingCredit),
   accumulator: accumulator(newPvp, left, right, commissionOccurrences),
 });
 
 describe('half-month-ledger', () => {
-  it('[HALF-001] 레벨 2 시작 PVP가 신규 필요량을 줄임', () => {
-    const result = assess(2, 700, 800, 0, 0);
+  it('[HALF-001] 목표 1,500의 시작 PVP가 신규 필요량을 줄임', () => {
+    const result = assess(1500, 700, 800, 0, 0);
 
     expect(result).toMatchObject({
       personalPvpTarget: 1500,
@@ -104,7 +106,7 @@ describe('half-month-ledger', () => {
   });
 
   it('[HALF-002] 시작 PVP만으로 목표를 초과해도 목표 단계는 그대로임', () => {
-    const result = assess(2, 1600, 0, 0, 0);
+    const result = assess(1500, 1600, 0, 0, 0);
 
     expect(result).toMatchObject({
       personalPvpTarget: 1500,
@@ -113,8 +115,8 @@ describe('half-month-ledger', () => {
     });
   });
 
-  it('[HALF-003] 레벨 3 이상 목표는 700', () => {
-    const result = assess(3, 800, 0, 0, 0);
+  it('[HALF-003] 직접 선택한 목표 700을 적용', () => {
+    const result = assess(700, 800, 0, 0, 0);
 
     expect(result).toMatchObject({
       personalPvpTarget: 700,
@@ -125,7 +127,7 @@ describe('half-month-ledger', () => {
 
   it('[HALF-004] 일일 좌·우 시작 잔액은 보름 원본에 포함하지 않음', () => {
     const result = evaluateFortnight({
-      member: member(3),
+      member: member(700),
       openingState: opening(0, 0, 362, 261),
       accumulator: createFortnightAccumulator(),
     });
@@ -140,7 +142,7 @@ describe('half-month-ledger', () => {
   });
 
   it('[HALF-005] 보름 마감 PVP가 작은 쪽을 채움', () => {
-    const result = assess(3, 0, 400, 2500, 2100);
+    const result = assess(700, 0, 400, 2500, 2100);
 
     expect(result).toMatchObject({
       periodPvpForSide: 400,
@@ -155,7 +157,7 @@ describe('half-month-ledger', () => {
   });
 
   it('[HALF-006] 동률 PVP를 나누지 않고 왼쪽에 전량 적용', () => {
-    const result = assess(3, 0, 400, 2300, 2300);
+    const result = assess(700, 0, 400, 2300, 2300);
 
     expect(result).toMatchObject({
       pvpAppliedSide: 'LEFT',
@@ -173,7 +175,7 @@ describe('half-month-ledger', () => {
     const sourceBefore = structuredClone(source);
 
     const result = evaluateFortnight({
-      member: member(3),
+      member: member(700),
       openingState: opening(),
       accumulator: source,
       rules: DEFAULT_RULE_SET,
@@ -190,7 +192,7 @@ describe('half-month-ledger', () => {
   });
 
   it('[HALF-P01] 보름 시작값과 신규 PVP 전액을 작은 쪽에 적용', () => {
-    const result = assess(3, 300, 400, 2500, 1800);
+    const result = assess(700, 300, 400, 2500, 1800);
 
     expect(result).toMatchObject({
       personalPvpTotal: 700,
@@ -204,7 +206,7 @@ describe('half-month-ledger', () => {
   });
 
   it('[HALF-P02] 목표 초과 PVP도 자르지 않고 전액 적용', () => {
-    const result = assess(2, 1600, 400, 2500, 500);
+    const result = assess(1500, 1600, 400, 2500, 500);
 
     expect(result).toMatchObject({
       personalPvpTotal: 2000,
@@ -218,7 +220,7 @@ describe('half-month-ledger', () => {
 
   it('[HALF-P03] 일일 PVP 시작 잔액은 개인·보름 PVP에서 제외', () => {
     const result = evaluateFortnight({
-      member: member(3),
+      member: member(700),
       openingState: opening(0, 300, 0, 0),
       accumulator: accumulator(400, 0, 0),
     });
@@ -233,7 +235,7 @@ describe('half-month-ledger', () => {
   });
 
   it('[HALF-P04] 보름 PVP 시작값은 회원 본인의 판정에만 사용', () => {
-    const result = assess(3, 300, 0, 0, 0);
+    const result = assess(700, 300, 0, 0, 0);
 
     expect(result).toMatchObject({
       fortnightPvpOpeningCredit: 300,
@@ -245,7 +247,7 @@ describe('half-month-ledger', () => {
   });
 
   it('[OPEN-001] [OPEN-P01] 네 시작값의 일일·보름 역할을 분리', () => {
-    const memberA = member(3);
+    const memberA = member(700);
     const openingState = opening(300, 100, 200, 100);
     const performance = raw(400, 0, 200);
     const daily = settleDaily({
@@ -286,7 +288,7 @@ describe('half-month-ledger', () => {
   });
 
   it('[DAY-010] 일일 초기화 뒤에도 보름 원본은 누적', () => {
-    const memberA = member(3);
+    const memberA = member(700);
     const openingState = opening();
     const firstRaw = raw(100, 200, 300, D1);
     const firstDaily = settleDaily({
@@ -336,7 +338,7 @@ describe('half-month-ledger', () => {
       previous,
       rawPerformance: sundayRaw,
       dailySettlement: sundayDaily,
-      member: member(3),
+      member: member(700),
       openingState: opening(),
     });
 
@@ -350,8 +352,8 @@ describe('half-month-ledger', () => {
 
   it('[COUNT-001] [COUNT-002] 날짜별 최고 단계 하나만 발생일로 집계', () => {
     const eight = occurrences([300, 300, 700, 1500, 2400, 6000, 20000, 60000]);
-    const eightResult = assess(4, 0, 700, 2500, 1800, eight);
-    const oneResult = assess(4, 0, 700, 2500, 1800, occurrences([60000]));
+    const eightResult = assess(700, 0, 700, 2500, 1800, eight);
+    const oneResult = assess(700, 0, 700, 2500, 1800, occurrences([60000]));
 
     expect(eightResult.commissionDays).toBe(8);
     expect(eightResult.commissionOccurrences).toEqual(eight);
@@ -361,7 +363,7 @@ describe('half-month-ledger', () => {
 
   it('[COUNT-003] 6회 권장 미달은 필수 보름 목표 실패가 아님', () => {
     const result = assess(
-      4,
+      700,
       0,
       700,
       2500,
@@ -377,20 +379,20 @@ describe('half-month-ledger', () => {
     });
   });
 
-  it('[COUNT-P01] 8회 권장은 레벨 4 이상에만 적용', () => {
+  it('[COUNT-P01] 8회 권장은 목표 700에만 적용', () => {
     const eight = occurrences([300, 300, 300, 300, 300, 300, 300, 300]);
 
-    expect(assess(4, 0, 700, 2500, 1800, eight)).toMatchObject({
+    expect(assess(700, 0, 700, 2500, 1800, eight)).toMatchObject({
       recommendationStatus: 'MET_OR_EXCEEDED',
       recommendedCommissionDays: 8,
     });
-    expect(assess(3, 0, 700, 2500, 1800, eight)).toMatchObject({
+    expect(assess(1500, 0, 700, 2500, 1800, eight)).toMatchObject({
       recommendationStatus: 'NOT_APPLICABLE',
       recommendedCommissionDays: null,
     });
-    expect(assess(5, 0, 700, 2500, 1800, eight)).toMatchObject({
-      recommendationStatus: 'MET_OR_EXCEEDED',
-      recommendedCommissionDays: 8,
+    expect(assess(2400, 0, 700, 2500, 1800, eight)).toMatchObject({
+      recommendationStatus: 'NOT_APPLICABLE',
+      recommendedCommissionDays: null,
     });
   });
 
@@ -405,11 +407,11 @@ describe('half-month-ledger', () => {
       previous: accumulator(Number.MAX_SAFE_INTEGER, 0, 0),
       rawPerformance: performance,
       dailySettlement: daily,
-      member: member(3),
+      member: member(700),
       openingState: opening(),
     })).toThrow(PvAggregateOutOfRangeError);
 
-    expect(() => assess(3, 1, 0, Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER))
+    expect(() => assess(700, 1, 0, Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER))
       .toThrow(PvAggregateOutOfRangeError);
   });
 });

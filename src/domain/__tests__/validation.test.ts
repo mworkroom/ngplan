@@ -40,7 +40,8 @@ function root(
     memberKey,
     memberId: `ID-${memberKey}`,
     name: `회원 ${memberKey}`,
-    level: 3,
+    pvpTarget: 700,
+    sheetMarker: 'NONE',
     parentMemberKey: null,
     sideAtParent: null,
     ...overrides,
@@ -57,7 +58,8 @@ function child(
     memberKey,
     memberId: `ID-${memberKey}`,
     name: `회원 ${memberKey}`,
-    level: 3,
+    pvpTarget: 700,
+    sheetMarker: 'NONE',
     parentMemberKey,
     sideAtParent,
     ...overrides,
@@ -148,8 +150,8 @@ const ORGANIZATION_VALIDATION_CODES = new Set<ValidationCode>([
   'MEMBER_ID_REQUIRED',
   'MEMBER_ID_DUPLICATE',
   'MEMBER_NAME_REQUIRED',
-  'LEVEL_NOT_INTEGER',
-  'LEVEL_OUT_OF_RANGE',
+  'PVP_TARGET_INVALID',
+  'SHEET_MARKER_INVALID',
   'PLACEMENT_INCOMPLETE',
   'ROOT_PLACEMENT_INVALID',
   'PARENT_NOT_FOUND',
@@ -282,8 +284,8 @@ describe('Phase 2용 Phase 1 공개 검증 경계', () => {
       members: [root('A'), child('B', 'C', 'LEFT'), child('C', 'B', 'RIGHT')],
     },
     {
-      name: 'invalid level',
-      members: [root('A', { level: 0 })],
+      name: 'invalid PVP target',
+      members: [root('A', { pvpTarget: 1000 as 700 })],
     },
   ] satisfies readonly { readonly name: string; readonly members: readonly MemberSnapshot[] }[])(
     '조직 오류 코드·위치·메시지를 validatePlan과 동일하게 유지한다: $name',
@@ -532,21 +534,22 @@ describe('[VAL-006] — 회원별 시작값 완전성', () => {
   });
 });
 
-describe('[VAL-P01] — 레벨 범위', () => {
-  it.each([
-    [-1, 'LEVEL_OUT_OF_RANGE'],
-    [0, 'LEVEL_OUT_OF_RANGE'],
-    [1.5, 'LEVEL_NOT_INTEGER'],
-  ] as const)('레벨 %s를 %s로 거부한다', (level, code) => {
-    expect(issueCodes(planFor([root('A', { level })]))).toContain(code);
+describe('[VAL-P01] — PVP 목표와 찾기 표지판', () => {
+  it.each([-1, 0, 1.5, 1000])('지원하지 않는 목표 %s를 거부한다', (pvpTarget) => {
+    expect(
+      issueCodes(planFor([root('A', { pvpTarget: pvpTarget as 700 })])),
+    ).toContain('PVP_TARGET_INVALID');
   });
 
-  it.each([1, 2, 3, 4, 5, 6, Number.MAX_SAFE_INTEGER])(
-    '레벨 %s를 상한 없이 허용한다',
-    (level) => {
-      expect(validatePlan(planFor([root('A', { level })])).isValid).toBe(true);
-    },
-  );
+  it.each([2400, 1500, 700] as const)('목표 %s를 허용한다', (pvpTarget) => {
+    expect(validatePlan(planFor([root('A', { pvpTarget })])).isValid).toBe(true);
+  });
+
+  it('지원하지 않는 찾기 표지판을 거부한다', () => {
+    expect(
+      issueCodes(planFor([root('A', { sheetMarker: 'PURPLE_4' as 'NONE' })])),
+    ).toContain('SHEET_MARKER_INVALID');
+  });
 });
 
 describe('[VAL-P02] — 루트와 연결 조건', () => {
@@ -717,7 +720,7 @@ describe('Phase 1 입력 스칼라와 오류 보고서', () => {
   it('지원하지 않는 규칙 버전을 RULESET_VERSION_UNSUPPORTED로 거부한다', () => {
     const invalidRules = {
       ...DEFAULT_RULE_SET,
-      rulesetVersion: '2.0.0',
+      rulesetVersion: '999.0.0',
     } as unknown as RuleSet;
 
     expect(validatePlan(validPlan(), invalidRules).issues.map((issue) => issue.code)).toContain(

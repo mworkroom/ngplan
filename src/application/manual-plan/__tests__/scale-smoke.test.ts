@@ -31,7 +31,8 @@ function createMember(index: number): MemberSnapshot {
     memberKey: `member-${index}`,
     memberId: String(100_000 + index),
     name: `규모 검증 회원 ${index}`,
-    level: index % 5 === 0 ? 4 : 3,
+    pvpTarget: index % 5 === 0 ? 1500 : 700,
+    sheetMarker: 'NONE',
     parentMemberKey: parentIndex === null ? null : `member-${parentIndex}`,
     sideAtParent: parentIndex === null ? null : index % 2 === 0 ? 'LEFT' : 'RIGHT',
   });

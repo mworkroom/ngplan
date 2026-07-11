@@ -47,7 +47,7 @@ export function MemberFortnightSummary({
             보름 목표 요약
           </h2>
           <p className="panel__description">
-            {selected.memberLabel} · 레벨 {selected.level}
+            {selected.memberLabel} · 목표 {pv(selected.pvpTarget)}
           </p>
         </div>
         <span className={`status-badge ${selected.allTargetsMet ? 'status-badge--ready' : 'status-badge--warning'}`}>

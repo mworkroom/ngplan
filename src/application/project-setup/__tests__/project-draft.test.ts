@@ -17,7 +17,7 @@ import {
   editProjectTitle,
   memberCardId,
   memberFieldId,
-  parseDraftLevel,
+  parseDraftPvpTarget,
   parseDraftPeriod,
   parseDraftPv,
   parseMemberOpeningState,
@@ -207,15 +207,13 @@ describe('P2-OPEN / P2-MEMBER 회원 편집과 파싱', () => {
   });
 
   it.each([
-    ['1', { ok: true, value: 1 }],
-    [' 5 ', { ok: true, value: 5 }],
-    ['', { ok: false, code: 'LEVEL_NOT_INTEGER' }],
-    ['text', { ok: false, code: 'LEVEL_NOT_INTEGER' }],
-    ['1.5', { ok: false, code: 'LEVEL_NOT_INTEGER' }],
-    ['0', { ok: false, code: 'LEVEL_OUT_OF_RANGE' }],
-    [String(Number.MAX_SAFE_INTEGER + 1), { ok: false, code: 'LEVEL_OUT_OF_RANGE' }],
-  ] as const)('레벨 문자열 %s를 안정적으로 파싱한다', (value, expected) => {
-    expect(parseDraftLevel(value)).toEqual(expected);
+    ['2400', { ok: true, value: 2400 }],
+    ['1500', { ok: true, value: 1500 }],
+    ['700', { ok: true, value: 700 }],
+    ['', { ok: false, code: 'PVP_TARGET_INVALID' }],
+    ['1000', { ok: false, code: 'PVP_TARGET_INVALID' }],
+  ] as const)('PVP 목표 문자열 %s를 안정적으로 파싱한다', (value, expected) => {
+    expect(parseDraftPvpTarget(value)).toEqual(expected);
   });
 
   it('기간 문자열을 빈칸의 암묵적 0 없이 파싱한다', () => {
@@ -243,19 +241,21 @@ describe('P2-OPEN / P2-MEMBER 회원 편집과 파싱', () => {
     expect(parseMemberOpeningState(member)).toBeNull();
   });
 
-  it('회원 ID·이름·레벨 편집은 대상 회원만 바꾸고 미존재/동일 편집은 원본을 보존한다', () => {
+  it('회원 ID·이름·목표·표지판 편집은 대상 회원만 바꾸고 미존재/동일 편집은 원본을 보존한다', () => {
     const root = expectTopologySuccess(addRootMember(createEmptyDraft(), 'A')).draft;
     const withChild = addCompletedChild(root, 'A', 'LEFT', 'B');
     const edited = editMemberIdentity(withChild, 'A', {
       memberId: 'ID-A',
       name: '회원 A',
-      level: '4',
+      pvpTarget: '1500',
+      sheetMarker: 'GREEN_2',
     });
 
     expect(edited.members[0]).toMatchObject({
       memberId: 'ID-A',
       name: '회원 A',
-      level: '4',
+      pvpTarget: '1500',
+      sheetMarker: 'GREEN_2',
     });
     expect(edited.members[1]).toBe(withChild.members[1]);
     expect(editMemberIdentity(edited, 'A', {})).toBe(edited);
@@ -281,7 +281,7 @@ describe('Draft 검증, 준비 상태와 공개 위치 매핑', () => {
         'PERIOD_MONTH_INVALID',
         'PROJECT_TITLE_REQUIRED',
         'MEMBER_NAME_REQUIRED',
-        'LEVEL_NOT_INTEGER',
+        'PVP_TARGET_INVALID',
         'MEMBER_OPENING_STATE_UNCONFIRMED',
       ]),
     );
@@ -357,7 +357,7 @@ describe('Draft 검증, 준비 상태와 공개 위치 매핑', () => {
     expect(selectMember(selected, null)).toBe(selected);
     expect(editProjectPeriod(active, { month: '8' }).activeBundle).toBeNull();
     expect(editProjectTitle(active, '새 제목').activeBundle).toBeNull();
-    expect(editMemberIdentity(active, 'A', { level: '4' }).activeBundle).toBeNull();
+    expect(editMemberIdentity(active, 'A', { pvpTarget: '1500' }).activeBundle).toBeNull();
     expect(editOpeningState(active, 'A', { dailyCarryPvp: '1' }).activeBundle).toBeNull();
     expect(clearActiveProjectSetupBundle(active).activeBundle).toBeNull();
     expect(clearActiveProjectSetupBundle(ready)).toBe(ready);

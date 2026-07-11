@@ -46,7 +46,8 @@ describe('P2-NORM 정본 Setup Bundle', () => {
     draft = editMemberIdentity(draft, 'A', {
       memberId: '  COMPANY-A  ',
       name: '  루트 회원  ',
-      level: '1',
+      pvpTarget: '2400',
+      sheetMarker: 'PINK_1',
     });
     draft = editOpeningState(draft, 'A', {
       fortnightPvpOpeningCredit: '100',
@@ -73,7 +74,8 @@ describe('P2-NORM 정본 Setup Bundle', () => {
             memberKey: 'A',
             memberId: 'COMPANY-A',
             name: '루트 회원',
-            level: 1,
+            pvpTarget: 2400,
+            sheetMarker: 'PINK_1',
             parentMemberKey: null,
             sideAtParent: null,
           },
@@ -81,7 +83,8 @@ describe('P2-NORM 정본 Setup Bundle', () => {
             memberKey: 'B',
             memberId: 'ID-B',
             name: '회원 B',
-            level: 3,
+            pvpTarget: 700,
+            sheetMarker: 'NONE',
             parentMemberKey: 'A',
             sideAtParent: 'LEFT',
           },
@@ -192,7 +195,7 @@ describe('P2-NORM 정본 Setup Bundle', () => {
     const excludedWithInvalidData = editMemberIdentity(excluded, 'B', {
       memberId: '',
       name: '',
-      level: '',
+      pvpTarget: '',
     });
     const outcome = expectNormalizeSuccess(
       normalizeProjectSetup(excludedWithInvalidData),

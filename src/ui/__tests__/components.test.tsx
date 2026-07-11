@@ -37,7 +37,8 @@ function member(
     participation: 'ACTIVE',
     memberId: `${memberKey}-id`,
     name: memberKey,
-    level: '3',
+    pvpTarget: '700',
+    sheetMarker: 'NONE',
     placement: { parentMemberKey: null, sideAtParent: null },
     openingState: {
       fortnightPvpOpeningCredit: '0',
@@ -131,6 +132,7 @@ describe('project and opening forms', () => {
       },
     });
     const onChange = vi.fn();
+    const onPvpTargetChange = vi.fn();
     render(
       <OpeningStateForm
         member={current}
@@ -144,16 +146,21 @@ describe('project and opening forms', () => {
           ),
         ]}
         onChange={onChange}
+        onPvpTargetChange={onPvpTargetChange}
       />,
     );
 
-    expect((screen.getByLabelText('PVP 목표값') as HTMLInputElement).value).toBe('700');
+    expect((screen.getByLabelText('이번 보름 PVP 목표') as HTMLSelectElement).value).toBe('700');
 
+    fireEvent.change(screen.getByLabelText('이번 보름 PVP 목표'), {
+      target: { value: '1500' },
+    });
     fireEvent.change(screen.getByLabelText('현재 좌 잔액'), { target: { value: '39' } });
     fireEvent.click(
       screen.getByRole('checkbox', { name: /회사 시스템의 시작값을 확인했습니다/ }),
     );
     expect(onChange).toHaveBeenCalledWith({ dailyCarryLeft: '39' });
+    expect(onPvpTargetChange).toHaveBeenCalledWith('1500');
     expect(onChange).toHaveBeenCalledWith({ openingStateConfirmed: true });
     expect(screen.getByText('dailyCarryLeft 문제')).toBeTruthy();
   });
@@ -320,7 +327,9 @@ describe('member topology controls', () => {
 
     fireEvent.change(screen.getByLabelText('회사 회원 ID'), { target: { value: '12a34' } });
     fireEvent.change(screen.getByLabelText('회원 이름'), { target: { value: '새 이름' } });
-    fireEvent.change(screen.getByLabelText('사업 레벨'), { target: { value: '4' } });
+    fireEvent.change(screen.getByLabelText('이름에 표지판 붙이기'), {
+      target: { value: 'GREEN_2' },
+    });
     fireEvent.change(screen.getByLabelText('새 상위 회원'), {
       target: { value: '' },
     });
@@ -333,7 +342,7 @@ describe('member topology controls', () => {
     fireEvent.click(screen.getByRole('button', { name: '현재 프로젝트에서 회원 제외' }));
     expect(onIdentityChange).toHaveBeenCalledWith({ memberId: '1234' });
     expect(onIdentityChange).toHaveBeenCalledWith({ name: '새 이름' });
-    expect(onIdentityChange).toHaveBeenCalledWith({ level: '4' });
+    expect(onIdentityChange).toHaveBeenCalledWith({ sheetMarker: 'GREEN_2' });
     expect(onMove).toHaveBeenCalledWith('parent', 'RIGHT');
     expect(onDetach).toHaveBeenCalledOnce();
     expect(onExclude).toHaveBeenCalledOnce();

@@ -29,7 +29,8 @@ function createBundle(): ProjectSetupBundle {
           memberKey: 'root',
           memberId: '',
           name: '루트 회원',
-          level: 3,
+          pvpTarget: 700,
+          sheetMarker: 'PINK_1',
           parentMemberKey: null,
           sideAtParent: null,
         }),
@@ -83,7 +84,8 @@ function createIdentityBundle(): ProjectSetupBundle {
           memberKey: '__proto__',
           memberId: '',
           name: '민지',
-          level: 3,
+          pvpTarget: 700,
+          sheetMarker: 'PINK_1',
           parentMemberKey: null,
           sideAtParent: null,
         }),
@@ -91,7 +93,8 @@ function createIdentityBundle(): ProjectSetupBundle {
           memberKey: 'A/B',
           memberId: '',
           name: '민지',
-          level: 4,
+          pvpTarget: 1500,
+          sheetMarker: 'GREEN_2',
           parentMemberKey: '__proto__',
           sideAtParent: 'LEFT' as const,
         }),
@@ -99,7 +102,8 @@ function createIdentityBundle(): ProjectSetupBundle {
           memberKey: 'A_B',
           memberId: '1004',
           name: '민지',
-          level: 4,
+          pvpTarget: 700,
+          sheetMarker: 'NONE',
           parentMemberKey: '__proto__',
           sideAtParent: 'RIGHT' as const,
         }),
@@ -171,12 +175,12 @@ describe('WP3 manual-plan workspace boundary', () => {
 
     expect(
       screen.getByRole('textbox', {
-        name: '7월 1일 (수) 민지 · 동명이인 1 PVP 계획 PV',
+        name: '7월 1일 (수) 1. 민지 · 동명이인 1 PVP 계획 PV',
       }),
     ).toBeDefined();
     expect(
       screen.getByRole('textbox', {
-        name: '7월 1일 (수) 민지 · 동명이인 2 PVP 계획 PV',
+        name: '7월 1일 (수) 2. 민지 · 동명이인 2 PVP 계획 PV',
       }),
     ).toBeDefined();
     expect(

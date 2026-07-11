@@ -4,9 +4,10 @@ import {
   type MemberDraft,
   type ProjectSetupIssue,
 } from '../../application/project-setup';
+import { SHEET_MARKER_OPTIONS } from '../member-marker';
 
 type Side = Exclude<MemberDraft['placement']['sideAtParent'], null>;
-type IdentityPatch = Partial<Pick<MemberDraft, 'memberId' | 'name' | 'level'>>;
+type IdentityPatch = Partial<Pick<MemberDraft, 'memberId' | 'name' | 'sheetMarker'>>;
 
 export interface MemberFormProps {
   readonly member: MemberDraft;
@@ -56,7 +57,6 @@ export function MemberForm({
 
   const memberIdIssue = issueFor(issues, member.memberKey, 'memberId');
   const nameIssue = issueFor(issues, member.memberKey, 'name');
-  const levelIssue = issueFor(issues, member.memberKey, 'level');
   const placementIssue = issueFor(issues, member.memberKey, 'parentMemberKey');
   const placementErrorId = `${memberFieldId(member.memberKey, 'parentMemberKey')}-error`;
   const isPlaced =
@@ -71,7 +71,7 @@ export function MemberForm({
   const canMove = isPlaced && targetAvailable && !isCurrentPlacement;
 
   const renderIdentityField = (
-    field: 'memberId' | 'name' | 'level',
+    field: 'memberId' | 'name',
     label: string,
     issue: ProjectSetupIssue | undefined,
   ) => {
@@ -82,7 +82,7 @@ export function MemberForm({
         <label htmlFor={fieldId}>{label}</label>
         <input
           id={fieldId}
-          inputMode={field === 'level' || field === 'memberId' ? 'numeric' : undefined}
+          inputMode={field === 'memberId' ? 'numeric' : undefined}
           pattern={field === 'memberId' ? '[0-9]*' : undefined}
           value={member[field]}
           aria-invalid={issue !== undefined}
@@ -122,7 +122,29 @@ export function MemberForm({
         <div className="form-grid form-grid--single">
           {renderIdentityField('name', '회원 이름', nameIssue)}
           {renderIdentityField('memberId', '회사 회원 ID', memberIdIssue)}
-          {renderIdentityField('level', '사업 레벨', levelIssue)}
+          <div className="field">
+            <label htmlFor={memberFieldId(member.memberKey, 'sheetMarker')}>
+              이름에 표지판 붙이기
+            </label>
+            <select
+              id={memberFieldId(member.memberKey, 'sheetMarker')}
+              value={member.sheetMarker}
+              onChange={(event) =>
+                onIdentityChange({
+                  sheetMarker: event.currentTarget.value as MemberDraft['sheetMarker'],
+                })
+              }
+            >
+              {SHEET_MARKER_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <p className="field-help">
+              긴 계획표에서 사람을 빨리 찾기 위한 표시입니다. 계산에는 사용되지 않습니다.
+            </p>
+          </div>
         </div>
       </div>
 

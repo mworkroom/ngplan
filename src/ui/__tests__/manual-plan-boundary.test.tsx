@@ -21,6 +21,14 @@ function inputById(id: string): HTMLInputElement {
   return element;
 }
 
+function selectById(id: string): HTMLSelectElement {
+  const element = document.getElementById(id);
+  if (!(element instanceof HTMLSelectElement)) {
+    throw new Error(`select not found: ${id}`);
+  }
+  return element;
+}
+
 afterEach(() => {
   cleanup();
   window.localStorage.clear();
@@ -39,7 +47,7 @@ describe('WP3 App setup handoff', () => {
     const treeViewport = screen.getByLabelText('좌우 조직 트리 스크롤 영역');
     await user.click(within(treeViewport).getByRole('button'));
     await user.type(inputById('member-member-1-name'), '루트 회원');
-    await user.type(inputById('member-member-1-level'), '3');
+    await user.selectOptions(selectById('member-member-1-pvpTarget'), '700');
     await user.click(inputById('member-member-1-openingStateConfirmed'));
     await user.click(screen.getByRole('button', { name: '설정 검증 및 완료' }));
     expect(
@@ -58,7 +66,7 @@ describe('WP3 App setup handoff', () => {
     const treeViewport = screen.getByLabelText('좌우 조직 트리 스크롤 영역');
     await user.click(within(treeViewport).getByRole('button'));
     await user.type(inputById('member-member-1-name'), '루트 회원');
-    await user.type(inputById('member-member-1-level'), '3');
+    await user.selectOptions(selectById('member-member-1-pvpTarget'), '700');
     await user.click(inputById('member-member-1-openingStateConfirmed'));
     await user.click(screen.getByRole('button', { name: '설정 검증 및 완료' }));
 

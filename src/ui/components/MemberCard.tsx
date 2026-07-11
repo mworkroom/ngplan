@@ -5,6 +5,10 @@ import {
   type ProjectSetupIssue,
 } from '../../application/project-setup';
 import { ChildSlot } from './ChildSlot';
+import {
+  markedMemberName,
+  sheetMarkerClassName,
+} from '../member-marker';
 
 export interface MemberCardProps {
   readonly member: MemberDraft;
@@ -44,12 +48,13 @@ export function MemberCard({
       issue.severity === 'ERROR' && issue.location.memberKey === member.memberKey,
   );
   const complete = !hasError;
-  const displayName = member.name.trim() || '이름 미입력 회원';
+  const baseName = member.name.trim() || '이름 미입력 회원';
+  const displayName = markedMemberName(baseName, member.sheetMarker);
 
   return (
     <article
       id={memberCardId(member.memberKey)}
-      className={`member-card${selected ? ' member-card--selected' : ''}${
+      className={`member-card ${sheetMarkerClassName(member.sheetMarker)}${selected ? ' member-card--selected' : ''}${
         complete ? ' member-card--complete' : ' member-card--incomplete'
       }`}
       aria-current={selected ? 'true' : undefined}
@@ -64,7 +69,10 @@ export function MemberCard({
         >
           <h3 className="member-card__name">{displayName}</h3>
           <p className="member-card__meta">
-            ID {member.memberId.trim() || '미입력'} · 레벨 {member.level.trim() || '미입력'}
+            ID {member.memberId.trim() || '미입력'} · 목표{' '}
+            {member.pvpTarget === ''
+              ? '미선택'
+              : `${Number(member.pvpTarget).toLocaleString('ko-KR')} PV`}
           </p>
         </button>
         <span

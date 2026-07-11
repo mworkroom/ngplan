@@ -29,7 +29,8 @@ export function createMemberDraft(memberKey: string): MemberDraft {
     participation: 'ACTIVE',
     memberId: '',
     name: '',
-    level: '',
+    pvpTarget: '',
+    sheetMarker: 'NONE',
     placement: { parentMemberKey: null, sideAtParent: null },
     openingState: createOpeningStateDraft(),
   };

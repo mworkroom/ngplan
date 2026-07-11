@@ -79,7 +79,8 @@ export function restoreDerivedProjectTitle(draft: ProjectSetupDraft): ProjectSet
 export interface MemberIdentityPatch {
   readonly memberId?: string;
   readonly name?: string;
-  readonly level?: string;
+  readonly pvpTarget?: string;
+  readonly sheetMarker?: MemberDraft['sheetMarker'];
 }
 
 export function editMemberIdentity(
@@ -92,11 +93,13 @@ export function editMemberIdentity(
       ...member,
       memberId: patch.memberId ?? member.memberId,
       name: patch.name ?? member.name,
-      level: patch.level ?? member.level,
+      pvpTarget: patch.pvpTarget ?? member.pvpTarget,
+      sheetMarker: patch.sheetMarker ?? member.sheetMarker,
     };
     return next.memberId === member.memberId &&
       next.name === member.name &&
-      next.level === member.level
+      next.pvpTarget === member.pvpTarget &&
+      next.sheetMarker === member.sheetMarker
       ? member
       : next;
   });

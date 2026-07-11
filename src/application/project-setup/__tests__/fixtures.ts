@@ -14,6 +14,7 @@ import type {
   ProjectSetupDraft,
   TopologyCommandOutcome,
 } from '../index';
+import type { SheetMarker } from '../../../domain/types';
 
 const FIXED_IDS = {
   PROJECT: 'project-1',
@@ -47,13 +48,15 @@ export function completeMember(
   patch: {
     readonly memberId?: string;
     readonly name?: string;
-    readonly level?: string;
+    readonly pvpTarget?: string;
+    readonly sheetMarker?: SheetMarker;
   } = {},
 ): ProjectSetupDraft {
   const withIdentity = editMemberIdentity(draft, memberKey, {
     memberId: patch.memberId ?? `ID-${memberKey}`,
     name: patch.name ?? `회원 ${memberKey}`,
-    level: patch.level ?? '3',
+    pvpTarget: patch.pvpTarget ?? '700',
+    sheetMarker: patch.sheetMarker ?? 'NONE',
   });
   return editOpeningState(withIdentity, memberKey, {
     openingStateConfirmed: true,

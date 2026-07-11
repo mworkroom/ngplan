@@ -16,6 +16,10 @@ import {
   type ManualPlanSchema,
 } from '../../../application/manual-plan';
 import { ManualPlanCell, type ManualPlanCellMode } from './ManualPlanCell';
+import {
+  markedMemberName,
+  sheetMarkerClassName,
+} from '../../member-marker';
 
 export interface ManualPlanSelection {
   readonly date: string;
@@ -226,15 +230,15 @@ export function ManualPlanTable({
               {schema.members.map((member) => (
                 <th
                   id={manualPlanMemberGroupDomId(member.memberKey)}
-                  className="manual-plan-table__member-heading"
+                  className={`manual-plan-table__member-heading ${sheetMarkerClassName(member.sheetMarker)}`}
                   key={member.memberKey}
                   scope="colgroup"
                   colSpan={3}
                   tabIndex={-1}
                 >
-                  <strong>{member.name}</strong>
+                  <strong>{markedMemberName(member.name, member.sheetMarker)}</strong>
                   <span>
-                    레벨 {member.level}
+                    목표 {member.pvpTarget.toLocaleString('ko-KR')} PV
                     {member.memberId === null ? '' : ` · ID ${member.memberId}`}
                     {member.duplicateLabel === null ? '' : ` · ${member.duplicateLabel}`}
                   </span>
@@ -243,15 +247,24 @@ export function ManualPlanTable({
             </tr>
             <tr>
               {schema.members.flatMap((member) =>
-                FIELD_DEFINITIONS.map(({ field, label }) => (
+                FIELD_DEFINITIONS.map(({ field, label }) => {
+                  const openingValue =
+                    field === 'pvp'
+                      ? member.openingState.fortnightPvpOpeningCredit
+                      : field === 'selfLeft'
+                        ? member.openingState.dailyCarryLeft
+                        : member.openingState.dailyCarryRight;
+                  return (
                   <th
                     id={manualPlanColumnHeaderDomId(member.memberKey, field)}
                     key={`${member.memberKey}-${field}`}
                     scope="col"
                   >
-                    {label}
+                    <span>{label}</span>
+                    <small>시작 {openingValue.toLocaleString('ko-KR')}</small>
                   </th>
-                )),
+                  );
+                }),
               )}
             </tr>
           </thead>

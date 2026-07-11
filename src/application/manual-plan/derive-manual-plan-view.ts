@@ -159,7 +159,8 @@ export function deriveManualPlanMemberSummaryView(
   return Object.freeze({
     memberKey,
     memberLabel: member.displayLabel,
-    level: assessment.level,
+    pvpTarget: assessment.pvpTarget,
+    sheetMarker: member.sheetMarker,
     fortnightPvpOpeningCredit: assessment.fortnightPvpOpeningCredit,
     newPvpTotal: assessment.newPvpTotal,
     personalPvpTotal: assessment.personalPvpTotal,

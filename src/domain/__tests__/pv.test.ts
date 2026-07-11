@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   commissionTierFor,
   DEFAULT_RULE_SET,
-  pvpTargetForLevel,
+  isAllowedPvpTarget,
 } from '../constants';
 import {
   checkedAdd,
@@ -78,12 +78,12 @@ describe('[VAL-004] — 파생 PV 합계 안전 범위', () => {
   });
 });
 
-describe('[VAL-P01] — 레벨별 PVP 목표 상수', () => {
-  it('레벨 1, 2, 3 이상에 확정 목표를 적용한다', () => {
-    expect(pvpTargetForLevel(1)).toBe(2400);
-    expect(pvpTargetForLevel(2)).toBe(1500);
-    expect(pvpTargetForLevel(3)).toBe(700);
-    expect(pvpTargetForLevel(5, DEFAULT_RULE_SET)).toBe(700);
+describe('[VAL-P01] — 허용 PVP 목표 상수', () => {
+  it('2,400·1,500·700만 목표로 허용한다', () => {
+    expect(isAllowedPvpTarget(2400, DEFAULT_RULE_SET)).toBe(true);
+    expect(isAllowedPvpTarget(1500, DEFAULT_RULE_SET)).toBe(true);
+    expect(isAllowedPvpTarget(700, DEFAULT_RULE_SET)).toBe(true);
+    expect(isAllowedPvpTarget(1000, DEFAULT_RULE_SET)).toBe(false);
   });
 });
 

@@ -1,6 +1,5 @@
 import {
   DEFAULT_RULE_SET,
-  pvpTargetForLevel,
 } from '../domain/constants';
 import { checkedAdd, subtractFloorZero, ZERO_PV } from '../domain/pv';
 import type {
@@ -62,7 +61,6 @@ function calculatePersonalPvpProgress(
   member: MemberSnapshot,
   openingState: OpeningStateInput,
   newPvpTotal: Pv,
-  rules: RuleSet,
   field: string,
   date?: RawPerformance['date'],
 ): PersonalPvpProgress {
@@ -75,7 +73,7 @@ function calculatePersonalPvpProgress(
       field,
     },
   );
-  const personalPvpTarget = pvpTargetForLevel(member.level, rules);
+  const personalPvpTarget = member.pvpTarget as Pv;
   const remainingPvp = subtractFloorZero(personalPvpTarget, personalPvpTotal);
 
   return {
@@ -90,7 +88,6 @@ function calculatePersonalPvpProgress(
 export function accumulateFortnightDay(
   input: AccumulateFortnightDayInput,
 ): AccumulateFortnightDayResult {
-  const rules = input.rules ?? DEFAULT_RULE_SET;
   const raw = input.rawPerformance;
   const newPvpTotal = checkedAdd(input.previous.newPvpTotal, raw.directPvp, {
     date: raw.date,
@@ -126,7 +123,6 @@ export function accumulateFortnightDay(
     input.member,
     input.openingState,
     newPvpTotal,
-    rules,
     'runningFortnight.personalPvpTotal',
     raw.date,
   );
@@ -153,7 +149,6 @@ export function evaluateFortnight(
     input.member,
     input.openingState,
     input.accumulator.newPvpTotal,
-    rules,
     'finalAssessment.personalPvpTotal',
   );
   const periodPvpForSide = progress.personalPvpTotal;
@@ -182,17 +177,18 @@ export function evaluateFortnight(
   const rightTargetMet = assessedRight >= rules.fortnightSideTarget;
   const sideTargetsMet = leftTargetMet && rightTargetMet;
   const recommendationApplies =
-    input.member.level >= rules.lowerLevelCommissionPreference.minimumLevel;
+    input.member.pvpTarget ===
+    rules.target700CommissionPreference.eligiblePvpTarget;
   const commissionDays = input.accumulator.commissionOccurrences.length;
   const recommendationStatus: RecommendationStatus = recommendationApplies
-    ? commissionDays >= rules.lowerLevelCommissionPreference.recommendedDays
+    ? commissionDays >= rules.target700CommissionPreference.recommendedDays
       ? 'MET_OR_EXCEEDED'
       : 'BELOW_RECOMMENDED'
     : 'NOT_APPLICABLE';
 
   return {
     memberKey: input.member.memberKey,
-    level: input.member.level,
+    pvpTarget: input.member.pvpTarget,
     fortnightPvpOpeningCredit:
       input.openingState.fortnightPvpOpeningCredit as Pv,
     newPvpTotal: input.accumulator.newPvpTotal,
@@ -214,7 +210,7 @@ export function evaluateFortnight(
     commissionDays,
     recommendationStatus,
     recommendedCommissionDays: recommendationApplies
-      ? rules.lowerLevelCommissionPreference.recommendedDays
+      ? rules.target700CommissionPreference.recommendedDays
       : null,
   };
 }

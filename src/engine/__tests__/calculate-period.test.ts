@@ -311,20 +311,20 @@ describe('calculatePlan', () => {
     });
   });
 
-  test('[COUNT-P01] applies the eight-day preference by level, not position', () => {
+  test('[COUNT-P01] applies the eight-day preference by target, not position', () => {
     const result = calculate(
       makePlanInput({
         members: [
-          member('A', null, null, 4),
-          member('B', 'A', 'LEFT', 3),
-          member('C', 'A', 'RIGHT', 5),
+          member('A', null, null, 700),
+          member('B', 'A', 'LEFT', 1500),
+          member('C', 'A', 'RIGHT', 2400),
         ],
       }),
     );
 
     expect(result.finalAssessmentByMember.A!.recommendationStatus).toBe('BELOW_RECOMMENDED');
     expect(result.finalAssessmentByMember.B!.recommendationStatus).toBe('NOT_APPLICABLE');
-    expect(result.finalAssessmentByMember.C!.recommendationStatus).toBe('BELOW_RECOMMENDED');
+    expect(result.finalAssessmentByMember.C!.recommendationStatus).toBe('NOT_APPLICABLE');
   });
 
   test('[COUNT-001] records eight distinct commission dates and tiers', () => {
@@ -366,7 +366,7 @@ describe('calculatePlan', () => {
     ];
     const result = calculate(
       makePlanInput({
-        members: [member('A', null, null, 4)],
+        members: [member('A', null, null, 700)],
         allocations: dates.map((date, index) => ({
           date,
           memberKey: 'A',
@@ -516,7 +516,7 @@ describe('calculatePlan', () => {
     }
   });
 
-  test('rejects a modified RuleSet body that reuses version 1.0.0', () => {
+  test('rejects a modified RuleSet body that reuses version 2.0.0', () => {
     const alteredRules = {
       ...DEFAULT_RULE_SET,
       commissionTiers: [700, 700, 1500, 2400, 6000, 20000, 60000] as const,

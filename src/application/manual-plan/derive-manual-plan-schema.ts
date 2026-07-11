@@ -104,6 +104,18 @@ function visibleIdentityKey(member: MemberSnapshot): string {
   return JSON.stringify([member.name, member.memberId]);
 }
 
+function markedName(member: MemberSnapshot): string {
+  const number =
+    member.sheetMarker === 'PINK_1'
+      ? '1'
+      : member.sheetMarker === 'GREEN_2'
+        ? '2'
+        : member.sheetMarker === 'BLUE_3'
+          ? '3'
+          : null;
+  return number === null ? member.name : `${number}. ${member.name}`;
+}
+
 function openingFor(
   bundle: ProjectSetupBundle,
   memberKey: string,
@@ -139,7 +151,7 @@ function createMemberDescriptors(
     const duplicateLabel = duplicateCount > 1 ? `동명이인 ${duplicateOrdinal}` : null;
     const memberId = member.memberId === '' ? null : member.memberId;
     const displayLabel = [
-      member.name,
+      markedName(member),
       memberId === null ? null : `회원 ID ${memberId}`,
       duplicateLabel,
     ]
@@ -152,7 +164,8 @@ function createMemberDescriptors(
       memberId,
       displayLabel,
       duplicateLabel,
-      level: member.level,
+      pvpTarget: member.pvpTarget,
+      sheetMarker: member.sheetMarker,
       openingState: openingFor(bundle, member.memberKey),
       leftMode: children.left === null ? 'SELF' : 'CHILD',
       rightMode: children.right === null ? 'SELF' : 'CHILD',

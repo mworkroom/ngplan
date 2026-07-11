@@ -1,11 +1,11 @@
-import type { CommissionTier, Pv, RuleSet } from './types';
+import type { CommissionTier, PvpTarget, Pv, RuleSet } from './types';
 
 const pvLiteral = (value: number): Pv => value as Pv;
 
-export const ENGINE_VERSION = '1.0.0';
+export const ENGINE_VERSION = '2.0.0';
 
-export const RULE_SET_1_0_0: RuleSet = Object.freeze({
-  rulesetVersion: '1.0.0',
+export const RULE_SET_2_0_0: RuleSet = Object.freeze({
+  rulesetVersion: '2.0.0',
   commissionTiers: Object.freeze([
     300,
     700,
@@ -15,31 +15,24 @@ export const RULE_SET_1_0_0: RuleSet = Object.freeze({
     20000,
     60000,
   ] satisfies CommissionTier[]),
-  pvpTargetByLevel: Object.freeze({
-    level1: pvLiteral(2400),
-    level2: pvLiteral(1500),
-    level3OrAbove: pvLiteral(700),
-  }),
+  allowedPvpTargets: Object.freeze([2400, 1500, 700] satisfies PvpTarget[]),
   fortnightSideTarget: pvLiteral(2500),
   businessCalendarPolicy: 'SUNDAY_SKIP_NO_INPUT',
   pvpTiePolicy: 'LEFT',
   fortnightPvpSourcePolicy: 'OPENING_PLUS_NEW_EXCLUDING_DAILY_CARRY',
-  lowerLevelCommissionPreference: Object.freeze({
-    minimumLevel: 4,
+  target700CommissionPreference: Object.freeze({
+    eligiblePvpTarget: 700,
     recommendedDays: 8,
   }),
 });
 
-export const DEFAULT_RULE_SET = RULE_SET_1_0_0;
+export const DEFAULT_RULE_SET = RULE_SET_2_0_0;
 
-export function pvpTargetForLevel(level: number, rules: RuleSet = DEFAULT_RULE_SET): Pv {
-  if (level === 1) {
-    return rules.pvpTargetByLevel.level1;
-  }
-  if (level === 2) {
-    return rules.pvpTargetByLevel.level2;
-  }
-  return rules.pvpTargetByLevel.level3OrAbove;
+export function isAllowedPvpTarget(
+  value: number,
+  rules: RuleSet = DEFAULT_RULE_SET,
+): value is PvpTarget {
+  return rules.allowedPvpTargets.includes(value as PvpTarget);
 }
 
 export function commissionTierFor(

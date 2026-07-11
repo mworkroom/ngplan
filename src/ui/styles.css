@@ -582,6 +582,25 @@ fieldset {
   text-align: left;
 }
 
+.member-card.sheet-marker--pink-1 .member-card__select,
+.manual-plan-table thead .sheet-marker--pink-1 {
+  background: #f4cccc;
+}
+
+.member-card.sheet-marker--green-2 .member-card__select,
+.manual-plan-table thead .sheet-marker--green-2 {
+  background: #d9ead3;
+}
+
+.member-card.sheet-marker--blue-3 .member-card__select,
+.manual-plan-table thead .sheet-marker--blue-3 {
+  background: #cfe2f3;
+}
+
+.member-card[class*="sheet-marker--"] .member-card__select {
+  border-radius: 8px;
+}
+
 .member-card__slots {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -839,6 +858,16 @@ fieldset {
   }
 }
 
+.opening-state-form__remaining {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-control);
+  background: var(--color-accent-soft);
+}
+
 @media (max-width: 520px) {
   .app-shell {
     padding: 12px;
@@ -971,6 +1000,19 @@ fieldset {
   top: 58px;
   z-index: 2;
   height: 38px;
+}
+
+.manual-plan-table thead tr:nth-child(2) th > span,
+.manual-plan-table thead tr:nth-child(2) th > small {
+  display: block;
+}
+
+.manual-plan-table thead tr:nth-child(2) th > small {
+  margin-top: 3px;
+  color: var(--color-muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .manual-plan-table__date-heading,
