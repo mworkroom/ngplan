@@ -13,6 +13,7 @@ export type DraftTitleSource = 'DERIVED' | 'MANUAL';
 export type MemberParticipation = 'ACTIVE' | 'EXCLUDED';
 
 export interface OpeningStateDraft {
+  readonly openingQualificationPvp: string;
   readonly fortnightPvpOpeningCredit: string;
   readonly dailyCarryPvp: string;
   readonly dailyCarryLeft: string;
@@ -98,6 +99,8 @@ export interface DerivedTopology {
   readonly traversal: readonly string[];
   readonly reassignmentQueue: readonly ReassignmentQueueEntry[];
 }
+
+export type CanonicalMemberSequence = readonly string[];
 
 export type TopologyCommandErrorCode =
   | 'MEMBER_NOT_FOUND'

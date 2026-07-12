@@ -951,6 +951,129 @@ fieldset {
   border: 0;
 }
 
+.automatic-plan-panel,
+.automatic-plan-preview {
+  margin-bottom: 20px;
+  padding: 18px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-panel);
+  box-shadow: var(--shadow-panel);
+}
+
+.automatic-plan-panel__heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.automatic-plan-panel__heading h2,
+.automatic-plan-panel__heading p {
+  margin: 0;
+}
+
+.automatic-plan-panel__heading p {
+  margin-top: 4px;
+  color: var(--color-muted);
+}
+
+.automatic-plan-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.automatic-plan-progress {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+  padding: 12px;
+  border-radius: var(--radius-control);
+  background: var(--color-accent-soft);
+}
+
+.automatic-plan-progress__status,
+.automatic-plan-progress__metrics {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.automatic-plan-progress__status span,
+.automatic-plan-progress__metrics {
+  color: var(--color-muted);
+}
+
+.automatic-plan-progress progress {
+  width: 100%;
+  height: 10px;
+  accent-color: var(--color-accent-action);
+}
+
+.automatic-plan-progress p {
+  margin: 0;
+  color: var(--color-danger);
+}
+
+.automatic-plan-preview__newer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 12px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-control);
+  background: var(--color-accent-soft);
+}
+
+.automatic-plan-preview__metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.automatic-plan-preview__metrics > div {
+  padding: 10px 12px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+}
+
+.automatic-plan-preview__metrics dt {
+  color: var(--color-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.automatic-plan-preview__metrics dd {
+  margin: 4px 0 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.automatic-plan-preview__days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.automatic-plan-preview__checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: 12px 0;
+  color: var(--color-success);
+  font-weight: 700;
+}
+
 @media (max-width: 1180px) {
   .workspace-grid,
   .setup-layout {

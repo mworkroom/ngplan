@@ -112,6 +112,8 @@ export function deriveManualPlanDailyAuditView(
 
   const commissionLabel = settlement.settlementStatus === 'SKIPPED'
     ? '정산 제외 · 커미션 없음'
+    : settlement.settlementKind === 'BELOW_QUALIFICATION_SETTLEMENT'
+      ? '자격 PVP 300 미만 정산 · 정상 커미션 제외'
     : settlement.commissionOccurred
       ? `${settlement.commissionTier} 단계 · 커미션 발생`
       : '커미션 없음';
@@ -126,6 +128,9 @@ export function deriveManualPlanDailyAuditView(
     carryIn: settlement.carryIn,
     rawPerformance: settlement.rawPerformance,
     preSettlement: settlement.preSettlement,
+    qualificationPvp: settlement.qualificationPvp,
+    qualificationThresholdMet: settlement.qualificationThresholdMet,
+    settlementKind: settlement.settlementKind,
     pvpAppliedSide: settlement.pvpAppliedSide,
     pvpApplicationReason: settlement.pvpApplicationReason,
     pvpApplicationLabel: dailyPvpApplicationLabel(
@@ -161,6 +166,9 @@ export function deriveManualPlanMemberSummaryView(
     memberLabel: member.displayLabel,
     pvpTarget: assessment.pvpTarget,
     sheetMarker: member.sheetMarker,
+    openingQualificationPvp: assessment.openingQualificationPvp,
+    closingQualificationPvp: assessment.closingQualificationPvp,
+    qualificationThresholdMet: assessment.qualificationThresholdMet,
     fortnightPvpOpeningCredit: assessment.fortnightPvpOpeningCredit,
     newPvpTotal: assessment.newPvpTotal,
     personalPvpTotal: assessment.personalPvpTotal,
@@ -187,6 +195,9 @@ export function deriveManualPlanMemberSummaryView(
     allTargetsLabel: assessment.allTargetsMet ? '전체 목표 달성' : '추가 계획 필요',
     commissionDays: assessment.commissionDays,
     commissionOccurrences: assessment.commissionOccurrences,
+    belowQualificationSettlementOccurrences:
+      assessment.belowQualificationSettlementOccurrences,
+    belowQualificationSettlementDays: assessment.belowQualificationSettlementDays,
     recommendationStatus: assessment.recommendationStatus,
     recommendedCommissionDays: assessment.recommendedCommissionDays,
     recommendationLabel: recommendationLabel(assessment),

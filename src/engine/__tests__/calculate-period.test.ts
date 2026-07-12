@@ -196,7 +196,7 @@ describe('calculatePlan', () => {
     expect(result.finalAssessmentByMember.A!.rawLeftTotal).toBe(0);
   });
 
-  test('[OPEN-001] separates the four opening-state roles', () => {
+  test('[OPEN-001] separates the five opening-state roles', () => {
     const input = makePlanInput({
       opening: {
         A: {
@@ -246,6 +246,158 @@ describe('calculatePlan', () => {
       assessedLeft: 700,
       assessedRight: 200,
       sideTargetsMet: false,
+    });
+  });
+
+  test('[QUAL-001] opening 33과 당일 direct PVP 267을 먼저 합산해 같은 날 full commission을 허용', () => {
+    const result = calculate(
+      makePlanInput({
+        opening: { A: { openingQualificationPvp: 33 } },
+        allocations: [
+          { date: '2026-07-01', memberKey: 'A', pvp: 267, selfLeft: 33, selfRight: 300 },
+        ],
+      }),
+    );
+
+    expect(result.dailySettlementByDateAndMember['2026-07-01']!.A).toMatchObject({
+      qualificationPvp: 300,
+      qualificationThresholdMet: true,
+      settlementKind: 'FULL_COMMISSION',
+      commissionTier: 300,
+      commissionOccurred: true,
+      carryOut: { pvp: 0, left: 0, right: 0 },
+    });
+    expect(result.runningFortnightByDateAndMember['2026-07-01']!.A).toMatchObject({
+      qualificationPvp: 300,
+      qualificationThresholdMet: true,
+    });
+    expect(result.finalAssessmentByMember.A).toMatchObject({
+      openingQualificationPvp: 33,
+      closingQualificationPvp: 300,
+      commissionDays: 1,
+      belowQualificationSettlementDays: 0,
+    });
+    expect(result.warnings).toEqual([]);
+  });
+
+  test('[QUAL-002] opening 33과 당일 direct PVP 266은 실제 reset하되 full commission으로 세지 않고 경고', () => {
+    const result = calculate(
+      makePlanInput({
+        opening: { A: { openingQualificationPvp: 33 } },
+        allocations: [
+          { date: '2026-07-01', memberKey: 'A', pvp: 266, selfLeft: 34, selfRight: 300 },
+        ],
+      }),
+    );
+
+    expect(result.dailySettlementByDateAndMember['2026-07-01']!.A).toMatchObject({
+      qualificationPvp: 299,
+      qualificationThresholdMet: false,
+      settlementKind: 'BELOW_QUALIFICATION_SETTLEMENT',
+      commissionTier: 300,
+      commissionOccurred: false,
+      carryOut: { pvp: 0, left: 0, right: 0 },
+    });
+    expect(result.finalAssessmentByMember.A).toMatchObject({
+      commissionDays: 0,
+      commissionOccurrences: [],
+      belowQualificationSettlementDays: 1,
+      belowQualificationSettlementOccurrences: [
+        { date: '2026-07-01', tier: 300, qualificationPvp: 299 },
+      ],
+    });
+    expect(result.warnings).toEqual([
+      expect.objectContaining({
+        code: 'BELOW_QUALIFICATION_SETTLEMENT',
+        severity: 'WARNING',
+        location: {
+          date: '2026-07-01',
+          memberKey: 'A',
+          field: 'qualificationPvp',
+        },
+      }),
+    ]);
+  });
+
+  test('[QUAL-003] qualification PVP는 일일 reset과 무관하게 날짜별로 inclusive 누적', () => {
+    const result = calculate(
+      makePlanInput({
+        opening: { A: { openingQualificationPvp: 33 } },
+        allocations: [
+          { date: '2026-07-01', memberKey: 'A', pvp: 100, selfLeft: 0, selfRight: 0 },
+          { date: '2026-07-02', memberKey: 'A', pvp: 200, selfLeft: 0, selfRight: 300 },
+        ],
+      }),
+    );
+
+    expect(result.dailySettlementByDateAndMember['2026-07-01']!.A).toMatchObject({
+      qualificationPvp: 133,
+      settlementKind: 'NO_COMMISSION',
+      carryOut: { pvp: 100, left: 0, right: 0 },
+    });
+    expect(result.dailySettlementByDateAndMember['2026-07-02']!.A).toMatchObject({
+      preSettlement: { pvp: 300, left: 0, right: 300 },
+      qualificationPvp: 333,
+      settlementKind: 'FULL_COMMISSION',
+      commissionTier: 300,
+    });
+    expect(result.finalAssessmentByMember.A!.closingQualificationPvp).toBe(333);
+  });
+
+  test('[QUAL-004] qualification 300 미만의 한쪽 실적은 정산 단계가 없으면 carry', () => {
+    const result = calculate(
+      makePlanInput({
+        opening: { A: { openingQualificationPvp: 33 } },
+        allocations: [
+          { date: '2026-07-01', memberKey: 'A', pvp: 0, selfLeft: 300, selfRight: 0 },
+        ],
+      }),
+    );
+
+    expect(result.dailySettlementByDateAndMember['2026-07-01']!.A).toMatchObject({
+      qualificationPvp: 33,
+      settlementKind: 'NO_COMMISSION',
+      commissionTier: null,
+      carryOut: { pvp: 0, left: 300, right: 0 },
+    });
+    expect(result.warnings).toEqual([]);
+  });
+
+  test('[QUAL-006] opening qualification PVP가 300이면 첫 영업일부터 full commission 가능', () => {
+    const result = calculate(
+      makePlanInput({
+        opening: { A: { openingQualificationPvp: 300 } },
+        allocations: [
+          { date: '2026-07-01', memberKey: 'A', pvp: 0, selfLeft: 300, selfRight: 300 },
+        ],
+      }),
+    );
+
+    expect(result.dailySettlementByDateAndMember['2026-07-01']!.A).toMatchObject({
+      qualificationPvp: 300,
+      settlementKind: 'FULL_COMMISSION',
+      commissionOccurred: true,
+    });
+  });
+
+  test('[QUAL-007] daily opening PVP와 qualification opening을 서로 대신 사용하지 않음', () => {
+    const result = calculate(
+      makePlanInput({
+        opening: {
+          A: { openingQualificationPvp: 33, dailyCarryPvp: 267 },
+        },
+        allocations: [
+          { date: '2026-07-01', memberKey: 'A', pvp: 0, selfLeft: 33, selfRight: 300 },
+        ],
+      }),
+    );
+
+    expect(result.dailySettlementByDateAndMember['2026-07-01']!.A).toMatchObject({
+      preSettlement: { pvp: 267, left: 33, right: 300 },
+      qualificationPvp: 33,
+      settlementKind: 'BELOW_QUALIFICATION_SETTLEMENT',
+      commissionTier: 300,
+      carryOut: { pvp: 0, left: 0, right: 0 },
     });
   });
 
@@ -309,6 +461,33 @@ describe('calculatePlan', () => {
       carryIn: { pvp: 100, left: 200, right: 100 },
       carryOut: { pvp: 100, left: 200, right: 100 },
     });
+    expect(result.closingDailyCarryByMember.A).toEqual({
+      pvp: 100,
+      left: 200,
+      right: 100,
+    });
+  });
+
+  test('[CARRY-001] 마지막 영업일의 미정산 carry를 authoritative closing state로 노출', () => {
+    const result = calculate(
+      makePlanInput({
+        half: 'SECOND_HALF',
+        allocations: [
+          { date: '2026-07-31', memberKey: 'A', pvp: 100, selfLeft: 200, selfRight: 100 },
+        ],
+      }),
+    );
+
+    expect(result.period.endDate).toBe('2026-07-31');
+    expect(result.dailySettlementByDateAndMember['2026-07-31']!.A).toMatchObject({
+      settlementKind: 'NO_COMMISSION',
+      carryOut: { pvp: 100, left: 200, right: 100 },
+    });
+    expect(result.closingDailyCarryByMember.A).toEqual({
+      pvp: 100,
+      left: 200,
+      right: 100,
+    });
   });
 
   test('[COUNT-P01] applies the eight-day preference by target, not position', () => {
@@ -341,6 +520,7 @@ describe('calculatePlan', () => {
     const tiers: CommissionTier[] = [300, 300, 700, 1500, 2400, 6000, 20000, 60000];
     const result = calculate(
       makePlanInput({
+        opening: { A: { openingQualificationPvp: 300 } },
         allocations: businessDates.map((date, index) => ({
           date,
           memberKey: 'A',
@@ -436,6 +616,52 @@ describe('calculatePlan', () => {
     }
   });
 
+  test('reports the date where cumulative qualification PVP first overflows', () => {
+    const outcome = calculatePlan(
+      makePlanInput({
+        opening: {
+          A: { openingQualificationPvp: Number.MAX_SAFE_INTEGER },
+        },
+        allocations: [
+          { date: '2026-07-01', memberKey: 'A', pvp: 1, selfLeft: 0, selfRight: 0 },
+        ],
+      }),
+    );
+
+    expect(outcome.status).toBe('FAILURE');
+    if (outcome.status === 'FAILURE') {
+      expect(outcome.validation.errors).toEqual([
+        expect.objectContaining({
+          code: 'PV_AGGREGATE_OUT_OF_RANGE',
+          location: {
+            date: '2026-07-01',
+            memberKey: 'A',
+            field: 'qualificationPvp',
+          },
+        }),
+      ]);
+    }
+  });
+
+  test('uses ruleset and engine 3.0.0 and canonical root-first LEFT-before-RIGHT output order', () => {
+    const result = calculate(
+      makePlanInput({
+        members: [
+          member('B', 'Z', 'RIGHT'),
+          member('A', 'M', 'LEFT'),
+          member('Z'),
+          member('M', 'Z', 'LEFT'),
+        ],
+      }),
+    );
+
+    expect(result.rulesetVersion).toBe('3.0.0');
+    expect(result.engineVersion).toBe('3.0.0');
+    expect(result.inputSnapshot.organization.members.map(({ memberKey }) => memberKey))
+      .toEqual(['Z', 'M', 'A', 'B']);
+    expect(Object.keys(result.finalAssessmentByMember)).toEqual(['Z', 'M', 'A', 'B']);
+  });
+
   test('is deterministic, input-immutable, and independent of member array order', () => {
     const orderedMembers = [member('A'), member('B', 'A', 'LEFT')];
     const shuffledMembers = [orderedMembers[1]!, orderedMembers[0]!];
@@ -516,7 +742,7 @@ describe('calculatePlan', () => {
     }
   });
 
-  test('rejects a modified RuleSet body that reuses version 2.0.0', () => {
+  test('rejects a modified RuleSet body that reuses version 3.0.0', () => {
     const alteredRules = {
       ...DEFAULT_RULE_SET,
       commissionTiers: [700, 700, 1500, 2400, 6000, 20000, 60000] as const,
@@ -540,6 +766,7 @@ describe('calculatePlan', () => {
     expect(Object.hasOwn(result.dailySettlementByDateAndMember['2026-07-01']!, '__proto__')).toBe(true);
     expect(Object.hasOwn(result.runningFortnightByDateAndMember['2026-07-01']!, '__proto__')).toBe(true);
     expect(Object.hasOwn(result.finalAssessmentByMember, '__proto__')).toBe(true);
+    expect(Object.hasOwn(result.closingDailyCarryByMember, '__proto__')).toBe(true);
     expect(result.finalAssessmentByMember.__proto__!.memberKey).toBe('__proto__');
   });
 });

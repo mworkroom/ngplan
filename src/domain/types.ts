@@ -3,10 +3,16 @@ declare const isoDateBrand: unique symbol;
 
 export type Pv = number & { readonly [pvBrand]: 'Pv' };
 export type IsoDate = string & { readonly [isoDateBrand]: 'IsoDate' };
+export type BusinessDate = IsoDate;
 export type Side = 'LEFT' | 'RIGHT';
 export type Half = 'FIRST_HALF' | 'SECOND_HALF';
 export type SettlementMode = 'SETTLE' | 'SKIP_NO_INPUT';
 export type SettlementStatus = 'SETTLED' | 'SKIPPED';
+export type SettlementKind =
+  | 'SKIPPED'
+  | 'NO_COMMISSION'
+  | 'BELOW_QUALIFICATION_SETTLEMENT'
+  | 'FULL_COMMISSION';
 export type CommissionTier = 300 | 700 | 1500 | 2400 | 6000 | 20000 | 60000;
 export type PvpTarget = 700 | 1500 | 2400;
 export type SheetMarker =
@@ -44,6 +50,7 @@ export interface MemberSnapshot {
 }
 
 export interface OpeningStateInput {
+  readonly openingQualificationPvp: number;
   readonly fortnightPvpOpeningCredit: number;
   readonly dailyCarryPvp: number;
   readonly dailyCarryLeft: number;
@@ -71,7 +78,7 @@ export interface CalculatePlanInput {
 }
 
 export interface RuleSet {
-  readonly rulesetVersion: '2.0.0';
+  readonly rulesetVersion: '3.0.0';
   readonly commissionTiers: readonly CommissionTier[];
   readonly allowedPvpTargets: readonly PvpTarget[];
   readonly fortnightSideTarget: Pv;
@@ -82,7 +89,14 @@ export interface RuleSet {
     readonly eligiblePvpTarget: 700;
     readonly recommendedDays: 8;
   };
+  readonly qualificationPolicy: {
+    readonly threshold: 300;
+    readonly accumulation: 'OPENING_PLUS_DIRECT_INCLUSIVE_NON_RESETTING';
+    readonly belowThresholdSettlement: 'RESET_AND_WARN_NOT_FULL_COMMISSION';
+  };
 }
+
+export type RuleSetVersion = RuleSet['rulesetVersion'];
 
 export interface PvBalance {
   readonly pvp: Pv;
@@ -107,6 +121,9 @@ export interface DailySettlement {
   readonly carryIn: PvBalance;
   readonly rawPerformance: RawPerformance;
   readonly preSettlement: PvBalance;
+  readonly qualificationPvp: Pv;
+  readonly qualificationThresholdMet: boolean;
+  readonly settlementKind: SettlementKind;
   readonly pvpAppliedSide: Side | null;
   readonly pvpApplicationReason: PvpApplicationReason | null;
   readonly assessedLeft: Pv | null;
@@ -129,6 +146,8 @@ export interface RunningFortnightState extends FortnightRawTotals {
   readonly personalPvpTarget: Pv;
   readonly remainingPvp: Pv;
   readonly personalPvpTargetMet: boolean;
+  readonly qualificationPvp: Pv;
+  readonly qualificationThresholdMet: boolean;
 }
 
 export interface CommissionOccurrence {
@@ -136,9 +155,17 @@ export interface CommissionOccurrence {
   readonly tier: CommissionTier;
 }
 
+export interface BelowQualificationSettlementOccurrence
+  extends CommissionOccurrence {
+  readonly qualificationPvp: Pv;
+}
+
 export interface FortnightAssessment extends FortnightRawTotals {
   readonly memberKey: string;
   readonly pvpTarget: PvpTarget;
+  readonly openingQualificationPvp: Pv;
+  readonly closingQualificationPvp: Pv;
+  readonly qualificationThresholdMet: boolean;
   readonly fortnightPvpOpeningCredit: Pv;
   readonly personalPvpTotal: Pv;
   readonly personalPvpTarget: Pv;
@@ -155,6 +182,8 @@ export interface FortnightAssessment extends FortnightRawTotals {
   readonly allTargetsMet: boolean;
   readonly commissionOccurrences: readonly CommissionOccurrence[];
   readonly commissionDays: number;
+  readonly belowQualificationSettlementOccurrences: readonly BelowQualificationSettlementOccurrence[];
+  readonly belowQualificationSettlementDays: number;
   readonly recommendationStatus: RecommendationStatus;
   readonly recommendedCommissionDays: number | null;
 }
@@ -206,6 +235,7 @@ export type ValidationCode =
   | 'SELF_SIDE_ALLOCATION_MISSING'
   | 'CONNECTED_SIDE_ALLOCATION'
   | 'NON_ZERO_INPUT_ON_SKIPPED_DATE'
+  | 'BELOW_QUALIFICATION_SETTLEMENT'
   | 'RULESET_VERSION_UNSUPPORTED'
   | 'RULESET_BODY_MISMATCH';
 
@@ -239,6 +269,7 @@ export interface CalculationResult {
     Record<string, Readonly<Record<string, RunningFortnightState>>>
   >;
   readonly finalAssessmentByMember: Readonly<Record<string, FortnightAssessment>>;
+  readonly closingDailyCarryByMember: Readonly<Record<string, PvBalance>>;
   readonly warnings: readonly ValidationIssue[];
 }
 

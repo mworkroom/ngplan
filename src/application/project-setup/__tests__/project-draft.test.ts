@@ -146,12 +146,13 @@ describe('P2-PROJ 프로젝트 Draft', () => {
 });
 
 describe('P2-OPEN / P2-MEMBER 회원 편집과 파싱', () => {
-  it('P2-OPEN-001: 새 회원의 네 시작값은 독립된 0 문자열이며 미확인이다', () => {
+  it('P2-OPEN-001: 새 회원의 다섯 시작값은 독립된 0 문자열이며 미확인이다', () => {
     const firstOpening = createOpeningStateDraft();
     const secondOpening = createOpeningStateDraft();
     const member = createMemberDraft('A');
 
     expect(firstOpening).toEqual({
+      openingQualificationPvp: '0',
       fortnightPvpOpeningCredit: '0',
       dailyCarryPvp: '0',
       dailyCarryLeft: '0',
@@ -172,6 +173,7 @@ describe('P2-OPEN / P2-MEMBER 회원 편집과 파싱', () => {
     const opening = edited.members[0]!.openingState;
 
     expect(opening).toEqual({
+      openingQualificationPvp: '0',
       fortnightPvpOpeningCredit: '0',
       dailyCarryPvp: '0',
       dailyCarryLeft: '39',
@@ -179,6 +181,7 @@ describe('P2-OPEN / P2-MEMBER 회원 편집과 파싱', () => {
       openingStateConfirmed: true,
     });
     expect(parseMemberOpeningState(edited.members[0]!)).toEqual({
+      openingQualificationPvp: 0,
       fortnightPvpOpeningCredit: 0,
       dailyCarryPvp: 0,
       dailyCarryLeft: 39,
@@ -197,6 +200,7 @@ describe('P2-OPEN / P2-MEMBER 회원 편집과 파싱', () => {
     ['text', { ok: false, code: 'PV_INVALID' }],
     ['Infinity', { ok: false, code: 'PV_INVALID' }],
     ['1e309', { ok: false, code: 'PV_OUT_OF_RANGE' }],
+    ['-0', { ok: false, code: 'PV_NEGATIVE' }],
     ['-1', { ok: false, code: 'PV_NEGATIVE' }],
     ['1.5', { ok: false, code: 'PV_NOT_INTEGER' }],
     ['-1.5', { ok: false, code: 'PV_NOT_INTEGER' }],

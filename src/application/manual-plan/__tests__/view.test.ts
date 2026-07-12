@@ -18,7 +18,8 @@ import {
   type ManualPlanSchema,
 } from '../index';
 
-const ZERO_OPENING: OpeningStateInput = {
+const DEFAULT_OPENING: OpeningStateInput = {
+  openingQualificationPvp: 300,
   fortnightPvpOpeningCredit: 0,
   dailyCarryPvp: 0,
   dailyCarryLeft: 0,
@@ -50,7 +51,7 @@ function bundle(
   for (const item of members) {
     Object.defineProperty(openings, item.memberKey, {
       value: Object.freeze({
-        ...ZERO_OPENING,
+        ...DEFAULT_OPENING,
         ...(Object.hasOwn(openingOverrides, item.memberKey)
           ? openingOverrides[item.memberKey]
           : {}),
@@ -122,6 +123,9 @@ describe('WP5 pure result view models', () => {
         organizationRight: 300,
       },
       preSettlement: { pvp: 100, left: 200, right: 300 },
+      qualificationPvp: 400,
+      qualificationThresholdMet: true,
+      settlementKind: 'FULL_COMMISSION',
       pvpAppliedSide: 'LEFT',
       pvpApplicationReason: 'SMALLER_LEFT',
       pvpApplicationLabel: '작은 쪽 좌에 PVP 적용',
@@ -166,6 +170,42 @@ describe('WP5 pure result view models', () => {
       commissionOccurred: true,
       carryOut: { pvp: 0, left: 0, right: 0 },
       running: { newPvpTotal: 100, rawLeftTotal: 200, rawRightTotal: 300 },
+    });
+  });
+
+  it('P4-QUAL-005 presents the preserved below-qualification audit trace plainly', () => {
+    const setup = bundle(
+      [member('A')],
+      { A: { openingQualificationPvp: 33 } },
+    );
+    const schema = deriveManualPlanSchema(setup);
+    let draft = createManualPlanDraft(setup);
+    draft = edit(schema, draft, '2026-07-01', 'A', 'pvp', 266);
+    draft = edit(schema, draft, '2026-07-01', 'A', 'selfLeft', 300);
+    draft = edit(schema, draft, '2026-07-01', 'A', 'selfRight', 300);
+    const state = calculateManualPlan(setup, draft, schema);
+
+    expect(state.status).toBe('AUDIT_BLOCKED');
+    if (state.status !== 'AUDIT_BLOCKED') throw new Error('expected audit block');
+    expect(
+      deriveManualPlanDailyAuditView(state.result, schema, '2026-07-01', 'A'),
+    ).toMatchObject({
+      qualificationPvp: 299,
+      qualificationThresholdMet: false,
+      settlementKind: 'BELOW_QUALIFICATION_SETTLEMENT',
+      commissionTier: 300,
+      commissionOccurred: false,
+      commissionLabel: '자격 PVP 300 미만 정산 · 정상 커미션 제외',
+      carryOut: { pvp: 0, left: 0, right: 0 },
+    });
+    expect(
+      deriveManualPlanMemberSummaryView(state.result, schema, 'A'),
+    ).toMatchObject({
+      openingQualificationPvp: 33,
+      closingQualificationPvp: 299,
+      qualificationThresholdMet: false,
+      commissionDays: 0,
+      belowQualificationSettlementDays: 1,
     });
   });
 

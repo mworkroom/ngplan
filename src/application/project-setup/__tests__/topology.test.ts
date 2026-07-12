@@ -5,6 +5,7 @@ import {
   addMemberToSlot,
   addRootMember,
   attachSubtree,
+  deriveCanonicalMemberSequence,
   deriveTopology,
   detachSubtree,
   excludeMember,
@@ -46,6 +47,53 @@ function member(draft: ProjectSetupDraft, memberKey: string) {
 }
 
 describe('P2-CARD 명시적 좌·우 슬롯', () => {
+  it('P2-NORM-005: 정본 회원 순서는 입력 배열과 무관하게 root-first LEFT-before-RIGHT다', () => {
+    const members = [
+      {
+        memberKey: 'C',
+        memberId: '',
+        name: '가장 먼저 보이는 이름',
+        pvpTarget: 700 as const,
+        sheetMarker: 'NONE' as const,
+        parentMemberKey: 'A',
+        sideAtParent: 'RIGHT' as const,
+      },
+      {
+        memberKey: 'D',
+        memberId: '',
+        name: 'D',
+        pvpTarget: 700 as const,
+        sheetMarker: 'NONE' as const,
+        parentMemberKey: 'B',
+        sideAtParent: 'LEFT' as const,
+      },
+      {
+        memberKey: 'B',
+        memberId: '',
+        name: 'B',
+        pvpTarget: 700 as const,
+        sheetMarker: 'NONE' as const,
+        parentMemberKey: 'A',
+        sideAtParent: 'LEFT' as const,
+      },
+      {
+        memberKey: 'A',
+        memberId: '',
+        name: '가장 나중에 보이는 이름',
+        pvpTarget: 700 as const,
+        sheetMarker: 'NONE' as const,
+        parentMemberKey: null,
+        sideAtParent: null,
+      },
+    ];
+
+    const sequence = deriveCanonicalMemberSequence({ members });
+
+    expect(sequence).toEqual(['A', 'B', 'D', 'C']);
+    expect(Object.isFrozen(sequence)).toBe(true);
+    expect(members.map(({ memberKey }) => memberKey)).toEqual(['C', 'D', 'B', 'A']);
+  });
+
   it('P2-CARD-001/003: 루트와 좌·우 회원을 추가하고 SELF를 CHILD로 파생한다', () => {
     const rootOutcome = expectTopologySuccess(addRootMember(createEmptyDraft(), 'A'));
     const leftOutcome = expectTopologySuccess(
@@ -68,6 +116,7 @@ describe('P2-CARD 명시적 좌·우 슬롯', () => {
     });
     expect(getChildSlotState(topology, 'B', 'RIGHT').kind).toBe('SELF');
     expect(member(rightOutcome.draft, 'B').openingState).toMatchObject({
+      openingQualificationPvp: '0',
       fortnightPvpOpeningCredit: '0',
       openingStateConfirmed: false,
     });

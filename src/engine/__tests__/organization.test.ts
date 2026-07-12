@@ -115,6 +115,30 @@ describe('organization', () => {
       .toEqual(deriveRawPerformance({ date: DATE, organization: secondIndex, allocations }));
   });
 
+  it('[ORG-P01] canonical 회원 순서는 루트부터 LEFT 서브트리, RIGHT 서브트리 순서임', () => {
+    const members = [
+      member('B', 'Z', 'RIGHT'),
+      member('A', 'M', 'LEFT'),
+      member('Z', null, null),
+      member('M', 'Z', 'LEFT'),
+    ];
+    const organization = buildOrganizationIndex(members);
+    const result = deriveRawPerformance({
+      date: DATE,
+      organization,
+      allocations: [
+        { date: DATE, memberKey: 'A', pvp: 0, selfLeft: 0, selfRight: 0 },
+        { date: DATE, memberKey: 'B', pvp: 0, selfLeft: 0, selfRight: 0 },
+        { date: DATE, memberKey: 'M', pvp: 0, selfRight: 0 },
+        { date: DATE, memberKey: 'Z', pvp: 0 },
+      ],
+    });
+
+    expect(organization.orderedMemberKeys).toEqual(['Z', 'M', 'A', 'B']);
+    expect(organization.postOrderMemberKeys).toEqual(['A', 'M', 'B', 'Z']);
+    expect(Object.keys(result)).toEqual(['Z', 'M', 'A', 'B']);
+  });
+
   it('[ORG-006] 하위 실적은 상위의 PVP가 아님', () => {
     const result = calculate(
       [member('A', null, null), member('B', 'A', 'LEFT')],
@@ -144,10 +168,12 @@ describe('organization', () => {
     const childFirstDaily = settleDaily({
       carryIn: balance(0, 0, 0),
       rawPerformance: firstRaw.B!,
+      qualificationPvp: 300 as Pv,
     });
     const parentFirstDaily = settleDaily({
       carryIn: balance(0, 0, 0),
       rawPerformance: firstRaw.A!,
+      qualificationPvp: 300 as Pv,
     });
     const secondRaw = deriveRawPerformance({
       date: NEXT_DATE,
@@ -160,6 +186,7 @@ describe('organization', () => {
     const parentSecondDaily = settleDaily({
       carryIn: parentFirstDaily.carryOut,
       rawPerformance: secondRaw.A!,
+      qualificationPvp: 300 as Pv,
     });
 
     expect(firstRaw.A?.organizationLeft).toBe(400);
@@ -184,6 +211,7 @@ describe('organization', () => {
     const childDaily = settleDaily({
       carryIn: balance(0, 0, 0),
       rawPerformance: rawByMember.B!,
+      qualificationPvp: 300 as Pv,
     });
 
     expect(childDaily).toMatchObject({

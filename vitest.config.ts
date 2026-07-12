@@ -27,6 +27,7 @@ export default defineConfig({
       include: [
         'src/domain/**/*.ts',
         'src/engine/**/*.ts',
+        'src/optimizer/**/*.ts',
         'src/application/**/*.ts',
         'src/ui/**/*.{ts,tsx}',
       ],
@@ -34,6 +35,8 @@ export default defineConfig({
         'src/**/__tests__/**',
         'src/domain/types.ts',
         'src/engine/index.ts',
+        'src/optimizer/types.ts',
+        'src/optimizer/index.ts',
       ],
       thresholds: {
         'src/domain/**': {
@@ -43,6 +46,12 @@ export default defineConfig({
           statements: 95,
         },
         'src/engine/**': {
+          branches: 95,
+          functions: 95,
+          lines: 95,
+          statements: 95,
+        },
+        'src/optimizer/**': {
           branches: 95,
           functions: 95,
           lines: 95,

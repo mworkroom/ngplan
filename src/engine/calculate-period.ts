@@ -1,6 +1,6 @@
 import { DEFAULT_RULE_SET, ENGINE_VERSION } from '../domain/constants';
 import { derivePeriod } from '../domain/period';
-import { PvAggregateOutOfRangeError } from '../domain/pv';
+import { checkedAdd, PvAggregateOutOfRangeError } from '../domain/pv';
 import type {
   CalculatePlanInput,
   CalculationOutcome,
@@ -32,10 +32,8 @@ import { buildOrganizationIndex, deriveRawPerformance } from './organization';
 const compareText = (left: string, right: string): number =>
   left < right ? -1 : left > right ? 1 : 0;
 
-function canonicalizeInput(input: CalculatePlanInput): CalculatePlanInput {
-  const members = [...input.organization.members]
-    .sort((left, right) => compareText(left.memberKey, right.memberKey))
-    .map((member) => ({ ...member }));
+function snapshotInput(input: CalculatePlanInput): CalculatePlanInput {
+  const members = input.organization.members.map((member) => ({ ...member }));
   const openingStateByMember = Object.fromEntries(
     Object.entries(input.organization.openingStateByMember)
       .sort(([left], [right]) => compareText(left, right))
@@ -44,13 +42,40 @@ function canonicalizeInput(input: CalculatePlanInput): CalculatePlanInput {
         opening === undefined ? opening : { ...opening },
       ]),
   ) as CalculatePlanInput['organization']['openingStateByMember'];
-  const allocations = [...input.allocations]
+  const allocations = input.allocations.map((allocation) => ({ ...allocation }));
+
+  return {
+    period: { ...input.period },
+    organization: {
+      snapshotId: input.organization.snapshotId,
+      members,
+      openingStateByMember,
+    },
+    allocations,
+  };
+}
+
+function canonicalizeValidatedInput(input: CalculatePlanInput): CalculatePlanInput {
+  const organization = buildOrganizationIndex(input.organization.members);
+  const memberOrder = new Map(
+    organization.orderedMemberKeys.map((memberKey, index) => [memberKey, index]),
+  );
+  const members = organization.orderedMemberKeys.map((memberKey) => ({
+    ...organization.membersByKey.get(memberKey)!,
+  }));
+  const openingStateByMember = Object.fromEntries(
+    organization.orderedMemberKeys.map((memberKey) => [
+      memberKey,
+      { ...input.organization.openingStateByMember[memberKey]! },
+    ]),
+  ) as CalculatePlanInput['organization']['openingStateByMember'];
+  const allocations = input.allocations
+    .map((allocation) => ({ ...allocation }))
     .sort(
       (left, right) =>
         compareText(left.date, right.date) ||
-        compareText(left.memberKey, right.memberKey),
-    )
-    .map((allocation) => ({ ...allocation }));
+        memberOrder.get(left.memberKey)! - memberOrder.get(right.memberKey)!,
+    );
 
   return {
     period: { ...input.period },
@@ -84,6 +109,22 @@ function createSafeRecord<T>(): Record<string, T> {
   return Object.create(null) as Record<string, T>;
 }
 
+function belowQualificationWarning(
+  settlement: DailySettlement,
+): ValidationIssue {
+  return Object.freeze({
+    code: 'BELOW_QUALIFICATION_SETTLEMENT',
+    severity: 'WARNING',
+    location: Object.freeze({
+      date: settlement.date,
+      memberKey: settlement.memberKey,
+      field: 'qualificationPvp',
+    }),
+    message: `누적 qualification PVP ${settlement.qualificationPvp} 상태에서 정산이 발생했습니다.`,
+    suggestion: '정산일 당일까지 누적 qualification PVP를 300 이상으로 만들거나 좌우 계획을 조정해 주세요.',
+  });
+}
+
 /** 검증부터 전체 반월의 조직·일일·보름 장부까지 한 번에 계산한다. */
 export function calculatePlan(
   input: CalculatePlanInput,
@@ -92,11 +133,12 @@ export function calculatePlan(
   if (!isCalculatePlanInputStructure(input)) {
     return { status: 'FAILURE', validation: validatePlan(input, rules) };
   }
-  const inputSnapshot = canonicalizeInput(input);
-  const validation = validatePlan(inputSnapshot, rules);
+  const sourceSnapshot = snapshotInput(input);
+  const validation = validatePlan(sourceSnapshot, rules);
   if (!validation.isValid) {
     return { status: 'FAILURE', validation };
   }
+  const inputSnapshot = canonicalizeValidatedInput(sourceSnapshot);
   const activeRules = DEFAULT_RULE_SET;
 
   try {
@@ -113,12 +155,18 @@ export function calculatePlan(
     }
 
     const carryByMember = new Map<string, PvBalance>();
+    const qualificationPvpByMember = new Map<string, Pv>();
     const accumulatorByMember = new Map<string, FortnightAccumulator>();
     for (const memberKey of organization.orderedMemberKeys) {
       const opening = inputSnapshot.organization.openingStateByMember[memberKey]!;
       carryByMember.set(memberKey, toPvBalance(opening));
+      qualificationPvpByMember.set(
+        memberKey,
+        opening.openingQualificationPvp as Pv,
+      );
       accumulatorByMember.set(memberKey, createFortnightAccumulator());
     }
+    const warnings: ValidationIssue[] = [...validation.warnings];
 
     const rawPerformanceByDateAndMember: Record<
       string,
@@ -145,13 +193,27 @@ export function calculatePlan(
       const runningByMember = createSafeRecord<RunningFortnightState>();
       for (const memberKey of organization.orderedMemberKeys) {
         const raw = rawByMember[memberKey]!;
+        const qualificationPvp = checkedAdd(
+          qualificationPvpByMember.get(memberKey)!,
+          raw.directPvp,
+          {
+            date,
+            memberKey,
+            field: 'qualificationPvp',
+          },
+        );
+        qualificationPvpByMember.set(memberKey, qualificationPvp);
         const settlement = settleDaily({
           carryIn: carryByMember.get(memberKey)!,
           rawPerformance: raw,
+          qualificationPvp,
           rules: activeRules,
         });
         dailyByMember[memberKey] = settlement;
         carryByMember.set(memberKey, settlement.carryOut);
+        if (settlement.settlementKind === 'BELOW_QUALIFICATION_SETTLEMENT') {
+          warnings.push(belowQualificationWarning(settlement));
+        }
 
         const member = organization.membersByKey.get(memberKey)!;
         const opening = inputSnapshot.organization.openingStateByMember[memberKey]!;
@@ -171,6 +233,7 @@ export function calculatePlan(
     }
 
     const finalAssessmentByMember = createSafeRecord<FortnightAssessment>();
+    const closingDailyCarryByMember = createSafeRecord<PvBalance>();
     for (const memberKey of organization.orderedMemberKeys) {
       finalAssessmentByMember[memberKey] = evaluateFortnight({
         accumulator: accumulatorByMember.get(memberKey)!,
@@ -178,6 +241,12 @@ export function calculatePlan(
         openingState: inputSnapshot.organization.openingStateByMember[memberKey]!,
         rules: activeRules,
       });
+      const closingCarry = carryByMember.get(memberKey)!;
+      closingDailyCarryByMember[memberKey] = {
+        pvp: closingCarry.pvp,
+        left: closingCarry.left,
+        right: closingCarry.right,
+      };
     }
 
     return {
@@ -191,7 +260,8 @@ export function calculatePlan(
         dailySettlementByDateAndMember,
         runningFortnightByDateAndMember,
         finalAssessmentByMember,
-        warnings: validation.warnings,
+        closingDailyCarryByMember,
+        warnings: Object.freeze(warnings),
       },
     };
   } catch (error) {

@@ -135,6 +135,13 @@ export type ManualPlanCalculationState =
       readonly warnings: readonly ManualPlanIssue[];
     }
   | {
+      readonly status: 'AUDIT_BLOCKED';
+      readonly input: CalculatePlanInput;
+      readonly result: CalculationResult;
+      readonly issues: readonly ManualPlanIssue[];
+      readonly warnings: readonly ManualPlanIssue[];
+    }
+  | {
       readonly status: 'BLOCKED';
       readonly issues: readonly ManualPlanIssue[];
     };
@@ -158,6 +165,9 @@ export interface ManualPlanDailyAuditView {
   readonly carryIn: PvBalance;
   readonly rawPerformance: RawPerformance;
   readonly preSettlement: PvBalance;
+  readonly qualificationPvp: number;
+  readonly qualificationThresholdMet: boolean;
+  readonly settlementKind: DailySettlement['settlementKind'];
   readonly pvpAppliedSide: DailySettlement['pvpAppliedSide'];
   readonly pvpApplicationReason: DailySettlement['pvpApplicationReason'];
   readonly pvpApplicationLabel: string;
@@ -176,6 +186,9 @@ export interface ManualPlanMemberSummaryView {
   readonly memberLabel: string;
   readonly pvpTarget: number;
   readonly sheetMarker: SheetMarker;
+  readonly openingQualificationPvp: number;
+  readonly closingQualificationPvp: number;
+  readonly qualificationThresholdMet: boolean;
   readonly fortnightPvpOpeningCredit: number;
   readonly newPvpTotal: number;
   readonly personalPvpTotal: number;
@@ -200,6 +213,9 @@ export interface ManualPlanMemberSummaryView {
   readonly allTargetsLabel: string;
   readonly commissionDays: number;
   readonly commissionOccurrences: FortnightAssessment['commissionOccurrences'];
+  readonly belowQualificationSettlementOccurrences:
+    FortnightAssessment['belowQualificationSettlementOccurrences'];
+  readonly belowQualificationSettlementDays: number;
   readonly recommendationStatus: FortnightAssessment['recommendationStatus'];
   readonly recommendedCommissionDays: number | null;
   readonly recommendationLabel: string;
@@ -216,3 +232,14 @@ export interface ManualPlanValidationSummaryItem {
   readonly contextLabel: string;
   readonly targetId: string;
 }
+
+export type ConvertVerifiedAllocationsToManualPlanDraftOutcome =
+  | {
+      readonly status: 'SUCCESS';
+      readonly draft: ManualPlanDraft;
+      readonly replacesModifiedDraft: boolean;
+    }
+  | {
+      readonly status: 'FAILURE';
+      readonly issues: readonly ManualPlanIssue[];
+    };

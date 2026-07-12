@@ -30,7 +30,8 @@ import {
   type ManualPlanSchema,
 } from '../index';
 
-const ZERO_OPENING: OpeningStateInput = Object.freeze({
+const DEFAULT_OPENING: OpeningStateInput = Object.freeze({
+  openingQualificationPvp: 300,
   fortnightPvpOpeningCredit: 0,
   dailyCarryPvp: 0,
   dailyCarryLeft: 0,
@@ -59,11 +60,17 @@ function setupBundle(
     member('A', null, null),
     member('B', 'A', 'LEFT'),
   ],
+  openingOverrides: Readonly<Record<string, Partial<OpeningStateInput>>> = {},
 ): ProjectSetupBundle {
   const openings = Object.create(null) as Record<string, OpeningStateInput>;
   for (const item of members) {
     Object.defineProperty(openings, item.memberKey, {
-      value: ZERO_OPENING,
+      value: Object.freeze({
+        ...DEFAULT_OPENING,
+        ...(Object.hasOwn(openingOverrides, item.memberKey)
+          ? openingOverrides[item.memberKey]
+          : {}),
+      }),
       enumerable: true,
       writable: false,
       configurable: false,
@@ -119,6 +126,7 @@ describe('WP2 strict PV parsing and canonical normalization', () => {
   });
 
   it.each([
+    ['-0', 'PV_NEGATIVE'],
     ['-1', 'PV_NEGATIVE'],
     ['1.5', 'PV_NOT_INTEGER'],
     ['1e3', 'PV_INVALID'],
@@ -349,6 +357,86 @@ describe('WP2 whole-period calculation orchestration', () => {
     expect(state.input.allocations).toHaveLength(schema.dates.length * schema.members.length);
     expect(state.result.inputSnapshot.allocations).toHaveLength(state.input.allocations.length);
     expect(state.warnings).toContain(warning);
+  });
+
+  it('P4-QUAL-002 allows a same-day crossing to qualification 300', () => {
+    const bundle = setupBundle(
+      [member('A', null, null)],
+      { A: { openingQualificationPvp: 33 } },
+    );
+    const schema = deriveManualPlanSchema(bundle);
+    const date = schema.dates.find((item) => item.settlementMode === 'SETTLE')!.date;
+    let draft = createManualPlanDraft(bundle);
+    draft = edit(schema, draft, date, 'A', 'pvp', '267');
+    draft = edit(schema, draft, date, 'A', 'selfLeft', '300');
+    draft = edit(schema, draft, date, 'A', 'selfRight', '300');
+
+    const state = calculateManualPlan(bundle, draft, schema);
+
+    expect(state.status).toBe('CURRENT');
+    if (state.status !== 'CURRENT') throw new Error('expected current');
+    expect(state.result.dailySettlementByDateAndMember[date]?.A).toMatchObject({
+      qualificationPvp: 300,
+      qualificationThresholdMet: true,
+      settlementKind: 'FULL_COMMISSION',
+      commissionTier: 300,
+      commissionOccurred: true,
+      carryOut: { pvp: 0, left: 0, right: 0 },
+    });
+    expect(state.result.finalAssessmentByMember.A).toMatchObject({
+      openingQualificationPvp: 33,
+      closingQualificationPvp: 300,
+      qualificationThresholdMet: true,
+      commissionDays: 1,
+      belowQualificationSettlementDays: 0,
+    });
+  });
+
+  it('P4-QUAL-005 preserves a below-qualification reset trace but blocks CURRENT use', () => {
+    const bundle = setupBundle(
+      [member('A', null, null)],
+      { A: { openingQualificationPvp: 33 } },
+    );
+    const schema = deriveManualPlanSchema(bundle);
+    const date = schema.dates.find((item) => item.settlementMode === 'SETTLE')!.date;
+    let draft = createManualPlanDraft(bundle);
+    draft = edit(schema, draft, date, 'A', 'pvp', '266');
+    draft = edit(schema, draft, date, 'A', 'selfLeft', '300');
+    draft = edit(schema, draft, date, 'A', 'selfRight', '300');
+
+    const state = calculateManualPlan(bundle, draft, schema);
+
+    expect(state.status).toBe('AUDIT_BLOCKED');
+    if (state.status !== 'AUDIT_BLOCKED') throw new Error('expected audit blocked');
+    expect(state.input.allocations).toHaveLength(schema.dates.length);
+    expect(state.issues).toContainEqual(
+      expect.objectContaining({
+        code: 'BELOW_QUALIFICATION_SETTLEMENT',
+        location: expect.objectContaining({ date, memberKey: 'A' }),
+      }),
+    );
+    expect(state.result.dailySettlementByDateAndMember[date]?.A).toMatchObject({
+      qualificationPvp: 299,
+      qualificationThresholdMet: false,
+      settlementKind: 'BELOW_QUALIFICATION_SETTLEMENT',
+      commissionTier: 300,
+      commissionOccurred: false,
+      carryOut: { pvp: 0, left: 0, right: 0 },
+    });
+    expect(state.result.finalAssessmentByMember.A).toMatchObject({
+      openingQualificationPvp: 33,
+      closingQualificationPvp: 299,
+      qualificationThresholdMet: false,
+      commissionDays: 0,
+      commissionOccurrences: [],
+      belowQualificationSettlementDays: 1,
+      belowQualificationSettlementOccurrences: [
+        { date, tier: 300 },
+      ],
+    });
+    expect(state.warnings).not.toContainEqual(
+      expect.objectContaining({ code: 'BELOW_QUALIFICATION_SETTLEMENT' }),
+    );
   });
 
   it('P3-CALC-001 / ORG-001 recalculates one-level propagation exactly once', () => {

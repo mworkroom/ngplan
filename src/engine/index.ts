@@ -1,8 +1,16 @@
 export {
   derivePeriod,
+  getGregorianDayOfWeek,
   isSunday,
+  isValidIsoDate,
   settlementModeForDate,
 } from '../domain/period';
+export {
+  CALENDAR_VERSION,
+  DEFAULT_RULE_SET,
+  ENGINE_VERSION,
+  RULE_SET_3_0_0,
+} from '../domain/constants';
 export {
   validateOrganizationSnapshot,
   validatePeriod,
@@ -19,9 +27,12 @@ export {
 export { buildOrganizationIndex, deriveRawPerformance } from './organization';
 
 export type {
+  BelowQualificationSettlementOccurrence,
+  BusinessDate,
   CalculatePlanInput,
   CalculationOutcome,
   CalculationResult,
+  CommissionOccurrence,
   DailySettlement,
   DerivedPeriod,
   FortnightAssessment,
@@ -37,9 +48,11 @@ export type {
   PvBalance,
   RawPerformance,
   RuleSet,
+  RuleSetVersion,
   SheetMarker,
   RunningFortnightState,
   SettlementMode,
+  SettlementKind,
   SettlementStatus,
   Side,
   ValidationCode,
@@ -47,6 +60,7 @@ export type {
   ValidationLocation,
   ValidationReport,
 } from '../domain/types';
+export type { GregorianDayOfWeek } from '../domain/period';
 export type { ParsePvResult } from '../domain/pv';
 export type { SettleDailyInput } from './daily-ledger';
 export type {

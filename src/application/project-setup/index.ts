@@ -25,6 +25,7 @@ export {
   selectMember,
 } from './edit-member';
 export {
+  deriveCanonicalMemberSequence,
   deriveTopology,
   getChildSlotState,
   getDescendantKeys,

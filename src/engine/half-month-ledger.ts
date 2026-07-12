@@ -3,6 +3,7 @@ import {
 } from '../domain/constants';
 import { checkedAdd, subtractFloorZero, ZERO_PV } from '../domain/pv';
 import type {
+  BelowQualificationSettlementOccurrence,
   CommissionOccurrence,
   DailySettlement,
   FortnightAssessment,
@@ -18,6 +19,7 @@ import type {
 
 export interface FortnightAccumulator extends FortnightRawTotals {
   readonly commissionOccurrences: readonly CommissionOccurrence[];
+  readonly belowQualificationSettlementOccurrences: readonly BelowQualificationSettlementOccurrence[];
 }
 
 export interface AccumulateFortnightDayInput {
@@ -54,6 +56,7 @@ export function createFortnightAccumulator(): FortnightAccumulator {
     rawLeftTotal: ZERO_PV,
     rawRightTotal: ZERO_PV,
     commissionOccurrences: [],
+    belowQualificationSettlementOccurrences: [],
   };
 }
 
@@ -104,7 +107,7 @@ export function accumulateFortnightDay(
     raw.organizationRight,
     { date: raw.date, memberKey: raw.memberKey, field: 'rawRightTotal' },
   );
-  const commissionOccurrences = input.dailySettlement.commissionOccurred
+  const commissionOccurrences = input.dailySettlement.settlementKind === 'FULL_COMMISSION'
     ? [
         ...input.previous.commissionOccurrences,
         {
@@ -113,11 +116,23 @@ export function accumulateFortnightDay(
         },
       ]
     : [...input.previous.commissionOccurrences];
+  const belowQualificationSettlementOccurrences =
+    input.dailySettlement.settlementKind === 'BELOW_QUALIFICATION_SETTLEMENT'
+      ? [
+          ...input.previous.belowQualificationSettlementOccurrences,
+          {
+            date: input.dailySettlement.date,
+            tier: input.dailySettlement.commissionTier!,
+            qualificationPvp: input.dailySettlement.qualificationPvp,
+          },
+        ]
+      : [...input.previous.belowQualificationSettlementOccurrences];
   const accumulator: FortnightAccumulator = {
     newPvpTotal,
     rawLeftTotal,
     rawRightTotal,
     commissionOccurrences,
+    belowQualificationSettlementOccurrences,
   };
   const progress = calculatePersonalPvpProgress(
     input.member,
@@ -136,6 +151,9 @@ export function accumulateFortnightDay(
       rawLeftTotal,
       rawRightTotal,
       ...progress,
+      qualificationPvp: input.dailySettlement.qualificationPvp,
+      qualificationThresholdMet:
+        input.dailySettlement.qualificationThresholdMet,
     },
   };
 }
@@ -150,6 +168,14 @@ export function evaluateFortnight(
     input.openingState,
     input.accumulator.newPvpTotal,
     'finalAssessment.personalPvpTotal',
+  );
+  const closingQualificationPvp = checkedAdd(
+    input.openingState.openingQualificationPvp as Pv,
+    input.accumulator.newPvpTotal,
+    {
+      memberKey: input.member.memberKey,
+      field: 'finalAssessment.closingQualificationPvp',
+    },
   );
   const periodPvpForSide = progress.personalPvpTotal;
   const leftIsSmallerOrTied =
@@ -180,6 +206,8 @@ export function evaluateFortnight(
     input.member.pvpTarget ===
     rules.target700CommissionPreference.eligiblePvpTarget;
   const commissionDays = input.accumulator.commissionOccurrences.length;
+  const belowQualificationSettlementDays =
+    input.accumulator.belowQualificationSettlementOccurrences.length;
   const recommendationStatus: RecommendationStatus = recommendationApplies
     ? commissionDays >= rules.target700CommissionPreference.recommendedDays
       ? 'MET_OR_EXCEEDED'
@@ -189,6 +217,11 @@ export function evaluateFortnight(
   return {
     memberKey: input.member.memberKey,
     pvpTarget: input.member.pvpTarget,
+    openingQualificationPvp:
+      input.openingState.openingQualificationPvp as Pv,
+    closingQualificationPvp,
+    qualificationThresholdMet:
+      closingQualificationPvp >= rules.qualificationPolicy.threshold,
     fortnightPvpOpeningCredit:
       input.openingState.fortnightPvpOpeningCredit as Pv,
     newPvpTotal: input.accumulator.newPvpTotal,
@@ -208,6 +241,11 @@ export function evaluateFortnight(
       (occurrence) => ({ ...occurrence }),
     ),
     commissionDays,
+    belowQualificationSettlementOccurrences:
+      input.accumulator.belowQualificationSettlementOccurrences.map(
+        (occurrence) => ({ ...occurrence }),
+      ),
+    belowQualificationSettlementDays,
     recommendationStatus,
     recommendedCommissionDays: recommendationApplies
       ? rules.target700CommissionPreference.recommendedDays

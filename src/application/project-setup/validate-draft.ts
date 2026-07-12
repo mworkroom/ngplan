@@ -18,6 +18,7 @@ import type {
 } from './types';
 
 const PV_FIELDS: readonly OpeningStateField[] = [
+  'openingQualificationPvp',
   'fortnightPvpOpeningCredit',
   'dailyCarryPvp',
   'dailyCarryLeft',
@@ -49,7 +50,7 @@ export function parseDraftPv(value: string): DraftPvParseOutcome {
   if (!Number.isSafeInteger(numeric)) {
     return { ok: false, code: 'PV_OUT_OF_RANGE' };
   }
-  if (numeric < 0) {
+  if (numeric < 0 || Object.is(numeric, -0)) {
     return { ok: false, code: 'PV_NEGATIVE' };
   }
   return { ok: true, value: numeric };
@@ -94,10 +95,11 @@ export function parseMemberOpeningState(
   }
   const values = parsed as readonly { readonly ok: true; readonly value: number }[];
   return {
-    fortnightPvpOpeningCredit: values[0]!.value,
-    dailyCarryPvp: values[1]!.value,
-    dailyCarryLeft: values[2]!.value,
-    dailyCarryRight: values[3]!.value,
+    openingQualificationPvp: values[0]!.value,
+    fortnightPvpOpeningCredit: values[1]!.value,
+    dailyCarryPvp: values[2]!.value,
+    dailyCarryLeft: values[3]!.value,
+    dailyCarryRight: values[4]!.value,
   };
 }
 

@@ -30,6 +30,7 @@ describe('[VAL-001] — PV 숫자 형식', () => {
 
   it.each([
     [-1, 'PV_NEGATIVE'],
+    [-0, 'PV_NEGATIVE'],
     [1.5, 'PV_NOT_INTEGER'],
     ['1', 'PV_INVALID'],
     [Number.NaN, 'PV_INVALID'],

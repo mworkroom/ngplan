@@ -69,30 +69,37 @@ export function DailyResultDetails({ view, blocked }: DailyResultDetailsProps) {
           </span>
         </li>
         <li>
-          <strong>3. 오늘 계산에 사용할 합계</strong>
+          <strong>3. 수당 자격 PVP</strong>
+          <span>
+            {pv(view.qualificationPvp)} ·{' '}
+            {view.qualificationThresholdMet ? '자격 300 이상' : '자격 300 미만'}
+          </span>
+        </li>
+        <li>
+          <strong>4. 오늘 계산에 사용할 합계</strong>
           <BalanceValues {...view.preSettlement} />
         </li>
         <li>
-          <strong>4. PVP 적용</strong>
+          <strong>5. PVP 적용</strong>
           <span>{view.pvpApplicationLabel}</span>
         </li>
         <li>
-          <strong>5. PVP를 더한 좌·우</strong>
+          <strong>6. PVP를 더한 좌·우</strong>
           <span className="manual-result-values">
             <span>좌 {pv(view.assessedLeft)}</span>
             <span>우 {pv(view.assessedRight)}</span>
           </span>
         </li>
         <li>
-          <strong>6. 커미션</strong>
+          <strong>7. 커미션</strong>
           <span>{view.commissionLabel}</span>
         </li>
         <li>
-          <strong>7. 다음 날로 넘어가는 값</strong>
+          <strong>8. 다음 날로 넘어가는 값</strong>
           <BalanceValues {...view.carryOut} />
         </li>
         <li>
-          <strong>8. 오늘까지의 보름 합계</strong>
+          <strong>9. 오늘까지의 보름 합계</strong>
           <span className="manual-result-values manual-result-values--wide">
             <span>개인 PVP {pv(view.running.personalPvpTotal)}</span>
             <span>목표 {pv(view.running.personalPvpTarget)}</span>

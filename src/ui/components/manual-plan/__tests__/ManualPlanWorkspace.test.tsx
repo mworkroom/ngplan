@@ -38,6 +38,7 @@ function createBundle(): ProjectSetupBundle {
       ]),
       openingStateByMember: Object.freeze({
         root: Object.freeze({
+          openingQualificationPvp: 0,
           fortnightPvpOpeningCredit: 0,
           dailyCarryPvp: 0,
           dailyCarryLeft: 0,
@@ -52,6 +53,7 @@ function createIdentityBundle(): ProjectSetupBundle {
   const openingStateByMember = Object.create(null) as Record<
     string,
     {
+      readonly openingQualificationPvp: number;
       readonly fortnightPvpOpeningCredit: number;
       readonly dailyCarryPvp: number;
       readonly dailyCarryLeft: number;
@@ -62,6 +64,7 @@ function createIdentityBundle(): ProjectSetupBundle {
     Object.defineProperty(openingStateByMember, memberKey, {
       enumerable: true,
       value: Object.freeze({
+        openingQualificationPvp: 0,
         fortnightPvpOpeningCredit: 0,
         dailyCarryPvp: 0,
         dailyCarryLeft: 0,

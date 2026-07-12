@@ -1,4 +1,5 @@
 export { createManualPlanDraft } from './create-manual-plan-draft';
+export { convertVerifiedAllocationsToManualPlanDraft } from './convert-verified-allocations-to-draft';
 export {
   deriveManualPlanSchema,
   manualPlanCellDomId,

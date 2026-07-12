@@ -37,7 +37,12 @@ const settle = (
   right: number,
   carryIn: PvBalance = balance(0, 0, 0),
   date: IsoDate = SATURDAY,
-) => settleDaily({ carryIn, rawPerformance: raw(pvp, left, right, date) });
+  qualificationPvp = 300,
+) => settleDaily({
+  carryIn,
+  rawPerformance: raw(pvp, left, right, date),
+  qualificationPvp: pv(qualificationPvp),
+});
 
 describe('daily-ledger', () => {
   it('[DAY-001] PVP로 작은 쪽을 채워 300 달성', () => {
@@ -49,6 +54,7 @@ describe('daily-ledger', () => {
     const result = settleDaily({
       carryIn,
       rawPerformance: performance,
+      qualificationPvp: pv(300),
       rules: DEFAULT_RULE_SET,
     });
 
@@ -56,6 +62,9 @@ describe('daily-ledger', () => {
       businessCalendarMode: 'SETTLE',
       settlementStatus: 'SETTLED',
       preSettlement: { pvp: 100, left: 200, right: 300 },
+      qualificationPvp: 300,
+      qualificationThresholdMet: true,
+      settlementKind: 'FULL_COMMISSION',
       pvpAppliedSide: 'LEFT',
       pvpApplicationReason: 'SMALLER_LEFT',
       assessedLeft: 300,
@@ -78,6 +87,7 @@ describe('daily-ledger', () => {
       pvpApplicationReason: 'SMALLER_RIGHT',
       assessedLeft: 200,
       assessedRight: 200,
+      settlementKind: 'NO_COMMISSION',
       commissionTier: null,
       commissionOccurred: false,
       carryOut: { pvp: 100, left: 200, right: 100 },
@@ -138,6 +148,19 @@ describe('daily-ledger', () => {
     expect(result.carryOut).toEqual(balance(0, 0, 0));
   });
 
+  it('[QUAL-005] qualification 299의 실제 정산은 reset하되 full commission으로 세지 않음', () => {
+    const result = settle(0, 300, 300, balance(0, 0, 0), SATURDAY, 299);
+
+    expect(result).toMatchObject({
+      qualificationPvp: 299,
+      qualificationThresholdMet: false,
+      settlementKind: 'BELOW_QUALIFICATION_SETTLEMENT',
+      commissionTier: 300,
+      commissionOccurred: false,
+      carryOut: { pvp: 0, left: 0, right: 0 },
+    });
+  });
+
   it('[DAY-007] PVP 적용 후 작은 쪽이 역전되어도 재분배하지 않음', () => {
     const result = settle(500, 0, 300);
 
@@ -194,6 +217,7 @@ describe('daily-ledger', () => {
     expect(sunday).toMatchObject({
       businessCalendarMode: 'SKIP_NO_INPUT',
       settlementStatus: 'SKIPPED',
+      settlementKind: 'SKIPPED',
       carryIn: { pvp: 100, left: 200, right: 100 },
       preSettlement: { pvp: 100, left: 200, right: 100 },
       pvpAppliedSide: null,
@@ -221,11 +245,13 @@ describe('daily-ledger', () => {
     expect(() => settleDaily({
       carryIn: balance(Number.MAX_SAFE_INTEGER, 0, 0),
       rawPerformance: raw(1, 0, 0),
+      qualificationPvp: pv(300),
     })).toThrow(PvAggregateOutOfRangeError);
 
     expect(() => settleDaily({
       carryIn: balance(1, Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER),
       rawPerformance: raw(0, 0, 0),
+      qualificationPvp: pv(300),
     })).toThrow(PvAggregateOutOfRangeError);
   });
 });

@@ -31,14 +31,38 @@ export function calculateManualPlan(
         ),
       });
     }
+    const mappedEngineWarnings = outcome.result.warnings.map(
+      mapEngineIssueToManualPlanIssue,
+    );
+    const qualificationBlockingIssues = Object.freeze(
+      mappedEngineWarnings.filter(
+        (issue) => issue.code === 'BELOW_QUALIFICATION_SETTLEMENT',
+      ),
+    );
+    if (qualificationBlockingIssues.length > 0) {
+      const warnings = Object.freeze([
+        ...setupWarnings,
+        ...mappedEngineWarnings.filter(
+          (issue) => issue.code !== 'BELOW_QUALIFICATION_SETTLEMENT',
+        ),
+      ]);
+      return Object.freeze({
+        status: 'AUDIT_BLOCKED',
+        input: normalized.input,
+        result: outcome.result,
+        issues: qualificationBlockingIssues,
+        warnings,
+      });
+    }
+    const warnings = Object.freeze([
+      ...setupWarnings,
+      ...mappedEngineWarnings,
+    ]);
     return Object.freeze({
       status: 'CURRENT',
       input: normalized.input,
       result: outcome.result,
-      warnings: Object.freeze([
-        ...setupWarnings,
-        ...outcome.result.warnings.map(mapEngineIssueToManualPlanIssue),
-      ]),
+      warnings,
     });
   } catch {
     return Object.freeze({

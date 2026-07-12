@@ -1,4 +1,4 @@
-import { readFile, stat } from 'node:fs/promises';
+import { readFile, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -18,6 +18,45 @@ const isFile = async (filePath) => {
   } catch {
     return false;
   }
+};
+
+const collectFiles = async (directory) => {
+  let entries;
+  try {
+    entries = await readdir(directory, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+
+  const files = [];
+  for (const entry of entries) {
+    const entryPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...(await collectFiles(entryPath)));
+    } else if (entry.isFile()) {
+      files.push(entryPath);
+    }
+  }
+  return files;
+};
+
+const toDistRelativePath = (filePath) =>
+  path.relative(distDirectory, filePath).split(path.sep).join('/');
+
+const hasModuleWorkerConstructor = (source, workerFileName) => {
+  let matchAt = source.indexOf(workerFileName);
+  while (matchAt !== -1) {
+    const before = source.slice(Math.max(0, matchAt - 300), matchAt);
+    const after = source.slice(matchAt, Math.min(source.length, matchAt + 300));
+    if (
+      /new\s+Worker\s*\(\s*new\s+URL\s*\(/u.test(before) &&
+      /type\s*:\s*(?:["']module["']|`module`)/u.test(after)
+    ) {
+      return true;
+    }
+    matchAt = source.indexOf(workerFileName, matchAt + workerFileName.length);
+  }
+  return false;
 };
 
 if (!(await isFile(indexPath))) {
@@ -94,6 +133,70 @@ if (/\b(?:src|href)\s*=\s*["']\/(?:src|assets)\//iu.test(html)) {
   recordFailure('배포 base를 우회하는 /src/ 또는 /assets/ 경로가 남아 있습니다.');
 }
 
+const distFiles = await collectFiles(distDirectory);
+const javascriptArtifacts = distFiles.filter((filePath) => filePath.endsWith('.js'));
+const workerArtifacts = javascriptArtifacts.filter((filePath) =>
+  /^automatic-plan\.worker(?:-[A-Za-z0-9_-]+)?\.js$/u.test(path.basename(filePath)),
+);
+const appBundleArtifacts = javascriptArtifacts.filter(
+  (filePath) => !workerArtifacts.includes(filePath),
+);
+const manifestArtifacts = distFiles.filter(
+  (filePath) => path.basename(filePath) === 'manifest.json',
+);
+
+if (workerArtifacts.length === 0) {
+  recordFailure('Phase 4 automatic-plan module worker 빌드 자산을 찾지 못했습니다.');
+}
+
+const appBundleSources = await Promise.all(
+  appBundleArtifacts.map((filePath) => readFile(filePath, 'utf8')),
+);
+const manifestSources = await Promise.all(
+  manifestArtifacts.map((filePath) => readFile(filePath, 'utf8')),
+);
+const verifiedWorkerArtifacts = [];
+
+for (const workerPath of workerArtifacts) {
+  const workerRelativePath = toDistRelativePath(workerPath);
+  const workerFileName = path.basename(workerPath);
+  const workerSource = await readFile(workerPath, 'utf8');
+  if (workerSource.trim().length === 0) {
+    recordFailure(`Phase 4 worker 빌드 자산이 비어 있습니다: ${workerRelativePath}`);
+    continue;
+  }
+
+  const expectedBaseReference = `${EXPECTED_BASE}${workerRelativePath}`;
+  const referencingBundles = appBundleSources.filter(
+    (source) =>
+      source.includes(expectedBaseReference) || source.includes(workerRelativePath),
+  );
+  const referencedByManifest = manifestSources.some(
+    (source) =>
+      source.includes(workerRelativePath) || source.includes(workerFileName),
+  );
+
+  if (referencingBundles.length === 0 && !referencedByManifest) {
+    recordFailure(
+      `Phase 4 worker가 app bundle 또는 manifest에서 참조되지 않습니다: ${workerRelativePath}`,
+    );
+    continue;
+  }
+
+  if (
+    !referencingBundles.some((source) =>
+      hasModuleWorkerConstructor(source, workerFileName),
+    )
+  ) {
+    recordFailure(
+      `Phase 4 worker의 { type: "module" } 생성 참조를 app bundle에서 찾지 못했습니다: ${workerRelativePath}`,
+    );
+    continue;
+  }
+
+  verifiedWorkerArtifacts.push(workerRelativePath);
+}
+
 if (failures.length > 0) {
   for (const failure of failures) {
     console.error(`- ${failure}`);
@@ -101,6 +204,6 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    `dist smoke check passed: ${assetReferences.length} referenced asset(s) under ${EXPECTED_BASE}`,
+    `dist smoke check passed: ${assetReferences.length} referenced asset(s) under ${EXPECTED_BASE}; module worker ${verifiedWorkerArtifacts.join(', ')}`,
   );
 }

@@ -36,24 +36,24 @@ const compareMemberKey = (left: MemberSnapshot, right: MemberSnapshot): number =
 
 /**
  * 검증이 끝난 회원 배치를 날짜별 계산에 재사용할 수 있는 인덱스로 만든다.
- * LEFT를 먼저 방문하고 RIGHT를 방문하므로 입력 배열 순서와 무관하게
- * 후위 순서가 결정된다.
+ * 루트부터 LEFT, RIGHT 순서로 방문하는 canonical 순서와 같은 순회의
+ * 후위 계산 순서를 함께 만든다.
  */
 export function buildOrganizationIndex(
   members: readonly MemberSnapshot[],
 ): OrganizationIndex {
-  const orderedMembers = [...members].sort(compareMemberKey);
-  const membersByKey = new Map(
-    orderedMembers.map((member) => [member.memberKey, member] as const),
+  const stableMembers = [...members].sort(compareMemberKey);
+  const sourceMembersByKey = new Map(
+    stableMembers.map((member) => [member.memberKey, member] as const),
   );
   const mutableChildrenByMemberKey = new Map<string, MutableChildren>(
-    orderedMembers.map((member) => [
+    stableMembers.map((member) => [
       member.memberKey,
       { left: null, right: null },
     ]),
   );
 
-  for (const member of orderedMembers) {
+  for (const member of stableMembers) {
     if (member.parentMemberKey === null) {
       continue;
     }
@@ -65,9 +65,10 @@ export function buildOrganizationIndex(
     }
   }
 
-  const rootKey = orderedMembers.find(
+  const rootKey = stableMembers.find(
     (member) => member.parentMemberKey === null,
   )!.memberKey;
+  const orderedMemberKeys: string[] = [];
   const postOrderMemberKeys: string[] = [];
   const stack: Array<readonly [memberKey: string, expanded: boolean]> = [
     [rootKey, false],
@@ -80,6 +81,7 @@ export function buildOrganizationIndex(
       continue;
     }
 
+    orderedMemberKeys.push(memberKey);
     const children = mutableChildrenByMemberKey.get(memberKey)!;
     stack.push([memberKey, true]);
     if (children.right !== null) {
@@ -90,10 +92,21 @@ export function buildOrganizationIndex(
     }
   }
 
+  const membersByKey = new Map(
+    orderedMemberKeys.map(
+      (memberKey) => [memberKey, sourceMembersByKey.get(memberKey)!] as const,
+    ),
+  );
+  const childrenByMemberKey = new Map(
+    orderedMemberKeys.map(
+      (memberKey) => [memberKey, mutableChildrenByMemberKey.get(memberKey)!] as const,
+    ),
+  );
+
   return {
     membersByKey,
-    childrenByMemberKey: mutableChildrenByMemberKey,
-    orderedMemberKeys: orderedMembers.map((member) => member.memberKey),
+    childrenByMemberKey,
+    orderedMemberKeys,
     postOrderMemberKeys,
   };
 }

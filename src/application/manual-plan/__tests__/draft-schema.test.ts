@@ -18,6 +18,7 @@ import {
 } from '../index';
 
 const ZERO_OPENING: OpeningStateInput = Object.freeze({
+  openingQualificationPvp: 0,
   fortnightPvpOpeningCredit: 0,
   dailyCarryPvp: 0,
   dailyCarryLeft: 0,

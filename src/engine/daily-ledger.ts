@@ -6,14 +6,17 @@ import { settlementModeForDate } from '../domain/period';
 import { checkedAdd, ZERO_PV } from '../domain/pv';
 import type {
   DailySettlement,
+  Pv,
   PvBalance,
   RawPerformance,
   RuleSet,
+  SettlementKind,
 } from '../domain/types';
 
 export interface SettleDailyInput {
   readonly carryIn: PvBalance;
   readonly rawPerformance: RawPerformance;
+  readonly qualificationPvp: Pv;
   readonly rules?: RuleSet;
 }
 
@@ -52,6 +55,9 @@ export function settleDaily(input: SettleDailyInput): DailySettlement {
   const rules = input.rules ?? DEFAULT_RULE_SET;
   const raw = input.rawPerformance;
   const carryIn = copyBalance(input.carryIn);
+  const qualificationPvp = input.qualificationPvp;
+  const qualificationThresholdMet =
+    qualificationPvp >= rules.qualificationPolicy.threshold;
   const businessCalendarMode = settlementModeForDate(raw.date);
 
   if (
@@ -91,6 +97,9 @@ export function settleDaily(input: SettleDailyInput): DailySettlement {
       carryIn,
       rawPerformance: copyRawPerformance(raw),
       preSettlement,
+      qualificationPvp,
+      qualificationThresholdMet,
+      settlementKind: 'SKIPPED',
       pvpAppliedSide: null,
       pvpApplicationReason: null,
       assessedLeft: null,
@@ -123,7 +132,12 @@ export function settleDaily(input: SettleDailyInput): DailySettlement {
         field: 'assessedRight',
       });
   const commissionTier = commissionTierFor(assessedLeft, assessedRight, rules);
-  const commissionOccurred = commissionTier !== null;
+  const settlementKind: SettlementKind = commissionTier === null
+    ? 'NO_COMMISSION'
+    : qualificationThresholdMet
+      ? 'FULL_COMMISSION'
+      : 'BELOW_QUALIFICATION_SETTLEMENT';
+  const commissionOccurred = settlementKind === 'FULL_COMMISSION';
 
   return {
     date: raw.date,
@@ -133,12 +147,15 @@ export function settleDaily(input: SettleDailyInput): DailySettlement {
     carryIn,
     rawPerformance: copyRawPerformance(raw),
     preSettlement,
+    qualificationPvp,
+    qualificationThresholdMet,
+    settlementKind,
     pvpAppliedSide,
     pvpApplicationReason,
     assessedLeft,
     assessedRight,
     commissionTier,
     commissionOccurred,
-    carryOut: commissionOccurred ? zeroBalance() : copyBalance(preSettlement),
+    carryOut: commissionTier === null ? copyBalance(preSettlement) : zeroBalance(),
   };
 }

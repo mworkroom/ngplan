@@ -12,16 +12,27 @@ const OPENING_FIELDS: readonly {
   readonly help?: string;
 }[] = [
   {
+    field: 'openingQualificationPvp',
+    label: '수당 자격 PVP 시작값',
+    help: '당일 직접 PVP까지 누적해 수당 자격 300을 확인합니다.',
+  },
+  {
     field: 'fortnightPvpOpeningCredit',
-    label: '현재 보유 PVP',
+    label: '보름 PVP 시작값',
+    help: '이번 보름의 개인 PVP 목표와 보름 좌·우 판정에만 사용합니다.',
+  },
+  {
+    field: 'dailyCarryPvp',
+    label: '일일 PVP 잔액',
+    help: '첫 계산일의 초기화 가능한 일일 PVP 장부입니다.',
   },
   {
     field: 'dailyCarryLeft',
-    label: '현재 좌 잔액',
+    label: '일일 좌 잔액',
   },
   {
     field: 'dailyCarryRight',
-    label: '현재 우 잔액',
+    label: '일일 우 잔액',
   },
 ];
 

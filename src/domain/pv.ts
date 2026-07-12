@@ -48,7 +48,7 @@ export function parsePv(value: unknown): ParsePvResult {
   if (!Number.isSafeInteger(value)) {
     return { ok: false, code: 'PV_OUT_OF_RANGE' };
   }
-  if (value < 0) {
+  if (value < 0 || Object.is(value, -0)) {
     return { ok: false, code: 'PV_NEGATIVE' };
   }
   return { ok: true, value: value as Pv };

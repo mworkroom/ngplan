@@ -26,6 +26,7 @@ import { createValidationReport } from '../validation';
 const PERIOD: PeriodInput = { year: 2026, month: 7, half: 'FIRST_HALF' };
 const SECOND_HALF: Half = 'SECOND_HALF';
 const ZERO_OPENING: OpeningStateInput = {
+  openingQualificationPvp: 0,
   fortnightPvpOpeningCredit: 0,
   dailyCarryPvp: 0,
   dailyCarryLeft: 0,
@@ -397,6 +398,25 @@ describe('[VAL-001] — PV 숫자 형식 사전 검증', () => {
 
     expect(issueCodes(input)).toContain(code);
   });
+
+  it('qualification opening과 allocation의 negative zero를 PV_NEGATIVE로 거부한다', () => {
+    const base = planFor([root('A')], {
+      openings: {
+        A: { ...ZERO_OPENING, openingQualificationPvp: -0 },
+      },
+    });
+    const allocations = replaceCell(
+      base.allocations,
+      '2026-07-01',
+      'A',
+      (cell) => ({ ...cell, pvp: -0 }),
+    );
+    const report = validatePlan({ ...base, allocations });
+
+    expect(
+      report.errors.filter((issue) => issue.code === 'PV_NEGATIVE'),
+    ).toHaveLength(2);
+  });
 });
 
 describe('[VAL-002] — 반월 밖 날짜', () => {
@@ -531,6 +551,27 @@ describe('[VAL-006] — 회원별 시작값 완전성', () => {
     });
 
     expect(issueCodes(input)).toContain('OPENING_STATE_MISSING');
+  });
+
+  it('qualification opening 필드가 빠지면 위치가 있는 PV_INVALID로 거부한다', () => {
+    const { openingQualificationPvp: _removed, ...withoutQualification } =
+      ZERO_OPENING;
+    const input = planFor([root('A')], {
+      openings: {
+        A: withoutQualification as unknown as OpeningStateInput,
+      },
+    });
+    const report = validatePlan(input);
+
+    expect(report.errors).toContainEqual(
+      expect.objectContaining({
+        code: 'PV_INVALID',
+        location: expect.objectContaining({
+          memberKey: 'A',
+          field: 'openingQualificationPvp',
+        }),
+      }),
+    );
   });
 });
 

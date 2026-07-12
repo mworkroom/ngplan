@@ -1,6 +1,9 @@
 import type { DerivedPeriod, IsoDate, PeriodInput, SettlementMode } from './types';
 
 const ISO_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
+const GREGORIAN_MONTH_OFFSETS = [0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4] as const;
+
+export type GregorianDayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 export function isLeapYear(year: number): boolean {
   return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
@@ -56,15 +59,28 @@ export function isValidIsoDate(value: string): value is IsoDate {
   );
 }
 
-export function isSunday(date: IsoDate): boolean {
+export function getGregorianDayOfWeek(date: IsoDate): GregorianDayOfWeek {
   const [yearText, monthText, dayText] = date.split('-');
-  const year = Number(yearText);
+  let year = Number(yearText);
   const month = Number(monthText);
   const day = Number(dayText);
-  const utcDate = new Date(0);
-  utcDate.setUTCHours(0, 0, 0, 0);
-  utcDate.setUTCFullYear(year, month - 1, day);
-  return utcDate.getUTCDay() === 0;
+  if (month < 3) {
+    year -= 1;
+  }
+  const monthOffset = GREGORIAN_MONTH_OFFSETS[month - 1]!;
+  return (
+    (year +
+      Math.floor(year / 4) -
+      Math.floor(year / 100) +
+      Math.floor(year / 400) +
+      monthOffset +
+      day) %
+    7
+  ) as GregorianDayOfWeek;
+}
+
+export function isSunday(date: IsoDate): boolean {
+  return getGregorianDayOfWeek(date) === 0;
 }
 
 export function settlementModeForDate(date: IsoDate): SettlementMode {

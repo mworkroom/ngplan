@@ -1,21 +1,99 @@
 import type { ManualPlanDraft } from '../application/manual-plan';
-import type { ProjectSetupDraft } from '../application/project-setup';
+import type {
+  MemberDraft,
+  OpeningStateDraft,
+  ProjectSetupBundle,
+  ProjectSetupDraft,
+} from '../application/project-setup';
 
-export const WORKSPACE_SESSION_STORAGE_KEY = 'ngplan.workspace-session.v1';
+export const LEGACY_WORKSPACE_SESSION_STORAGE_KEY = 'ngplan.workspace-session.v1';
+export const WORKSPACE_SESSION_STORAGE_KEY = 'ngplan.workspace-session.v2';
+export const WORKSPACE_SESSION_VERSION = 2 as const;
+
+export type WorkspaceAutomaticPlanCheckpoint = Readonly<Record<string, unknown>>;
 
 export interface WorkspaceSessionSnapshot {
-  readonly version: 1;
+  readonly version: typeof WORKSPACE_SESSION_VERSION;
   readonly draft: ProjectSetupDraft;
   readonly manualPlanDraft: ManualPlanDraft | null;
   readonly screen: 'SETUP' | 'MANUAL_PLAN';
   readonly organizationScale: number;
+  readonly automaticPlanCheckpoint: WorkspaceAutomaticPlanCheckpoint | null;
 }
+
+export interface WorkspaceSessionWriteSnapshot {
+  readonly version: typeof WORKSPACE_SESSION_VERSION;
+  readonly draft: ProjectSetupDraft;
+  readonly manualPlanDraft: ManualPlanDraft | null;
+  readonly screen: 'SETUP' | 'MANUAL_PLAN';
+  readonly organizationScale: number;
+  readonly automaticPlanCheckpoint?: WorkspaceAutomaticPlanCheckpoint | null;
+}
+
+const LEGACY_OPENING_FIELDS = [
+  'fortnightPvpOpeningCredit',
+  'dailyCarryPvp',
+  'dailyCarryLeft',
+  'dailyCarryRight',
+] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function looksLikeProjectDraft(value: unknown): value is ProjectSetupDraft {
+function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
+  if (value === null || typeof value !== 'object' || seen.has(value)) {
+    return value;
+  }
+  seen.add(value);
+  for (const key of Reflect.ownKeys(value)) {
+    deepFreeze((value as Record<PropertyKey, unknown>)[key], seen);
+  }
+  return Object.freeze(value);
+}
+
+function isSideOrNull(value: unknown): boolean {
+  return value === null || value === 'LEFT' || value === 'RIGHT';
+}
+
+function looksLikeOpeningState(
+  value: unknown,
+  requireQualification: boolean,
+): value is OpeningStateDraft {
+  if (!isRecord(value)) {
+    return false;
+  }
+  if (
+    !LEGACY_OPENING_FIELDS.every((field) => typeof value[field] === 'string') ||
+    typeof value.openingStateConfirmed !== 'boolean'
+  ) {
+    return false;
+  }
+  return !requireQualification || typeof value.openingQualificationPvp === 'string';
+}
+
+function looksLikeMemberDraft(value: unknown, requireQualification: boolean): boolean {
+  if (!isRecord(value) || !isRecord(value.placement)) {
+    return false;
+  }
+  return (
+    typeof value.memberKey === 'string' &&
+    (value.participation === 'ACTIVE' || value.participation === 'EXCLUDED') &&
+    typeof value.memberId === 'string' &&
+    typeof value.name === 'string' &&
+    typeof value.pvpTarget === 'string' &&
+    typeof value.sheetMarker === 'string' &&
+    (value.placement.parentMemberKey === null ||
+      typeof value.placement.parentMemberKey === 'string') &&
+    isSideOrNull(value.placement.sideAtParent) &&
+    looksLikeOpeningState(value.openingState, requireQualification)
+  );
+}
+
+function looksLikeProjectDraft(
+  value: unknown,
+  requireQualification: boolean,
+): value is ProjectSetupDraft {
   if (!isRecord(value) || !Array.isArray(value.members)) {
     return false;
   }
@@ -27,17 +105,77 @@ function looksLikeProjectDraft(value: unknown): value is ProjectSetupDraft {
     (value.half === 'FIRST_HALF' || value.half === 'SECOND_HALF') &&
     typeof value.title === 'string' &&
     (value.titleSource === 'DERIVED' || value.titleSource === 'MANUAL') &&
+    value.timezone === 'Asia/Seoul' &&
+    value.projectStatus === 'IN_PROGRESS' &&
     (value.rootMemberKey === null || typeof value.rootMemberKey === 'string') &&
     (value.selectedMemberKey === null || typeof value.selectedMemberKey === 'string') &&
-    value.members.every(
-      (member) =>
-        isRecord(member) &&
-        typeof member.memberKey === 'string' &&
-        typeof member.name === 'string' &&
-        isRecord(member.placement) &&
-        isRecord(member.openingState),
-    )
+    value.members.every((member) => looksLikeMemberDraft(member, requireQualification))
   );
+}
+
+function isSafePv(value: unknown): value is number {
+  return (
+    typeof value === 'number' &&
+    Number.isSafeInteger(value) &&
+    value >= 0 &&
+    !Object.is(value, -0)
+  );
+}
+
+function looksLikeProjectSetupBundle(value: unknown): value is ProjectSetupBundle {
+  if (
+    !isRecord(value) ||
+    !isRecord(value.project) ||
+    !isRecord(value.project.period) ||
+    !isRecord(value.organization) ||
+    !Array.isArray(value.organization.members) ||
+    !isRecord(value.organization.openingStateByMember)
+  ) {
+    return false;
+  }
+  if (
+    typeof value.project.projectId !== 'string' ||
+    typeof value.project.title !== 'string' ||
+    !Number.isSafeInteger(value.project.period.year) ||
+    !Number.isSafeInteger(value.project.period.month) ||
+    (value.project.period.half !== 'FIRST_HALF' &&
+      value.project.period.half !== 'SECOND_HALF') ||
+    value.project.timezone !== 'Asia/Seoul' ||
+    value.project.projectStatus !== 'IN_PROGRESS' ||
+    typeof value.project.organizationSnapshotId !== 'string' ||
+    typeof value.organization.snapshotId !== 'string'
+  ) {
+    return false;
+  }
+  const memberKeys = new Set<string>();
+  for (const member of value.organization.members) {
+    if (
+      !isRecord(member) ||
+      typeof member.memberKey !== 'string' ||
+      typeof member.memberId !== 'string' ||
+      typeof member.name !== 'string' ||
+      !isSafePv(member.pvpTarget) ||
+      typeof member.sheetMarker !== 'string' ||
+      (member.parentMemberKey !== null && typeof member.parentMemberKey !== 'string') ||
+      !isSideOrNull(member.sideAtParent) ||
+      memberKeys.has(member.memberKey)
+    ) {
+      return false;
+    }
+    memberKeys.add(member.memberKey);
+    const opening = value.organization.openingStateByMember[member.memberKey];
+    if (
+      !isRecord(opening) ||
+      !isSafePv(opening.openingQualificationPvp) ||
+      !isSafePv(opening.fortnightPvpOpeningCredit) ||
+      !isSafePv(opening.dailyCarryPvp) ||
+      !isSafePv(opening.dailyCarryLeft) ||
+      !isSafePv(opening.dailyCarryRight)
+    ) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function looksLikeManualPlanDraft(value: unknown): value is ManualPlanDraft {
@@ -49,52 +187,187 @@ function looksLikeManualPlanDraft(value: unknown): value is ManualPlanDraft {
         isRecord(cell) &&
         typeof cell.date === 'string' &&
         typeof cell.memberKey === 'string' &&
-        typeof cell.pvp === 'string',
+        typeof cell.pvp === 'string' &&
+        (!Object.hasOwn(cell, 'selfLeft') || typeof cell.selfLeft === 'string') &&
+        (!Object.hasOwn(cell, 'selfRight') || typeof cell.selfRight === 'string'),
     )
   );
 }
 
-export function readWorkspaceSession(): WorkspaceSessionSnapshot | null {
-  try {
-    const raw = window.sessionStorage.getItem(WORKSPACE_SESSION_STORAGE_KEY);
-    if (raw === null) {
-      return null;
-    }
-    const value: unknown = JSON.parse(raw);
-    if (
-      !isRecord(value) ||
-      value.version !== 1 ||
-      !looksLikeProjectDraft(value.draft) ||
-      (value.manualPlanDraft !== null && !looksLikeManualPlanDraft(value.manualPlanDraft)) ||
-      (value.screen !== 'SETUP' && value.screen !== 'MANUAL_PLAN') ||
-      typeof value.organizationScale !== 'number' ||
-      !Number.isFinite(value.organizationScale) ||
-      value.organizationScale < 0.25 ||
-      value.organizationScale > 1.5
-    ) {
-      return null;
-    }
-    return value as unknown as WorkspaceSessionSnapshot;
-  } catch {
+function normalizedScale(value: unknown): number {
+  return typeof value === 'number' &&
+    Number.isFinite(value) &&
+    value >= 0.25 &&
+    value <= 1.5
+    ? value
+    : 1;
+}
+
+function withSafeActiveBundle(draft: ProjectSetupDraft): ProjectSetupDraft {
+  return draft.activeBundle === null || looksLikeProjectSetupBundle(draft.activeBundle)
+    ? draft
+    : { ...draft, activeBundle: null };
+}
+
+function normalizeV2Snapshot(value: unknown): WorkspaceSessionSnapshot | null {
+  if (
+    !isRecord(value) ||
+    value.version !== WORKSPACE_SESSION_VERSION ||
+    !looksLikeProjectDraft(value.draft, true)
+  ) {
     return null;
+  }
+  const draft = withSafeActiveBundle(value.draft);
+  const manualPlanDraft = looksLikeManualPlanDraft(value.manualPlanDraft)
+    ? value.manualPlanDraft
+    : null;
+  const screen = value.screen === 'MANUAL_PLAN' &&
+      draft.activeBundle !== null &&
+      manualPlanDraft !== null
+    ? 'MANUAL_PLAN' as const
+    : 'SETUP' as const;
+  const automaticPlanCheckpoint = isRecord(value.automaticPlanCheckpoint)
+    ? value.automaticPlanCheckpoint
+    : null;
+
+  return deepFreeze({
+    version: WORKSPACE_SESSION_VERSION,
+    draft,
+    manualPlanDraft,
+    screen,
+    organizationScale: normalizedScale(value.organizationScale),
+    automaticPlanCheckpoint,
+  });
+}
+
+function migrateLegacyMember(value: unknown): MemberDraft {
+  const member = value as MemberDraft;
+  const opening = member.openingState as OpeningStateDraft;
+  return {
+    ...member,
+    placement: { ...member.placement },
+    openingState: {
+      openingQualificationPvp: '0',
+      fortnightPvpOpeningCredit: opening.fortnightPvpOpeningCredit,
+      dailyCarryPvp: opening.dailyCarryPvp,
+      dailyCarryLeft: opening.dailyCarryLeft,
+      dailyCarryRight: opening.dailyCarryRight,
+      openingStateConfirmed: false,
+    },
+  };
+}
+
+function migrateV1Snapshot(value: unknown): WorkspaceSessionSnapshot | null {
+  if (
+    !isRecord(value) ||
+    value.version !== 1 ||
+    !looksLikeProjectDraft(value.draft, false)
+  ) {
+    return null;
+  }
+  const legacyDraft = value.draft;
+  const draft: ProjectSetupDraft = {
+    ...legacyDraft,
+    members: legacyDraft.members.map(migrateLegacyMember),
+    activeBundle: null,
+  };
+  return deepFreeze({
+    version: WORKSPACE_SESSION_VERSION,
+    draft,
+    manualPlanDraft: looksLikeManualPlanDraft(value.manualPlanDraft)
+      ? value.manualPlanDraft
+      : null,
+    screen: 'SETUP',
+    organizationScale: normalizedScale(value.organizationScale),
+    automaticPlanCheckpoint: null,
+  });
+}
+
+function removeStorageKey(key: string): void {
+  try {
+    window.sessionStorage.removeItem(key);
+  } catch {
+    // 현재 탭 저장소 정리가 차단되어도 인메모리 작업은 계속할 수 있습니다.
   }
 }
 
-export function writeWorkspaceSession(snapshot: WorkspaceSessionSnapshot): void {
+function persistV2Snapshot(snapshot: WorkspaceSessionSnapshot): boolean {
   try {
     window.sessionStorage.setItem(
       WORKSPACE_SESSION_STORAGE_KEY,
       JSON.stringify(snapshot),
     );
+    return true;
   } catch {
-    // 임시 저장이 차단되어도 현재 탭의 인메모리 작업은 계속할 수 있습니다.
+    return false;
   }
 }
 
-export function clearWorkspaceSession(): void {
+export function readWorkspaceSession(): WorkspaceSessionSnapshot | null {
   try {
-    window.sessionStorage.removeItem(WORKSPACE_SESSION_STORAGE_KEY);
+    const currentRaw = window.sessionStorage.getItem(WORKSPACE_SESSION_STORAGE_KEY);
+    if (currentRaw !== null) {
+      try {
+        const current = normalizeV2Snapshot(JSON.parse(currentRaw));
+        if (current !== null) {
+          return current;
+        }
+      } catch {
+        // 손상된 v2만 버리고 아래의 안전한 v1 migration을 시도합니다.
+      }
+      removeStorageKey(WORKSPACE_SESSION_STORAGE_KEY);
+    }
+
+    const legacyRaw = window.sessionStorage.getItem(
+      LEGACY_WORKSPACE_SESSION_STORAGE_KEY,
+    );
+    if (legacyRaw === null) {
+      return null;
+    }
+    try {
+      const migrated = migrateV1Snapshot(JSON.parse(legacyRaw));
+      if (migrated === null) {
+        removeStorageKey(LEGACY_WORKSPACE_SESSION_STORAGE_KEY);
+        return null;
+      }
+      if (persistV2Snapshot(migrated)) {
+        removeStorageKey(LEGACY_WORKSPACE_SESSION_STORAGE_KEY);
+      }
+      return migrated;
+    } catch {
+      removeStorageKey(LEGACY_WORKSPACE_SESSION_STORAGE_KEY);
+      return null;
+    }
   } catch {
-    // 저장소 삭제가 차단되어도 새 작업 상태는 정상적으로 시작합니다.
+    return null;
   }
+}
+
+export function writeWorkspaceSession(snapshot: WorkspaceSessionWriteSnapshot): void {
+  const current: WorkspaceSessionSnapshot = {
+    version: WORKSPACE_SESSION_VERSION,
+    draft: snapshot.draft,
+    manualPlanDraft: snapshot.manualPlanDraft,
+    screen: snapshot.screen,
+    organizationScale: snapshot.organizationScale,
+    automaticPlanCheckpoint: snapshot.automaticPlanCheckpoint ?? null,
+  };
+  if (persistV2Snapshot(current)) {
+    removeStorageKey(LEGACY_WORKSPACE_SESSION_STORAGE_KEY);
+  }
+}
+
+export function replaceWorkspaceAutomaticPlanCheckpoint(
+  checkpoint: WorkspaceAutomaticPlanCheckpoint | null,
+): boolean {
+  const current = readWorkspaceSession();
+  if (current === null) {
+    return false;
+  }
+  return persistV2Snapshot({ ...current, automaticPlanCheckpoint: checkpoint });
+}
+
+export function clearWorkspaceSession(): void {
+  removeStorageKey(WORKSPACE_SESSION_STORAGE_KEY);
+  removeStorageKey(LEGACY_WORKSPACE_SESSION_STORAGE_KEY);
 }

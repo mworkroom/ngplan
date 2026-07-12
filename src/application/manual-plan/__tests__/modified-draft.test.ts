@@ -10,6 +10,7 @@ import type { ManualPlanDraft } from '../types';
 
 function createBundle(): ProjectSetupBundle {
   const opening = Object.freeze({
+    openingQualificationPvp: 0,
     fortnightPvpOpeningCredit: 0,
     dailyCarryPvp: 0,
     dailyCarryLeft: 0,

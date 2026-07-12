@@ -12,6 +12,7 @@ import type { ProjectSetupBundle } from '../../../../application/project-setup';
 import { ManualPlanWorkspace } from '../ManualPlanWorkspace';
 
 const ZERO_OPENING: OpeningStateInput = {
+  openingQualificationPvp: 0,
   fortnightPvpOpeningCredit: 0,
   dailyCarryPvp: 0,
   dailyCarryLeft: 0,

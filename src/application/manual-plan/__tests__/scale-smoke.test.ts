@@ -19,6 +19,7 @@ const DIRECT_FIELD_SLOT_COUNT_PER_DATE = MEMBER_COUNT + 32;
 const ENGINEERING_SMOKE_LIMIT_MS = 2_000;
 
 const ZERO_OPENING: OpeningStateInput = Object.freeze({
+  openingQualificationPvp: 0,
   fortnightPvpOpeningCredit: 0,
   dailyCarryPvp: 0,
   dailyCarryLeft: 0,

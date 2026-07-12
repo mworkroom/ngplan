@@ -1,0 +1,30 @@
+export const AUTOMATIC_PLAN_REQUEST_VERSION = '1.0.0' as const;
+export const AUTOMATIC_PLAN_POLICY_VERSION = '2.0.0' as const;
+export const AUTOMATIC_PLAN_OBJECTIVE_VERSION = '2.0.0' as const;
+export const AUTOMATIC_PLAN_CALENDAR_VERSION = '1.0.0' as const;
+export const AUTOMATIC_PLAN_FINGERPRINT_VERSION = '1.0.0' as const;
+export const AUTOMATIC_PLAN_MODEL_VERSION = '1.0.0' as const;
+export const AUTOMATIC_PLAN_MODEL_CERTIFICATE_VERSION = '1.0.0' as const;
+export const AUTOMATIC_PLAN_RULESET_VERSION = '3.0.0' as const;
+export const AUTOMATIC_PLAN_ENGINE_VERSION = '3.0.0' as const;
+
+export const AUTOMATIC_PLAN_PRODUCT_TIME_LIMIT_MS = 1_800_000 as const;
+export const AUTOMATIC_PLAN_MAX_ACTIVE_MEMBERS = 50 as const;
+export const AUTOMATIC_PLAN_QUALIFICATION_THRESHOLD = 300 as const;
+export const AUTOMATIC_PLAN_TARGET_700_RECOMMENDED_DAYS = 8 as const;
+
+export const AUTOMATIC_PLAN_FIELD_ORDER = Object.freeze([
+  'PVP',
+  'SELF_LEFT',
+  'SELF_RIGHT',
+] as const);
+
+export const AUTOMATIC_PLAN_OBJECTIVE_STAGE_ORDER = Object.freeze([
+  'TOTAL_NEW_PV',
+  'DISCARDED_EXCESS',
+  'TARGET_700_AT_LEAST_EIGHT',
+  'TARGET_700_ASCENDING_VECTOR',
+  'NON_HUNDRED_CELLS',
+  'MAX_DIRECT_PVP',
+  'DETERMINISTIC_ALLOCATION_VECTOR',
+] as const);

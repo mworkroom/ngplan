@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
+import { CALENDAR_VERSION } from '../constants';
 import {
   daysInMonth,
   derivePeriod,
+  getGregorianDayOfWeek,
   isLeapYear,
   isSunday,
   isValidIsoDate,
@@ -51,6 +53,30 @@ describe('[CAL-002] — 상·하반기와 월말 경계 표', () => {
 });
 
 describe('[CAL-P01] — 일요일의 입력·정산·표시 정책', () => {
+  it('calendar contract 1.0.0의 proleptic Gregorian 요일을 계산한다', () => {
+    expect(CALENDAR_VERSION).toBe('1.0.0');
+    expect(getGregorianDayOfWeek('0001-01-01' as IsoDate)).toBe(1);
+    expect(getGregorianDayOfWeek('2000-01-01' as IsoDate)).toBe(6);
+    expect(getGregorianDayOfWeek('2026-07-12' as IsoDate)).toBe(0);
+  });
+
+  it('host timezone 설정과 무관하게 같은 일요일을 반환한다', () => {
+    const originalTimezone = process.env.TZ;
+    try {
+      for (const timezone of ['Asia/Seoul', 'America/Sao_Paulo', 'UTC']) {
+        process.env.TZ = timezone;
+        expect(isSunday('2026-07-12' as IsoDate)).toBe(true);
+        expect(isSunday('2026-07-13' as IsoDate)).toBe(false);
+      }
+    } finally {
+      if (originalTimezone === undefined) {
+        delete process.env.TZ;
+      } else {
+        process.env.TZ = originalTimezone;
+      }
+    }
+  });
+
   it('일요일만 SKIP_NO_INPUT이고 토요일·공휴일은 SETTLE이다', () => {
     expect(settlementModeForDate('2026-07-12' as IsoDate)).toBe('SKIP_NO_INPUT');
     expect(settlementModeForDate('2026-07-11' as IsoDate)).toBe('SETTLE');

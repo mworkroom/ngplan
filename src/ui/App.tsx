@@ -1,9 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  deriveManualPlanSchema,
+  isManualPlanDraftModified,
   mapProjectSetupIssueToManualPlanIssue,
   reconcileManualPlanDraft,
   type ManualPlanDraft,
 } from '../application/manual-plan';
+import {
+  applyVerifiedAutomaticPlanCandidate,
+  createAutomaticPlanCheckpointSnapshot,
+  createAutomaticPlanRequest,
+  restoreAutomaticPlanCheckpointSnapshot,
+  AutomaticPlanRunController,
+  type AutomaticPlanWorkerFactory,
+} from '../application/automatic-plan';
 import {
   activateProjectSetupBundle,
   addMemberToSlot,
@@ -40,6 +50,12 @@ import {
   type ProjectSetupValidation,
   type TopologyCommandOutcome,
 } from '../application/project-setup';
+import {
+  AUTOMATIC_PLAN_PRODUCT_TIME_LIMIT_MS,
+  type AutomaticPlanProofProgress,
+  type AutomaticPlanRunState,
+  type VerifiedAutomaticPlanCandidate,
+} from '../optimizer';
 import { ExcludeMemberDialog } from './components/ExcludeMemberDialog';
 import { MemberForm } from './components/MemberForm';
 import { OpeningStateForm } from './components/OpeningStateForm';
@@ -47,6 +63,10 @@ import { OrganizationTree } from './components/OrganizationTree';
 import { ProjectPeriodForm } from './components/ProjectPeriodForm';
 import { ReassignmentQueue } from './components/ReassignmentQueue';
 import { ManualPlanWorkspace } from './components/manual-plan/ManualPlanWorkspace';
+import { ApplyAutomaticPlanDialog } from './components/automatic-plan/ApplyAutomaticPlanDialog';
+import { AutomaticPlanPanel } from './components/automatic-plan/AutomaticPlanPanel';
+import type { AutomaticPlanPreviewMetrics } from './components/automatic-plan/AutomaticPlanPreview';
+import type { AutomaticPlanUiStatus } from './components/automatic-plan/AutomaticPlanProgress';
 import {
   clearWorkspaceSession,
   readWorkspaceSession,
@@ -60,6 +80,101 @@ type DisplayDensity = 'COMPACT' | 'COMFORTABLE';
 type AppScreen = 'SETUP' | 'MANUAL_PLAN';
 
 const DISPLAY_DENSITY_STORAGE_KEY = 'ngplan.display-density';
+
+const EMPTY_AUTOMATIC_PLAN_PROOF: AutomaticPlanProofProgress = Object.freeze({
+  stage: 'TOTAL_NEW_PV',
+  provenScalarObjectiveCount: 0,
+  provenVectorPrefix: null,
+  primaryLowerBound: null,
+});
+
+const defaultAutomaticPlanWorkerFactory: AutomaticPlanWorkerFactory = () =>
+  new Worker(new URL('../workers/automatic-plan.worker.ts', import.meta.url), {
+    type: 'module',
+    name: 'ngplan-automatic-plan',
+  });
+
+function automaticPlanPhaseLabel(state: AutomaticPlanRunState | null): string {
+  if (state === null) return '계산 전';
+  switch (state.messageCode) {
+    case 'BUILDING_VERIFIED_INCUMBENT':
+    case 'FINDING_USABLE_PLAN':
+      return '사용 가능한 계획 찾는 중';
+    case 'VERIFIED_PLAN_FOUND':
+      return '더 적은 값을 찾는 중';
+    case 'EXACT_PROOF_BACKEND_UNAVAILABLE':
+      return '정확한 최소값 확인을 계속하지 못함';
+    case 'CANCELLED_BY_OPERATOR':
+      return '계산을 중지함';
+    default:
+      return state.status === 'OPTIMAL'
+        ? '최소값 확인 완료'
+        : state.status === 'RUNNING'
+          ? '최소값인지 확인 중'
+          : '계산 종료';
+  }
+}
+
+function automaticPlanPreviewMetrics(
+  candidate: VerifiedAutomaticPlanCandidate,
+  runState: AutomaticPlanRunState | null,
+): AutomaticPlanPreviewMetrics {
+  const memberByKey = new Map(
+    candidate.calculation.inputSnapshot.organization.members.map(
+      (member) => [member.memberKey, member] as const,
+    ),
+  );
+  const settlements = Object.values(
+    candidate.calculation.dailySettlementByDateAndMember,
+  ).flatMap((byMember) => Object.values(byMember));
+  const optimalityProven =
+    runState?.status === 'OPTIMAL' &&
+    runState.bestCandidate.candidateId === candidate.candidateId;
+  const runStatusLabel = optimalityProven
+    ? '최소값 확인 완료'
+    : runState === null
+      ? '복원된 검증 계획 · 새 계산 전'
+      : runState.status === 'RUNNING'
+        ? '최적성 확인 중'
+        : runState.status === 'TIME_LIMIT'
+          ? '시간 종료 · 최소값 미증명'
+          : runState.status === 'CANCELLED'
+            ? '계산 중지 · 최소값 미증명'
+            : runState.status === 'FAILED'
+              ? '검증 계획 · 최소값 증명 미완료'
+              : '최소값 미증명';
+  return Object.freeze({
+    candidateId: candidate.candidateId,
+    foundAtElapsedMs: candidate.foundAtElapsedMs,
+    totalNewPv: candidate.objective.totalNewPv,
+    optimalityProven,
+    runStatusLabel,
+    discardedExcessPv: candidate.objective.discardedExcessPv,
+    target700MembersAtLeastEight:
+      candidate.objective.target700MembersAtLeastEight,
+    target700TotalCommissionDays:
+      candidate.display.target700TotalCommissionDays,
+    target700MemberDayCounts: Object.freeze(
+      candidate.display.target700MemberDayCounts.map((item) =>
+        Object.freeze({
+          memberKey: item.memberKey,
+          memberLabel: memberByKey.get(item.memberKey)?.name ?? item.memberKey,
+          days: item.commissionDays,
+        }),
+      ),
+    ),
+    nonHundredCellCount: candidate.objective.nonHundredCellCount,
+    maxDirectPvp: candidate.objective.maxDirectPvp,
+    terminalCarryTotal: candidate.display.terminalCarrySummary.totalCarryPv,
+    allTargetsMet: Object.values(
+      candidate.calculation.finalAssessmentByMember,
+    ).every((assessment) => assessment.allTargetsMet),
+    allCommissionsQualified: settlements.every(
+      (settlement) =>
+        settlement.settlementKind !== 'BELOW_QUALIFICATION_SETTLEMENT',
+    ),
+  });
+}
 
 function readDisplayDensity(): DisplayDensity {
   try {
@@ -93,6 +208,7 @@ export function createSessionIdGenerator(
 export interface AppProps {
   readonly generateId?: IdGenerator;
   readonly initialDate?: Date;
+  readonly createAutomaticPlanWorker?: AutomaticPlanWorkerFactory;
 }
 
 interface SlotAction {
@@ -120,7 +236,11 @@ function createInitialDraft(generateId: IdGenerator, date: Date): ProjectSetupDr
   });
 }
 
-export function App({ generateId: injectedGenerateId, initialDate }: AppProps = {}) {
+export function App({
+  generateId: injectedGenerateId,
+  initialDate,
+  createAutomaticPlanWorker = defaultAutomaticPlanWorkerFactory,
+}: AppProps = {}) {
   const generateIdRef = useRef<IdGenerator | null>(null);
   if (generateIdRef.current === null) {
     generateIdRef.current = injectedGenerateId ?? createSessionIdGenerator();
@@ -158,6 +278,22 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
   const [organizationScale, setOrganizationScale] = useState(
     restoredSession?.organizationScale ?? 1,
   );
+  const [automaticPlanState, setAutomaticPlanState] =
+    useState<AutomaticPlanRunState | null>(null);
+  const [checkpointCandidate, setCheckpointCandidate] =
+    useState<VerifiedAutomaticPlanCandidate | null>(null);
+  const [workspaceAutomaticPlanCheckpoint, setWorkspaceAutomaticPlanCheckpoint] =
+    useState<Readonly<Record<string, unknown>> | null>(
+      restoredSession?.automaticPlanCheckpoint ?? null,
+    );
+  const [pinnedCandidate, setPinnedCandidate] =
+    useState<VerifiedAutomaticPlanCandidate | null>(null);
+  const [applyAutomaticPlanRequested, setApplyAutomaticPlanRequested] =
+    useState(false);
+  const [automaticPlanActionError, setAutomaticPlanActionError] =
+    useState<string | null>(null);
+  const automaticPlanControllerRef = useRef<AutomaticPlanRunController | null>(null);
+  const restoredCheckpointFingerprintRef = useRef<string | null>(null);
   const slotFirstActionRef = useRef<HTMLButtonElement>(null);
   const excludeTriggerRef = useRef<HTMLElement | null>(null);
 
@@ -183,6 +319,15 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
       : (topology.childrenByParent.get(memberPendingExclusion.memberKey) ?? [])
           .map((memberKey) => topology.memberByKey.get(memberKey))
           .filter((member): member is MemberDraft => member !== undefined);
+  const latestAutomaticPlanCandidate =
+    automaticPlanState?.bestCandidate ?? checkpointCandidate;
+  const manualPlanIsModified = useMemo(() => {
+    if (draft.activeBundle === null || manualPlanDraft === null) return false;
+    return isManualPlanDraftModified(
+      deriveManualPlanSchema(draft.activeBundle),
+      manualPlanDraft,
+    );
+  }, [draft.activeBundle, manualPlanDraft]);
 
   useEffect(() => {
     slotFirstActionRef.current?.focus();
@@ -198,13 +343,58 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
 
   useEffect(() => {
     writeWorkspaceSession({
-      version: 1,
+      version: 2,
       draft,
       manualPlanDraft,
       screen: screenState,
       organizationScale,
+      automaticPlanCheckpoint: workspaceAutomaticPlanCheckpoint,
     });
-  }, [draft, manualPlanDraft, organizationScale, screenState]);
+  }, [
+    draft,
+    manualPlanDraft,
+    organizationScale,
+    screenState,
+    workspaceAutomaticPlanCheckpoint,
+  ]);
+
+  useEffect(() => {
+    if (checkpointCandidate === null) return;
+    const timer = window.setTimeout(() => {
+      setWorkspaceAutomaticPlanCheckpoint(
+        createAutomaticPlanCheckpointSnapshot(checkpointCandidate),
+      );
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [checkpointCandidate]);
+
+  useEffect(
+    () => () => automaticPlanControllerRef.current?.dispose(),
+    [],
+  );
+
+  useEffect(() => {
+    const bundle = draft.activeBundle;
+    if (bundle === null) return;
+    const normalized = createAutomaticPlanRequest(bundle);
+    if (
+      normalized.status === 'FAILURE' ||
+      restoredCheckpointFingerprintRef.current ===
+        normalized.request.problemFingerprint
+    ) {
+      return;
+    }
+    restoredCheckpointFingerprintRef.current = normalized.request.problemFingerprint;
+    if (workspaceAutomaticPlanCheckpoint === null) return;
+    const restored = restoreAutomaticPlanCheckpointSnapshot(
+      normalized.request,
+      workspaceAutomaticPlanCheckpoint,
+    );
+    if (restored.status === 'RESTORED') {
+      setCheckpointCandidate(restored.candidate);
+      setAnnouncement('새로고침 전에 찾은 검증 계획을 다시 확인했습니다. 새 계산은 별도의 30분으로 시작합니다.');
+    }
+  }, [draft.activeBundle, workspaceAutomaticPlanCheckpoint]);
 
   const generateUniqueMemberKey = (): string => {
     const usedKeys = new Set(draft.members.map((member) => member.memberKey));
@@ -238,7 +428,21 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
     }, 0);
   };
 
+  const invalidateAutomaticPlan = (): void => {
+    automaticPlanControllerRef.current?.cancel();
+    automaticPlanControllerRef.current?.dispose();
+    automaticPlanControllerRef.current = null;
+    setAutomaticPlanState(null);
+    setCheckpointCandidate(null);
+    setWorkspaceAutomaticPlanCheckpoint(null);
+    setPinnedCandidate(null);
+    setApplyAutomaticPlanRequested(false);
+    setAutomaticPlanActionError(null);
+    restoredCheckpointFingerprintRef.current = null;
+  };
+
   const commitDraft = (nextDraft: ProjectSetupDraft, message?: string): void => {
+    if (nextDraft !== draft) invalidateAutomaticPlan();
     setDraft(nextDraft);
     setSubmittedValidation(null);
     setCommandError(null);
@@ -290,6 +494,7 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
     ) {
       return;
     }
+    invalidateAutomaticPlan();
     const next = createProjectDraft({
       year: draft.year,
       month: draft.month,
@@ -394,6 +599,7 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
       }
       return;
     }
+    invalidateAutomaticPlan();
     setDraft(activateProjectSetupBundle(draft, outcome.bundle));
     setCommandError(null);
     setAnnouncement('입력을 모두 확인했습니다. 계획표를 열 수 있습니다.');
@@ -406,6 +612,106 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
     }
     setManualPlanDraft(reconcileManualPlanDraft(activeBundle, manualPlanDraft));
     setScreenState('MANUAL_PLAN');
+  };
+
+  const startAutomaticPlan = (): void => {
+    const activeBundle = draft.activeBundle;
+    if (activeBundle === null) return;
+    const baseRequest = createAutomaticPlanRequest(activeBundle);
+    if (baseRequest.status === 'FAILURE') {
+      setAutomaticPlanActionError(baseRequest.error.message);
+      return;
+    }
+    const compatibleWarmStart =
+      latestAutomaticPlanCandidate?.problemFingerprint ===
+      baseRequest.request.problemFingerprint
+        ? latestAutomaticPlanCandidate.allocations
+        : undefined;
+    const requestOutcome = createAutomaticPlanRequest(
+      activeBundle,
+      compatibleWarmStart,
+    );
+    if (requestOutcome.status === 'FAILURE') {
+      setAutomaticPlanActionError(requestOutcome.error.message);
+      return;
+    }
+    automaticPlanControllerRef.current?.dispose();
+    const controller = new AutomaticPlanRunController({
+      createWorker: createAutomaticPlanWorker,
+      onStateChange: setAutomaticPlanState,
+      onVerifiedCandidate: (candidate) => {
+        setCheckpointCandidate(candidate);
+      },
+    });
+    automaticPlanControllerRef.current = controller;
+    setAutomaticPlanActionError(null);
+    try {
+      controller.start(requestOutcome.request);
+    } catch {
+      controller.dispose();
+      automaticPlanControllerRef.current = null;
+      setAutomaticPlanState(Object.freeze({
+        status: 'FAILED',
+        elapsedMs: 0,
+        bestCandidate: latestAutomaticPlanCandidate,
+        proof: EMPTY_AUTOMATIC_PLAN_PROOF,
+        error: Object.freeze({
+          code: 'AUTOMATIC_PLAN_INTERNAL_ERROR',
+          message: '자동 계획 작업 파일을 불러오지 못했습니다. 연결 상태를 확인해 주세요.',
+        }),
+        messageCode: 'WORKER_ASSET_LOAD_FAILED',
+      }));
+    }
+  };
+
+  const handleStartAutomaticPlanFromSetup = (): void => {
+    const activeBundle = draft.activeBundle;
+    if (activeBundle === null) return;
+    setManualPlanDraft(reconcileManualPlanDraft(activeBundle, manualPlanDraft));
+    setScreenState('MANUAL_PLAN');
+    startAutomaticPlan();
+  };
+
+  const handleOpenAutomaticPlanPreview = (): void => {
+    if (latestAutomaticPlanCandidate !== null) {
+      setPinnedCandidate(latestAutomaticPlanCandidate);
+    }
+  };
+
+  const handleApplyPinnedCandidate = (): void => {
+    if (pinnedCandidate === null || manualPlanDraft === null) return;
+    setApplyAutomaticPlanRequested(true);
+  };
+
+  const confirmApplyPinnedCandidate = (): void => {
+    const activeBundle = draft.activeBundle;
+    if (
+      activeBundle === null ||
+      manualPlanDraft === null ||
+      pinnedCandidate === null
+    ) {
+      setApplyAutomaticPlanRequested(false);
+      return;
+    }
+    const applied = applyVerifiedAutomaticPlanCandidate(
+      activeBundle,
+      manualPlanDraft,
+      pinnedCandidate,
+    );
+    if (applied.status === 'FAILURE') {
+      setAutomaticPlanActionError(applied.message);
+      setApplyAutomaticPlanRequested(false);
+      return;
+    }
+    setManualPlanDraft(applied.draft);
+    setCheckpointCandidate(applied.candidate);
+    setPinnedCandidate(null);
+    setApplyAutomaticPlanRequested(false);
+    setAutomaticPlanActionError(null);
+    automaticPlanControllerRef.current?.cancel();
+    automaticPlanControllerRef.current?.dispose();
+    automaticPlanControllerRef.current = null;
+    setAnnouncement('선택한 자동 계획을 계획표에 적용했습니다. 이제 각 값을 직접 수정할 수 있습니다.');
   };
 
   const candidateParents = useMemo(() => {
@@ -424,6 +730,33 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
     slotAction === null
       ? undefined
       : topology.memberByKey.get(slotAction.parentMemberKey);
+  const automaticPlanUiStatus: AutomaticPlanUiStatus =
+    automaticPlanState?.status ?? 'IDLE';
+  const latestAutomaticPlanMetrics = useMemo(
+    () =>
+      latestAutomaticPlanCandidate === null
+        ? null
+        : automaticPlanPreviewMetrics(
+            latestAutomaticPlanCandidate,
+            automaticPlanState,
+          ),
+    [automaticPlanState, latestAutomaticPlanCandidate],
+  );
+  const pinnedAutomaticPlanMetrics = useMemo(
+    () =>
+      pinnedCandidate === null
+        ? null
+        : automaticPlanPreviewMetrics(
+            pinnedCandidate,
+            automaticPlanState,
+          ),
+    [automaticPlanState, pinnedCandidate],
+  );
+  const automaticPlanErrorMessage =
+    automaticPlanActionError ??
+    (automaticPlanState?.status === 'FAILED'
+      ? automaticPlanState.error.message
+      : null);
 
   if (
     screenState === 'MANUAL_PLAN' &&
@@ -431,17 +764,48 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
     manualPlanDraft !== null
   ) {
     return (
-      <ManualPlanWorkspace
-        bundle={draft.activeBundle}
-        draft={manualPlanDraft}
-        setupWarnings={Object.freeze(
-          liveValidation.warnings.map(mapProjectSetupIssueToManualPlanIssue),
-        )}
-        displayDensity={displayDensity}
-        onDisplayDensityChange={setDisplayDensity}
-        onDraftChange={setManualPlanDraft}
-        onReturnToSetup={() => setScreenState('SETUP')}
-      />
+      <>
+        <ManualPlanWorkspace
+          bundle={draft.activeBundle}
+          draft={manualPlanDraft}
+          setupWarnings={Object.freeze(
+            liveValidation.warnings.map(mapProjectSetupIssueToManualPlanIssue),
+          )}
+          displayDensity={displayDensity}
+          onDisplayDensityChange={setDisplayDensity}
+          onDraftChange={setManualPlanDraft}
+          onReturnToSetup={() => setScreenState('SETUP')}
+          announcement={announcement}
+          automaticPlanPanel={(
+            <AutomaticPlanPanel
+              status={automaticPlanUiStatus}
+              elapsedMs={automaticPlanState?.elapsedMs ?? 0}
+              maximumMs={AUTOMATIC_PLAN_PRODUCT_TIME_LIMIT_MS}
+              phaseLabel={automaticPlanPhaseLabel(automaticPlanState)}
+              latestCandidate={latestAutomaticPlanMetrics}
+              pinnedCandidate={pinnedAutomaticPlanMetrics}
+              errorMessage={automaticPlanErrorMessage}
+              onStart={startAutomaticPlan}
+              onStop={() => automaticPlanControllerRef.current?.cancel()}
+              onOpenPreview={handleOpenAutomaticPlanPreview}
+              onSwitchToLatest={() => {
+                if (latestAutomaticPlanCandidate !== null) {
+                  setPinnedCandidate(latestAutomaticPlanCandidate);
+                }
+              }}
+              onApplyPinned={handleApplyPinnedCandidate}
+              onClosePreview={() => setPinnedCandidate(null)}
+            />
+          )}
+        />
+        {applyAutomaticPlanRequested ? (
+          <ApplyAutomaticPlanDialog
+            manualDraftModified={manualPlanIsModified}
+            onConfirm={confirmApplyPinnedCandidate}
+            onCancel={() => setApplyAutomaticPlanRequested(false)}
+          />
+        ) : null}
+      </>
     );
   }
 
@@ -543,6 +907,13 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
               onClick={handleOpenManualPlan}
             >
               플랜 열기
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={handleStartAutomaticPlanFromSetup}
+            >
+              자동 계획 만들기
             </button>
           </div>
         </section>

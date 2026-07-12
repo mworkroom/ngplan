@@ -13,9 +13,11 @@ type User = ReturnType<typeof userEvent.setup>;
 
 const INITIAL_DATE = new Date(2026, 6, 10, 12, 0, 0);
 const OPENING_FIELD_LABELS = [
-  '현재 보유 PVP',
-  '현재 좌 잔액',
-  '현재 우 잔액',
+  '수당 자격 PVP 시작값',
+  '보름 PVP 시작값',
+  '일일 PVP 잔액',
+  '일일 좌 잔액',
+  '일일 우 잔액',
 ] as const;
 
 function createDeterministicIdGenerator(): NonNullable<AppProps['generateId']> {
@@ -479,7 +481,7 @@ describe('App project setup flow', () => {
       .mockReturnValueOnce(true);
     const user = renderApp();
     await createNamedRoot(user, 'Legacy', '1000');
-    await replaceInput(user, '현재 보유 PVP', '42');
+    await replaceInput(user, '보름 PVP 시작값', '42');
 
     await user.click(screen.getByRole('button', { name: '초기화' }));
 
@@ -489,7 +491,7 @@ describe('App project setup flow', () => {
     expect(
       screen.getByRole('button', { name: 'Legacy 회원 상세 편집' }),
     ).toBeDefined();
-    expect(inputByLabel('현재 보유 PVP').value).toBe('42');
+    expect(inputByLabel('보름 PVP 시작값').value).toBe('42');
 
     await user.click(screen.getByRole('button', { name: '초기화' }));
 
@@ -575,7 +577,7 @@ describe('App project setup flow', () => {
       }) as HTMLInputElement).value,
     ).toBe('123');
     await waitFor(() => {
-      expect(window.sessionStorage.getItem('ngplan.workspace-session.v1')).toContain('123');
+      expect(window.sessionStorage.getItem('ngplan.workspace-session.v2')).toContain('123');
     });
 
     cleanup();

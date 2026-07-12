@@ -492,6 +492,11 @@ function validateOpeningStates(
       continue;
     }
     validatePvField(
+      state.openingQualificationPvp,
+      { snapshotId: input.snapshotId, memberKey, field: 'openingQualificationPvp' },
+      issues,
+    );
+    validatePvField(
       state.fortnightPvpOpeningCredit,
       { snapshotId: input.snapshotId, memberKey, field: 'fortnightPvpOpeningCredit' },
       issues,
@@ -749,7 +754,13 @@ function hasCanonicalRuleSetBody(rules: RuleSet): boolean {
       rules.target700CommissionPreference.eligiblePvpTarget ===
         expected.target700CommissionPreference.eligiblePvpTarget &&
       rules.target700CommissionPreference.recommendedDays ===
-        expected.target700CommissionPreference.recommendedDays
+        expected.target700CommissionPreference.recommendedDays &&
+      rules.qualificationPolicy.threshold ===
+        expected.qualificationPolicy.threshold &&
+      rules.qualificationPolicy.accumulation ===
+        expected.qualificationPolicy.accumulation &&
+      rules.qualificationPolicy.belowThresholdSettlement ===
+        expected.qualificationPolicy.belowThresholdSettlement
     );
   } catch {
     return false;
@@ -849,8 +860,8 @@ export function validatePlan(
       issues,
       'RULESET_BODY_MISMATCH',
       { snapshotId, field: 'ruleset' },
-      '규칙 버전 2.0.0의 본문이 확정된 규칙과 일치하지 않습니다.',
-      '내보낸 기본 RuleSet 2.0.0을 변경하지 않고 사용해 주세요.',
+      '규칙 버전 3.0.0의 본문이 확정된 규칙과 일치하지 않습니다.',
+      '내보낸 기본 RuleSet 3.0.0을 변경하지 않고 사용해 주세요.',
     );
   }
 

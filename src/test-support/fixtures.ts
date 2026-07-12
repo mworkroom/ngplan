@@ -11,6 +11,7 @@ import type {
 } from '../domain/types';
 
 export const ZERO_OPENING_STATE: OpeningStateInput = Object.freeze({
+  openingQualificationPvp: 0,
   fortnightPvpOpeningCredit: 0,
   dailyCarryPvp: 0,
   dailyCarryLeft: 0,

@@ -1,11 +1,17 @@
-import type { Side } from '../../engine';
+import type { OrganizationSnapshotInput, Side } from '../../engine';
 import type {
+  CanonicalMemberSequence,
   ChildSlotState,
   DerivedTopology,
   MemberDraft,
   ProjectSetupDraft,
   ReassignmentQueueEntry,
 } from './types';
+
+interface CanonicalChildren {
+  readonly LEFT: string | null;
+  readonly RIGHT: string | null;
+}
 
 export function topologySlotKey(parentMemberKey: string, side: Side): string {
   return `${parentMemberKey}\u0000${side}`;
@@ -90,6 +96,77 @@ export function deriveTopology(draft: ProjectSetupDraft): DerivedTopology {
     traversal,
     reassignmentQueue,
   };
+}
+
+export function deriveCanonicalMemberSequence(
+  organization: Pick<OrganizationSnapshotInput, 'members'>,
+): CanonicalMemberSequence {
+  const memberByKey = new Map(
+    organization.members.map((member) => [member.memberKey, member] as const),
+  );
+  if (memberByKey.size !== organization.members.length) {
+    throw new Error('정본 회원 순서를 만들려면 회원 키가 모두 달라야 합니다.');
+  }
+
+  const roots = organization.members.filter(
+    (member) => member.parentMemberKey === null && member.sideAtParent === null,
+  );
+  if (roots.length !== 1) {
+    throw new Error('정본 회원 순서를 만들려면 맨 위 회원이 한 명이어야 합니다.');
+  }
+
+  const childrenByMemberKey = new Map<string, { LEFT: string | null; RIGHT: string | null }>(
+    organization.members.map((member) => [
+      member.memberKey,
+      { LEFT: null, RIGHT: null },
+    ]),
+  );
+  for (const member of organization.members) {
+    if (member.parentMemberKey === null || member.sideAtParent === null) {
+      continue;
+    }
+    const children = childrenByMemberKey.get(member.parentMemberKey);
+    if (children === undefined) {
+      throw new Error('정본 회원 순서를 만들 수 없는 상위 회원 참조가 있습니다.');
+    }
+    if (children[member.sideAtParent] !== null) {
+      throw new Error('정본 회원 순서를 만들 수 없는 중복 좌·우 자리가 있습니다.');
+    }
+    children[member.sideAtParent] = member.memberKey;
+  }
+
+  const sequence: string[] = [];
+  const visiting = new Set<string>();
+  const visited = new Set<string>();
+  const visit = (memberKey: string): void => {
+    if (visiting.has(memberKey)) {
+      throw new Error('정본 회원 순서를 만들 수 없는 조직 순환이 있습니다.');
+    }
+    if (visited.has(memberKey)) {
+      return;
+    }
+    const children = childrenByMemberKey.get(memberKey) as CanonicalChildren | undefined;
+    if (children === undefined || !memberByKey.has(memberKey)) {
+      throw new Error('정본 회원 순서를 만들 수 없는 회원 참조가 있습니다.');
+    }
+
+    visiting.add(memberKey);
+    sequence.push(memberKey);
+    if (children.LEFT !== null) {
+      visit(children.LEFT);
+    }
+    if (children.RIGHT !== null) {
+      visit(children.RIGHT);
+    }
+    visiting.delete(memberKey);
+    visited.add(memberKey);
+  };
+
+  visit(roots[0]!.memberKey);
+  if (sequence.length !== organization.members.length) {
+    throw new Error('정본 회원 순서를 만들려면 모든 회원이 맨 위 회원과 연결되어야 합니다.');
+  }
+  return Object.freeze(sequence);
 }
 
 export function getChildSlotState(

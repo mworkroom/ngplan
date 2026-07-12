@@ -15,7 +15,7 @@ Phase 2 creates the first usable application screen. It allows the operator to d
 - the active members for that project;
 - the binary left/right organization topology;
 - each member's directly selected PVP target and optional sheet marker;
-- each member's four independent opening values.
+- each member's five independent opening values: qualification PVP, half-month PVP, daily PVP, daily left, and daily right.
 
 The editing UI must allow incomplete intermediate states. Phase 1 calculation types do not. Therefore Phase 2 must keep these two layers separate:
 
@@ -37,7 +37,7 @@ Phase 2 is successful when all of the following are true:
 - An empty child slot is displayed as `SELF` and offers a `+` action.
 - An occupied child slot is displayed as `CHILD` and points to exactly one direct child.
 - Drag-and-drop is not required for adding, moving, or reconnecting members.
-- All four opening values default to numeric zero.
+- All five opening values default to numeric zero.
 - A separate confirmation state records whether the operator checked those defaulted values against the company system.
 - A member can be excluded from the active project without deleting descendant member data.
 - When an intermediate member is excluded, its direct child subtrees are preserved and can be reattached.
@@ -48,7 +48,7 @@ Phase 2 is successful when all of the following are true:
 - Validation `ERROR` items block completion; `WARNING` items remain visible but do not block completion.
 - Any draft mutation after completion immediately invalidates the active setup bundle and requires revalidation.
 - Creating a new project never copies members, topology, or opening values from a previous project.
-- The UI clearly states that Phase 2 has no persistent storage and a browser refresh discards the draft.
+- The UI clearly states that the current setup/manual workspace uses only one versioned current-tab `sessionStorage` snapshot: screen changes and refresh are protected, closing the tab removes it, and no durable/cross-device project storage exists.
 - All Phase 1 regression tests and coverage gates continue to pass.
 - Type checking, automated tests, coverage, production build, and distribution smoke checks pass.
 
@@ -65,7 +65,7 @@ The following defaults are approved and do not require another confirmation step
 | UI framework | React + React DOM | The organization tree, form state, Phase 3 planning table, and later revision views benefit from component-based state management. |
 | Component tests | Vitest + a DOM environment + Testing Library | User-visible behavior can be tested without moving Phase 1 calculation tests out of Node. |
 | Organization editing | Free editing while the in-memory project is `IN_PROGRESS` | Phase 2 has no confirmed or actual plan revision yet. |
-| Opening value defaults | Initialize all four fields to `0` | Zero is common and pre-filling it reduces repetitive typing. |
+| Opening value defaults | Initialize all five fields to `0` | Zero is common and pre-filling it reduces repetitive typing. Qualification, half-month, and daily PVP remain separate semantic fields even when their current values happen to match. |
 | Opening value safety | Keep a separate per-member `openingStateConfirmed` flag | A pre-filled zero must not silently mean that the company-system value was checked. |
 | Member placement | Use left/right `+` buttons and explicit selectors | This matches the requested card-based workflow and avoids drag-and-drop complexity. |
 | Intermediate member departure | Exclude the member and preserve surviving descendant subtrees for reassignment | Removing one person must not force the operator to re-enter every lower-level member. |
@@ -89,6 +89,8 @@ The following defaults are approved and do not require another confirmation step
 | `reassignment queue` | A derived UI list of active subtree roots that are temporarily disconnected and must be attached before completion. |
 | `promote child` | Attach the only direct child of an excluded member to the excluded member's former parent and former side. |
 | `active setup bundle` | The most recent validated `ProjectSetupBundle` that Phase 3 is allowed to consume. |
+| `canonical business member sequence` | A stable root-first preorder: visit the root, then each member's complete `LEFT` subtree before the `RIGHT` subtree. It is used by Phase 4 fingerprints and tie-breaks, not by the centered worksheet display. |
+| `worksheet display order` | A UI-only inorder sequence: `LEFT` subtree, current member, `RIGHT` subtree. It may center the root visually but must never become the optimizer's business order. |
 
 Avoid vague implementation terms such as "delete the lower levels." Commands must say exactly whether they exclude one member, detach one subtree, or remove an accidental empty draft record.
 
@@ -147,7 +149,8 @@ Usage rules:
 - Company member ID, member name, selected PVP target (`2400 | 1500 | 700`), and optional sheet marker (`NONE | PINK_1 | GREEN_2 | BLUE_3 | PURPLE_4`).
 - Active or excluded project participation state.
 - Parent member key and `LEFT/RIGHT` placement for active placed members.
-- Four independent opening value strings and per-member confirmation state.
+- Five independent opening value strings and per-member confirmation state.
+- A stable canonical business sequence derived only from the root and `LEFT/RIGHT` topology, separate from any UI inorder/render order.
 
 ### 4.3 Card-Based Organization Editing
 
@@ -161,6 +164,7 @@ Usage rules:
 - The tree viewport supports horizontal scrolling.
 - Completed branches can be collapsed and expanded.
 - A fit-to-view or compact overview may be added only if it does not replace accessible card controls.
+- UI tree/worksheet presentation may use inorder for centering, but normalization also exposes or can deterministically derive the separate root-first, `LEFT`-before-`RIGHT` canonical business sequence.
 
 ### 4.4 Opening Values
 
@@ -168,6 +172,7 @@ Every newly created member starts with:
 
 ```ts
 {
+  openingQualificationPvp: '0',
   fortnightPvpOpeningCredit: '0',
   dailyCarryPvp: '0',
   dailyCarryLeft: '0',
@@ -176,9 +181,18 @@ Every newly created member starts with:
 }
 ```
 
-The four numeric fields remain independent. Editing one field must not change another. The operator confirms the set once per member with a control such as `Company-system opening values checked`.
+The five numeric fields remain independent. Editing one field must not change another. The operator confirms the set once per member with a control such as `Company-system opening values checked`.
 
-All four values may legitimately remain zero. Completion depends on confirmation, not on requiring a non-zero value.
+All five values may legitimately remain zero. Completion depends on confirmation, not on requiring a non-zero value.
+
+The fields have different downstream meanings:
+
+- `openingQualificationPvp` starts the non-resetting full-commission qualification counter. Same-date direct PVP is added before checking whether it reached 300.
+- `fortnightPvpOpeningCredit` starts the half-month personal-PVP assessment.
+- `dailyCarryPvp` starts the resettable daily PVP balance.
+- `dailyCarryLeft` and `dailyCarryRight` start the resettable daily side balances.
+
+Phase 2 does not calculate settlement, but its published bundle must preserve these meanings. A later engine may preserve the mechanical reset of a manually entered below-300 settlement while rejecting that event in an automatic candidate and exposing a blocking manual-plan warning. Phase 2 must not collapse the three PVP meanings into one field in anticipation of that later rule.
 
 ### 4.5 Non-Destructive Member Exclusion and Reassignment
 
@@ -236,7 +250,7 @@ Phase 2 includes functional baseline accessibility. Formal browser, performance,
 - Applying organization changes to an already confirmed or actual plan.
 - Persistent project history and revision invalidation rules.
 - `CLOSED` transition and read-only archive behavior.
-- `localStorage`, `sessionStorage`, IndexedDB, file/server storage, accounts, synchronization, autosave, or refresh recovery.
+- Durable project storage, IndexedDB, file/server storage, accounts, synchronization, cross-tab/device recovery, or project history. One versioned current-work `sessionStorage` snapshot is allowed for the current tab, and Phase 4 may add only a minimal verified-candidate checkpoint to it.
 - Copying opening values from a previous project.
 - Import, export, PDF, spreadsheet, or print output.
 - Drag-and-drop member placement.
@@ -267,7 +281,7 @@ UI components import application APIs. They do not import private validation hel
 |---|---|
 | `ProjectSetupDraft` | Project fields, title source state, members, selected member, root key, active bundle reference |
 | `MemberDraft` | Stable key, active/excluded state, identity fields, PVP-target string, sheet marker, placement, opening draft |
-| `OpeningStateDraft` | Four numeric strings defaulted to `'0'` plus `openingStateConfirmed` |
+| `OpeningStateDraft` | Five numeric strings defaulted to `'0'` plus `openingStateConfirmed` |
 | `PlacementDraft` | Parent key and side; a temporary unplaced state is allowed only in the draft |
 | `ReassignmentQueueEntry` | Active disconnected subtree root and context explaining why reassignment is required |
 | `TopologyCommandOutcome` | Success with new immutable draft/change summary, or failure with original draft unchanged |
@@ -276,6 +290,7 @@ UI components import application APIs. They do not import private validation hel
 | `NormalizeProjectSetupOutcome` | Success bundle/warnings, or errors/warnings with no bundle |
 | `PlanProject` | ID, title, period, timezone, `IN_PROGRESS`, organization snapshot ID |
 | `ProjectSetupBundle` | `PlanProject` plus Phase 1 `OrganizationSnapshotInput`; not a persisted archive model |
+| `CanonicalMemberSequence` | Stable root-first, `LEFT`-before-`RIGHT` member keys derived from canonical topology; never UI inorder, names, localized sorting, or mutable render order |
 
 The reassignment queue is derived from active members that are not the selected root and currently have no parent after a structural edit. It is not a second authoritative organization representation.
 
@@ -308,10 +323,10 @@ Do not add a router in Phase 2.
 | File | Change |
 |---|---|
 | `src/application/project-setup/types.ts` | Define drafts, topology states, outcomes, summaries, project core, and bundle. |
-| `src/application/project-setup/create-project-draft.ts` | Create fresh projects with zeroed/unconfirmed openings and no previous input. |
+| `src/application/project-setup/create-project-draft.ts` | Create fresh projects with five zeroed/unconfirmed openings and no previous input. |
 | `src/application/project-setup/edit-member.ts` | Edit identity, PVP target, sheet marker, opening values, and confirmation. |
 | `src/application/project-setup/edit-topology.ts` | Atomic add, attach, move, exclude, detach, and promote commands. |
-| `src/application/project-setup/derive-topology.ts` | Derive child indexes, `SELF/CHILD`, traversal, and reassignment queue. |
+| `src/application/project-setup/derive-topology.ts` | Derive child indexes, `SELF/CHILD`, UI inorder, canonical root-first `LEFT`-before-`RIGHT` business order, and reassignment queue. |
 | `src/application/project-setup/validate-draft.ts` | Validate incomplete strings, confirmations, and queue readiness. |
 | `src/application/project-setup/normalize-project-setup.ts` | Build and validate period, organization input, project, and bundle. |
 | `src/application/project-setup/map-validation-issues.ts` | Map locations to forms, cards, slots, and queue entries. |
@@ -336,7 +351,7 @@ Do not add a router in Phase 2.
 | `src/ui/components/MemberCard.tsx` | Marker-prefixed identity, PVP target, confirmation, errors, and two child slots. |
 | `src/ui/components/ChildSlot.tsx` | `SELF/CHILD` and left/right `+` actions. |
 | `src/ui/components/MemberForm.tsx` | Identity, optional sheet marker, parent, and side. |
-| `src/ui/components/OpeningStateForm.tsx` | Four zero-defaulted values and confirmation. |
+| `src/ui/components/OpeningStateForm.tsx` | Five zero-defaulted values and confirmation. |
 | `src/ui/components/ReassignmentQueue.tsx` | Detached subtree roots and attach actions. |
 | `src/ui/components/ExcludeMemberDialog.tsx` | Explain exclusion consequences before mutation. |
 | `src/ui/components/ValidationSummary.tsx` | Errors/warnings and navigation to sources. |
@@ -374,7 +389,7 @@ Completion gate:
 1. Install only approved UI/test dependencies.
 2. Preserve strict TypeScript and Node-based Phase 1 tests.
 3. Create the app shell with centralized theme tokens.
-4. Show `New project` and the no-storage/refresh-loss notice.
+4. Show `New project` and the current-tab-only `sessionStorage` notice: refresh is protected, tab closure removes the workspace, and no durable project record exists.
 5. Verify `/ngplan/` rendering.
 
 Completion gate:
@@ -387,7 +402,7 @@ Completion gate:
 
 1. Implement injectable ID generation.
 2. Create a fresh-project factory with no previous-project input.
-3. Initialize four openings to `'0'` and confirmation to `false`.
+3. Initialize five openings to `'0'` and confirmation to `false`.
 4. Parse periods through Phase 1 validation.
 5. Implement derived/manual title behavior.
 6. Add per-member company-system confirmation.
@@ -442,6 +457,7 @@ Completion gate:
 6. Publish a bundle only with no errors, empty queue, and confirmed openings.
 7. Preserve warnings.
 8. Never fabricate allocations or call `calculatePlan`.
+9. Publish or deterministically derive the root-first, `LEFT`-before-`RIGHT` canonical business sequence independently of the UI inorder.
 
 Completion gate:
 
@@ -449,6 +465,7 @@ Completion gate:
 - Invalid drafts produce no partial bundle.
 - Existing Phase 1 validation behavior remains stable.
 - Validation does not mutate drafts or published bundles.
+- Canonical business order is stable under UI reorder/render changes and differs intentionally from the centered inorder display where the topology requires it.
 
 ### WP6 — Integrated Flow and Baseline Accessibility
 
@@ -536,11 +553,12 @@ Then run `npm run preview` and verify the application manually.
 | P2-PROJ-002 | Change across 28/29/30/31-day months | Phase 1 period derivation remains correct |
 | P2-PROJ-003 | Start new project from non-empty draft | No member/topology/opening data copied |
 | P2-PROJ-004 | Change period before/after manual title edit | Derived title updates only before manual edit |
-| P2-OPEN-001 | Create new member | Four opening strings are `'0'`; confirmation false |
+| P2-OPEN-001 | Create new member | Five opening strings are `'0'`; confirmation false |
 | P2-OPEN-002 | Keep zeros and confirm | Opening state valid |
 | P2-OPEN-003 | Keep defaults unconfirmed | Completion blocked |
 | P2-OPEN-004 | Negative, fractional, text, unsafe value | Stable field error |
 | P2-OPEN-005 | Edit one opening field | Other fields unchanged |
+| P2-OPEN-006 | Qualification, half-month, and daily PVP values differ | All three meanings survive normalization independently |
 | P2-MEMBER-001 | Duplicate names, unique company IDs | Allowed |
 | P2-MEMBER-002 | Duplicate company ID | Completion blocked with location |
 | P2-CARD-001 | Add left/right through `+` | Correct parent/side |
@@ -561,6 +579,7 @@ Then run `npm run preview` and verify the application manually.
 | P2-NORM-002 | Any error | No partial bundle |
 | P2-NORM-003 | Warnings only | Bundle produced with warnings preserved |
 | P2-NORM-004 | Repeated validation with injected IDs | Draft unchanged; deterministic result |
+| P2-NORM-005 | Root with nested left/right subtrees | Canonical business sequence is root-first and `LEFT` before `RIGHT`; UI inorder remains separate |
 | P2-READY-001 | Edit after completion | Active bundle and ready state cleared |
 | P2-REG-001 | Compare organization validator and `validatePlan` | Shared errors/locations identical |
 | P2-UI-001 | Build topology with keyboard and `+` | Core flow completes without mouse/drag |
@@ -609,7 +628,8 @@ Then run `npm run preview` and verify the application manually.
 
 ### E — Opening Values
 
-- Four fields default independently to zero.
+- Five fields default independently to zero.
+- Qualification, half-month, and daily PVP are distinct semantic inputs.
 - Separate confirmation prevents silent acceptance of unchecked defaults.
 - New projects never import previous openings.
 
@@ -640,7 +660,9 @@ Then run `npm run preview` and verify the application manually.
 | Identity based on array index/company ID | Broken references after edit | Stable injected internal keys |
 | Old bundle remains active after edit | Phase 3 consumes stale topology | Clear bundle on every mutation |
 | Fake allocations test readiness | Phase coupling | Period/organization-only validators |
-| Browser persistence added for convenience | Phase 6 policy preempted | Prohibit persistence in Phase 2 |
+| Current-tab safety grows into durable storage | Phase 6 policy preempted | Keep one versioned `sessionStorage` workspace and an optional minimal verified-candidate checkpoint only; no history, cross-tab/device sync, or proof frontier |
+| UI inorder becomes optimizer order | Same business input can produce a different automatic plan after a display change | Derive a separate root-first, `LEFT`-before-`RIGHT` canonical business sequence from stable topology |
+| Three PVP opening meanings collapse into one | Wrong qualification, daily reset, or half-month target | Store and normalize five independent opening fields with boundary tests |
 | Tree width grows without bounds | Unreadable cards | Scroll viewport, compact cards, collapse |
 | Bright cyan used for small text | Poor readability | Use `#087ea4` action cyan |
 | Router ignores Pages base | Deployed white screen | No router; `/ngplan/` smoke test |
@@ -653,12 +675,13 @@ Phase 2 is complete only when:
 - The themed React app renders at `/ngplan/`.
 - A half-month `PlanProject` can be created in memory.
 - A multi-level organization can be built through left/right `+` controls.
-- Identity, PVP target, optional sheet marker, placement, four opening values, and confirmation are editable.
+- Identity, PVP target, optional sheet marker, placement, five opening values, and confirmation are editable.
 - Openings default to zero and require separate confirmation.
 - `SELF/CHILD` is derived and updates after structural commands.
 - No-child, one-child, two-child, and root exclusions preserve all surviving data and follow their defined reassignment behavior.
 - All active members form one connected, acyclic, single-root organization before completion.
 - A valid confirmed draft produces a Phase 1-compatible `ProjectSetupBundle`.
+- The bundle preserves separate qualification, half-month, and daily PVP openings and a stable root-first, `LEFT`-before-`RIGHT` business sequence independent of UI inorder.
 - Errors block publication; warnings are preserved.
 - Any later edit invalidates the active bundle.
 - Phase 1 validation is reused rather than duplicated.
@@ -666,7 +689,7 @@ Phase 2 is complete only when:
 - Theme tokens and contrast follow the approved Atomy/ngcatalogue palette.
 - Typecheck, tests, per-layer coverage, build, and `smoke:dist` pass.
 - Manual preview confirms card addition, zero confirmation, and reassignment.
-- No Phase 3+ planning, optimization, revision, persistence, closure, or domain work is implemented.
+- No Phase 3+ planning, optimization, revision, durable persistence, closure, or domain calculation work is implemented. The current-tab workspace safety net does not create a project record.
 - Korean development log records implementation, verification, limitations, and deferred Phase 5 behavior.
 
 After Phase 2, Phase 3 consumes only the immutable `ProjectSetupBundle`, not React state or mutable drafts. Phase 5 later uses the same stable identities and non-destructive topology operations to rebuild a plan after a member leaves, eliminating manual spreadsheet-formula repair.

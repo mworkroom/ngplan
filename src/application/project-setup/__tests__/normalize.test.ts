@@ -40,7 +40,7 @@ function member(draft: ProjectSetupDraft, memberKey: string) {
 }
 
 describe('P2-NORM 정본 Setup Bundle', () => {
-  it('P2-NORM-001 / P2-OPEN-002: 확인된 0을 포함한 유효 Draft를 정확히 정규화한다', () => {
+  it('P2-NORM-001 / P2-OPEN-002/006: 다섯 opening 의미를 독립적으로 정규화한다', () => {
     let draft = createSingleMemberDraft('A');
     draft = addCompletedChild(draft, 'A', 'LEFT', 'B');
     draft = editMemberIdentity(draft, 'A', {
@@ -50,6 +50,7 @@ describe('P2-NORM 정본 Setup Bundle', () => {
       sheetMarker: 'PINK_1',
     });
     draft = editOpeningState(draft, 'A', {
+      openingQualificationPvp: '33',
       fortnightPvpOpeningCredit: '100',
       dailyCarryPvp: '200',
       dailyCarryLeft: '300',
@@ -92,12 +93,14 @@ describe('P2-NORM 정본 Setup Bundle', () => {
         ],
         openingStateByMember: {
           A: {
+            openingQualificationPvp: 33,
             fortnightPvpOpeningCredit: 100,
             dailyCarryPvp: 200,
             dailyCarryLeft: 300,
             dailyCarryRight: 400,
           },
           B: {
+            openingQualificationPvp: 0,
             fortnightPvpOpeningCredit: 0,
             dailyCarryPvp: 0,
             dailyCarryLeft: 0,
@@ -147,6 +150,7 @@ describe('P2-NORM 정본 Setup Bundle', () => {
     expect(Object.getPrototypeOf(openings)).toBeNull();
     expect(Object.hasOwn(openings, '__proto__')).toBe(true);
     expect(openings.__proto__).toEqual({
+      openingQualificationPvp: 0,
       fortnightPvpOpeningCredit: 0,
       dailyCarryPvp: 0,
       dailyCarryLeft: 0,

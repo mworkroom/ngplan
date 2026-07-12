@@ -87,6 +87,9 @@ Phase 3 is successful when all of the following are true:
 - Direct PVP and every derived `SELF` direction accept non-negative integer PV in 1 PV units on settlement days.
 - A connected direction is read-only and shows the organization aggregate calculated by Phase 1.
 - Sunday rows remain visible, accept no nonzero input, calculate as `SKIPPED`, and preserve carry.
+- Current-rule daily and half-month PVP apply wholly to the smaller side; Phase 3 exposes the engine result and no historical-rule selector.
+- A manually entered settlement below qualification PVP 300 preserves the engine's mechanical reset trace, is not counted as a usable full commission, and produces a blocking planning warning.
+- Period-end carry follows the authoritative engine closing result and is not silently erased or labeled waste.
 - Blank editable draft values normalize to zero without using implicit JavaScript number coercion.
 - Invalid nonblank input identifies the exact date, member, side, and field and blocks current results.
 - No stale result appears as if it reflects an invalid draft.
@@ -122,8 +125,9 @@ These defaults are part of the implementation contract and do not require anothe
 | Arrow keys | Preserve native input behavior | Do not hijack cursor movement without a complete spreadsheet interaction model. |
 | Bulk operations | No multi-cell paste, fill handle, undo stack, import, or export | These are useful future enhancements but are not Phase 3 exit requirements. |
 | Result layout | Compact grid plus selected-cell audit panel plus member summary | Putting every result in every cell would make the worksheet unreadable. |
-| Return to setup | Discard the whole manual draft after explicit confirmation if modified | In-place topology/opening edits against an existing plan require Phase 5 revision semantics. |
-| Storage | Keep setup and plan data in memory only | Recovery, records, and export belong to Phase 6. The display-density preference may remain locally stored as a UI preference. |
+| Member display order | Use organization inorder (`LEFT` subtree, member, `RIGHT` subtree) for the centered worksheet | This is a presentation choice only. Phase 4 business identity uses a separate root-first, `LEFT`-before-`RIGHT` canonical order. |
+| Return to setup | Retain the manual draft in the current-tab workspace and reconcile matching member/date/field cells after setup is validated again | Operators must be able to correct setup without losing manual work; Phase 5 revision semantics are still not introduced. |
+| Storage | Store one versioned current-work snapshot in `sessionStorage` | Same-tab screen changes and refresh are protected, while durable records, cross-tab/device recovery, and export remain Phase 6 work. |
 | Routing and global state | Keep the current top-level React screen state; add no router or global state library | Two in-memory screens do not justify new infrastructure. |
 | UI terminology | Use plain Korean business labels and hide technical topology names | Operators should not need to understand `root`, `parent`, `child`, `subtree`, or `memberKey`. |
 
@@ -161,6 +165,21 @@ These defaults are part of the implementation contract and do not require anothe
 - Mobile-first redesign. The screen must remain safe at narrower widths, but Phase 3 is PC-first.
 
 Requirements that mention actual-value differences or changed resimulation cells are assigned to Phase 5 by the roadmap and must not be partially implemented here.
+
+### 4.3 Phase 4 Handoff Constraints
+
+Phase 3 does not implement optimization, but its bundle, manual draft, result selectors, and current-tab workspace are the Phase 4 handoff. The following Phase 4 contracts must not be contradicted by Phase 3 maintenance:
+
+- The functional organization maximum is 50 active members. The product exposes one fixed maximum 30-minute automatic run and no 3-hour, custom-duration, hidden-extension, or background mode.
+- Phase 2 supplies five opening values: qualification PVP, half-month PVP, daily PVP, daily left, and daily right. The three PVP meanings remain separate.
+- `qualificationPvp` is opening qualification PVP plus inclusive cumulative direct PVP through the current date. Same-date PVP counts before the 300 gate.
+- A below-300 mechanical settlement keeps the real reset/carry trace. It is forbidden in an automatic candidate and shown as a blocking warning in manual planning.
+- Only the current smaller-side PVP rule is authoritative for daily and half-month calculation.
+- The exact automatic objective order is total new PV, discarded excess, target-700 at-least-eight count plus complete ascending day vector, non-100-multiple direct-cell count, maximum direct PVP, then the canonical allocation tie-break.
+- Target-700 total commission days are display-only. Exact PVP value 100 has no standalone preference.
+- The canonical business member order is root-first and recursively `LEFT` before `RIGHT`; it is independent of this worksheet's inorder display.
+- Period-end carry is preserved according to Phase 1 and receives no invented terminal penalty.
+- The current-tab workspace may add only a minimal verified-incumbent checkpoint. It does not persist solver frontier/proof progress or become durable/cross-device storage.
 
 ## 5. Canonical Data Flow
 
@@ -235,9 +254,10 @@ Rules:
 Derive one immutable schema from the setup bundle:
 
 - `period.dates` from `derivePeriod` supplies row order.
-- Member order is deterministic, root-first and left-before-right, derived from the authoritative root/child relationships rather than UI array order.
-- The current engine `orderedMemberKeys` is a stable member-key sort used by calculation output; it is not the required user-facing tree preorder. Derive the worksheet preorder from the root and `childrenByMemberKey`, and lock it with application tests.
-- Each member descriptor contains its stable key, display label, selected PVP target, optional sheet marker, optional company ID, opening values, and left/right `SELF | CHILD` modes.
+- Worksheet member order is deterministic organization inorder: recursively render the `LEFT` subtree, the current member, then the `RIGHT` subtree. This keeps the root visually centered and matches the implemented Phase 3 table.
+- The worksheet inorder is UI-only. Phase 4 separately derives the canonical business sequence as root-first preorder with every `LEFT` subtree before `RIGHT`; optimizer fingerprints, objectives, checkpoints, and tie-breaks must never reuse the worksheet order.
+- The current engine `orderedMemberKeys` is a stable member-key sort used by calculation output; it is neither the worksheet inorder nor the Phase 4 canonical business preorder. Derive both topology orders explicitly from the root and child relationships and lock their separation with application tests.
+- Each member descriptor contains its stable key, display label, selected PVP target, optional sheet marker, optional company ID, all five opening values, and left/right `SELF | CHILD` modes.
 - Each date descriptor contains its ISO date, Korean display label, and settlement mode.
 - Re-export or consume the existing `settlementModeForDate`/`isSunday` domain helper. Do not duplicate Sunday detection in the application or UI.
 
@@ -285,6 +305,8 @@ type ManualPlanCalculationState =
 ```
 
 The `BLOCKED` variant must not contain a renderable current result. A component must exhaustively switch on this state rather than checking unrelated nullable values.
+
+The Phase 4 qualification-aware engine extension adds one exceptional audited-blocking path for a manual below-300 mechanical settlement. Its exact current-draft settlement/reset trace must remain available for audit, but the state must remain structurally distinct from `CURRENT`, carry a blocking issue, and never be usable as an automatic candidate or normal commission result. A stale result from an earlier draft is never an acceptable substitute for that trace.
 
 After each edit:
 
@@ -361,8 +383,8 @@ Use one semantic `<table>` inside one dedicated scroll container.
 - First column: date and weekday.
 - Two sticky header rows: member group, then `PVP / 좌 / 우`.
 - Sticky first date column.
-- Member groups follow deterministic organization order.
-- Each member header shows the optional numbered color marker, display label, selected PVP target, optional company ID, and opening PVP/left/right values above the corresponding columns.
+- Member groups follow the deterministic worksheet inorder. This display order is not the Phase 4 canonical business order.
+- Each member header shows the optional numbered color marker, display label, selected PVP target, optional company ID, and relevant opening PVP/left/right values above the corresponding columns. Qualification, half-month, and daily opening PVP remain distinct in data and audit views even when the compact header cannot show all three at once.
 - Editable cells use a compact text input with `inputMode="numeric"` and an exact accessible name containing date, member display label, and field.
 - Read-only connected directions show the current organization aggregate and a concise `조직 합계` cue or tooltip.
 - Sunday rows have a visible `일요일 · 정산 제외` cue and no enabled edit control.
@@ -408,11 +430,13 @@ For the selected date/member, show the authoritative Phase 1 values in calculati
 7. carry-out PVP, left, and right;
 8. running personal PVP, remaining PVP, raw left/right totals, and personal-PVP target state through that date.
 
+Under the qualification-aware ruleset, the audit also shows or can explain opening qualification PVP, inclusive cumulative qualification PVP for the selected date, and whether a mechanical settlement was a qualification-valid full commission. If the value is below 300, preserve the engine's real reset trace, do not count it as a usable commission, and show a plain blocking warning.
+
 `RunningFortnightState` does not expose running left/right target booleans. Show running raw left/right totals without inventing side-target comparisons in the UI. Left/right target status is shown only from the final `FortnightAssessment`.
 
 For Sunday, show `정산 제외`, no commission occurrence, and clearly show that carry-out equals carry-in.
 
-The daily carry PVP is a calculated ledger value here. It must not be reintroduced as a Phase 2 opening input.
+The first-date daily carry PVP is one of Phase 2's five explicit opening inputs. After calculation begins, each following day's carry PVP is derived from the prior settlement and must not become another editable planning field.
 
 ### 7.7 Member Half-Month Summary
 
@@ -420,6 +444,7 @@ For the selected member, and in a compact all-member overview where space permit
 
 - directly selected PVP target and optional sheet marker;
 - current/opening PVP credit;
+- opening and current qualification PVP when the qualification-aware ruleset is active;
 - new PVP total;
 - personal PVP total;
 - personal PVP target;
@@ -431,6 +456,8 @@ For the selected member, and in a compact all-member overview where space permit
 - all-target status;
 - commission days and occurrences;
 - target-700 recommendation status and recommended days when applicable.
+
+Only qualification-valid full commission occurrences count. Target-700 total days may be shown as a display metric, but Phase 3 selectors must not imply that the total is a separate Phase 4 objective.
 
 Use the `RuleSet`/engine result as authority. The approved contract has no business-level field: each member directly selects `2400 | 1500 | 700`; target 700 is subject to the soft approximately-eight-day recommendation; the optional sheet marker is display-only.
 
@@ -543,6 +570,7 @@ Tasks:
 - Implement the `CURRENT | BLOCKED` state.
 - Map Phase 1 validation locations into Phase 3 issues.
 - Preserve nonblocking setup/calculation warnings as session display metadata where available.
+- Preserve a qualification-aware manual below-300 settlement's exact reset trace while publishing a structurally blocking issue rather than a usable `CURRENT` result.
 
 Exit gate:
 
@@ -560,6 +588,7 @@ Tasks:
 - Add the `수동 계획표 열기` action to the ready setup state.
 - Freeze/retain the exact bundle consumed by the manual session.
 - Reuse the existing display-density preference. Clearly describe the current-tab-only `sessionStorage` safety net and that closing the tab removes it.
+- Keep the versioned workspace extensible only for Phase 4's minimal reverified incumbent checkpoint; never store solver frontier, proof progress, or durable project history.
 - Implement immediate return-to-setup behavior while retaining the controlled manual draft.
 - Ensure a later setup mutation cannot silently update an existing manual session.
 
@@ -691,7 +720,11 @@ Do not reduce a threshold to make Phase 3 pass.
 | P3-RESULT-002 | Half-month progress | PVP target, remaining, raw sides, target states map exactly |
 | P3-RESULT-003 | Unmet goal | Calculation succeeds and shortage is displayed, not flagged as input error |
 | P3-RESULT-004 | Zero pre-settlement PVP | Product view says no PVP to apply; direct-zero/carried-nonzero still shows real application |
+| P3-QUAL-001 | Opening qualification 33 plus same-date direct PVP 267 | Qualification is 300 and that day's full commission may count |
+| P3-QUAL-002 | Manual below-300 mechanical settlement | Actual reset trace preserved; result blocked with warning; occurrence not counted as usable commission |
+| P3-CARRY-001 | Carry remains after the final plan date | Engine closing carry is preserved and no terminal waste is invented |
 | P3-GRID-001 | Headers and order | Dates and member groups are deterministic and semantically associated |
+| P3-ORDER-001 | Worksheet order versus business order | Worksheet uses organization inorder; canonical optimizer order is root-first and `LEFT` before `RIGHT` |
 | P3-GRID-002 | Editability | PVP/SELF enabled; CHILD/Sunday unavailable |
 | P3-GRID-003 | Keyboard flow | Tab and Enter navigation skip noneditable cells correctly |
 | P3-GRID-004 | Member jump | Correct group scrolls into view and receives focus |
@@ -735,7 +768,7 @@ Read the cases themselves before writing tests. Do not copy expected values from
 
 ### A — Phase Boundary
 
-- Manual planning only; no optimizer, actual values, revision history, durable project storage, or export. The current tab may retain one unversioned working draft in `sessionStorage`.
+- Manual planning only; no optimizer, actual values, revision history, durable project storage, or export. The current tab retains one versioned working snapshot in `sessionStorage`; Phase 4 may add only a minimal reverified incumbent checkpoint.
 - No organization or opening-value edits inside the planning session.
 
 ### B — Setup Handoff
@@ -757,7 +790,10 @@ Read the cases themselves before writing tests. Do not copy expected values from
 - Every valid change calls Phase 1 for the whole period.
 - UI/application selectors do not reproduce formulas.
 - Raw daily values, daily carry, and half-month totals remain separate.
+- Qualification PVP, daily PVP balance, and half-month PVP remain separate; same-date direct PVP is included before the 300 gate.
 - A daily reset never overwrites raw performance or half-month totals.
+- A below-300 mechanical settlement preserves the real reset trace but is blocked and never counted as a usable full commission.
+- Period-end carry follows the engine and receives no invented terminal penalty.
 
 ### E — Result Freshness
 
@@ -768,6 +804,7 @@ Read the cases themselves before writing tests. Do not copy expected values from
 ### F — Worksheet Usability
 
 - Dates are rows and member PVP/left/right values are grouped columns.
+- Worksheet member columns use inorder for display; optimizer identity uses a separate root-first, `LEFT`-before-`RIGHT` order.
 - Sticky headers/date column and horizontal scrolling work together.
 - Keyboard entry, member jump, error focus, and density settings work.
 - Technical topology terms do not leak into Korean UI copy.
@@ -791,12 +828,15 @@ Read the cases themselves before writing tests. Do not copy expected values from
 | Too much result data in the grid | Entry becomes unreadable | Keep grid focused on three fields; move audit detail and summaries to panels |
 | Duplicate names with empty IDs | Operator edits the wrong member | Deterministic plain-language disambiguation without exposing member keys |
 | Member ordering differs across views | Inputs and results appear under the wrong person | One authoritative worksheet schema and centralized lookups |
+| Worksheet inorder leaks into the optimizer | A visual layout change alters the problem fingerprint or optimum | Keep UI inorder and canonical root-first, `LEFT`-before-`RIGHT` business order as named, separately tested contracts |
 | Setup draft changes after manual input | Result uses mixed organization versions | Never mutate the open bundle; on validated reopen reconcile only matching member/date/editable-field strings into the new schema |
 | `App.tsx` absorbs all Phase 3 logic | Fragile state coupling and low testability | Dedicated application module and manual-plan components |
 | CSS density breaks sticky positioning | Headers scroll away or overlap | Avoid nested transforms; test both density modes and real preview |
 | Immediate full recalculation becomes slow at unknown scale | Input lag | Keep orchestration pure, smoke-test 31×16, measure before adding debounce/worker/virtualization; formal performance in Phase 7 |
 | Requirements text crosses Phase 5 boundary | Premature revision model | Follow roadmap boundary and explicitly exclude actual/diff/resimulation features |
 | Current-tab continuity grows into an ad hoc project database | Phase 6 lifecycle and migration policy preempted | Store only one versioned working snapshot in `sessionStorage`; no project list, history, cross-tab sync, or durable recovery |
+| Minimal candidate checkpoint is mistaken for proof resume | Operator overtrusts a restarted run | Persist only a verified incumbent and compatibility metadata, reverify it, and start a fresh fixed 30-minute run |
+| Below-300 settlement is hidden to keep the plan usable | Later carry diverges from the company system | Preserve mechanical reset, block the manual plan with a plain warning, and reject the event in automatic candidates |
 
 ## 13. Definition of Done
 
@@ -811,14 +851,16 @@ Phase 3 is complete only when:
 - Sundays are visible, locked to zero, skipped by settlement, and preserve carry.
 - Blank planning values normalize explicitly to zero.
 - Invalid input blocks current calculation and focuses the exact source.
-- Every valid edit recalculates the entire period through the unchanged Phase 1 engine.
+- Every valid edit recalculates the entire period through the active versioned Phase 1 engine.
 - Daily audit, running progress, final assessments, shortages, commission days, and recommendations are visible.
 - The worksheet works with keyboard-only entry, member jump, sticky navigation, and both display-density modes.
 - Duplicate names and optional IDs cannot cause identity confusion.
 - Returning to setup preserves the manual working draft, and reopening after setup correction safely reconciles matching cells.
+- Worksheet inorder remains presentation-only and is never reused as Phase 4's root-first, `LEFT`-before-`RIGHT` canonical business order.
+- Qualification-aware manual calculation preserves below-300 mechanical reset traces while blocking their use as valid plans; final carry remains unpenalized unless the engine records an explicit erasure.
 - No automatic optimizer, revision, actual-value, persistence, closure, import, or export feature is included.
 - All Phase 1–3 tests pass without reducing coverage thresholds.
 - Production build, `/ngplan/` smoke check, and manual preview pass.
 - The Korean development log records implementation decisions, verification evidence, known limitations, and deferred Phase 4–6 work.
 
-After Phase 3, Phase 4 may create automatic allocation candidates against the same immutable setup and verify them through the same Phase 1 engine. Phase 5 will introduce plan confirmation, actual values, revisions, organization changes after planning, and partial resimulation. Phase 6 will define persistence, recovery, closed records, and spreadsheet/export formats. Phase 3 must leave those contracts unclaimed.
+After Phase 3, Phase 4 may create automatic allocation candidates against the same immutable setup and verify them through the qualification-aware versioned Phase 1 engine. It uses one fixed 30-minute run, the exact revised objective order, a separate canonical business member order, and a current-tab verified-incumbent checkpoint only. Phase 5 will introduce plan confirmation, actual values, revisions, organization changes after planning, and partial resimulation. Phase 6 will define durable persistence, cross-device recovery, closed records, and spreadsheet/export formats. Phase 3 must leave those contracts unclaimed.

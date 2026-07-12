@@ -22,6 +22,7 @@ import { DailyResultDetails } from '../DailyResultDetails';
 import { MemberFortnightSummary } from '../MemberFortnightSummary';
 
 const ZERO_OPENING: OpeningStateInput = {
+  openingQualificationPvp: 300,
   fortnightPvpOpeningCredit: 0,
   dailyCarryPvp: 0,
   dailyCarryLeft: 0,
@@ -118,7 +119,7 @@ function currentResult(
 afterEach(cleanup);
 
 describe('WP5 daily and fortnight result presentation', () => {
-  it('P3-RESULT-001 / DAY-001 renders all eight daily audit steps from engine values', () => {
+  it('P3-RESULT-001 / DAY-001 renders all nine daily audit steps from engine values', () => {
     const { schema, result } = currentResult(bundle(), (schema, initial) => {
       let draft = edit(schema, initial, '2026-07-01', 'A', 'pvp', 100);
       draft = edit(schema, draft, '2026-07-01', 'A', 'selfLeft', 200);
@@ -128,13 +129,15 @@ describe('WP5 daily and fortnight result presentation', () => {
     render(<DailyResultDetails view={view} blocked={false} />);
 
     const audit = screen.getByRole('list');
-    expect(within(audit).getAllByRole('listitem')).toHaveLength(8);
+    expect(within(audit).getAllByRole('listitem')).toHaveLength(9);
     expect(screen.getByText('1. 전날에서 넘어온 값')).toBeDefined();
     expect(screen.getByText('2. 오늘 들어온 실적')).toBeDefined();
-    expect(screen.getByText('3. 오늘 계산에 사용할 합계')).toBeDefined();
+    expect(screen.getByText('3. 수당 자격 PVP')).toBeDefined();
+    expect(screen.getByText('400 PV · 자격 300 이상')).toBeDefined();
+    expect(screen.getByText('4. 오늘 계산에 사용할 합계')).toBeDefined();
     expect(screen.getByText('작은 쪽 좌에 PVP 적용')).toBeDefined();
     expect(screen.getByText('300 단계 · 커미션 발생')).toBeDefined();
-    expect(screen.getByText('8. 오늘까지의 보름 합계')).toBeDefined();
+    expect(screen.getByText('9. 오늘까지의 보름 합계')).toBeDefined();
   });
 
   it('P3-RESULT-004 / P3-SUN-001 distinguishes no PVP and a skipped Sunday with null values', () => {
@@ -192,7 +195,7 @@ describe('WP5 daily and fortnight result presentation', () => {
     );
 
     expect(screen.getAllByText('추가 계획 필요').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('300 PV')).toHaveLength(2);
+    expect(screen.getAllByText('300 PV')).toHaveLength(3);
     expect(screen.getByText('2,500 PV · 좌 목표 달성')).toBeDefined();
     expect(screen.getByText('2,500 PV · 우 목표 달성')).toBeDefined();
     expect(screen.getByText('7월 1일')).toBeDefined();

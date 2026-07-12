@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import {
   calculateManualPlan,
   deriveAllManualPlanMemberSummaryRows,
@@ -33,6 +33,8 @@ export interface ManualPlanWorkspaceProps {
   readonly onDisplayDensityChange: (density: ManualPlanDisplayDensity) => void;
   readonly onDraftChange: (draft: ManualPlanDraft) => void;
   readonly onReturnToSetup: () => void;
+  readonly automaticPlanPanel?: ReactNode;
+  readonly announcement?: string;
 }
 
 function formatDateRange(startDate: string, endDate: string): string {
@@ -62,6 +64,8 @@ export function ManualPlanWorkspace({
   onDisplayDensityChange,
   onDraftChange,
   onReturnToSetup,
+  automaticPlanPanel,
+  announcement = '',
 }: ManualPlanWorkspaceProps) {
   const schema = useMemo(() => deriveManualPlanSchema(bundle), [bundle]);
   const calculation: ManualPlanCalculationState = useMemo(
@@ -94,9 +98,11 @@ export function ManualPlanWorkspace({
   const visibleIssues =
     calculation.status === 'BLOCKED'
       ? [...calculation.issues, ...setupWarnings]
-      : calculation.warnings;
+      : calculation.status === 'AUDIT_BLOCKED'
+        ? [...calculation.issues, ...calculation.warnings]
+        : calculation.warnings;
   const resultViews = useMemo(() => {
-    if (calculation.status !== 'CURRENT') {
+    if (calculation.status === 'BLOCKED') {
       return { daily: null, selectedMember: null, allMembers: null };
     }
     return {
@@ -144,7 +150,9 @@ export function ManualPlanWorkspace({
           >
             {calculation.status === 'CURRENT'
               ? '✓ 계산 완료'
-              : '⚠ 입력 확인 필요'}
+              : calculation.status === 'AUDIT_BLOCKED'
+                ? '⚠ 정산 자격 확인 필요'
+                : '⚠ 입력 확인 필요'}
           </span>
           <label className="density-control">
             <select
@@ -180,6 +188,12 @@ export function ManualPlanWorkspace({
         </div>
       </aside>
 
+      {automaticPlanPanel}
+
+      <p className="visually-hidden" aria-live="polite" aria-atomic="true">
+        {announcement}
+      </p>
+
       <ManualPlanValidationSummary
         issues={visibleIssues}
         schema={schema}
@@ -190,6 +204,8 @@ export function ManualPlanWorkspace({
       <p className="visually-hidden" aria-live="polite" aria-atomic="true">
         {calculation.status === 'BLOCKED'
           ? `입력 오류 ${calculation.issues.length}개`
+          : calculation.status === 'AUDIT_BLOCKED'
+            ? `정산 자격 경고 ${calculation.issues.length}개. 실제 초기화 결과를 표시합니다.`
           : '현재 계획 계산 완료'}
       </p>
 

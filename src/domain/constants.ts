@@ -2,10 +2,11 @@ import type { CommissionTier, PvpTarget, Pv, RuleSet } from './types';
 
 const pvLiteral = (value: number): Pv => value as Pv;
 
-export const ENGINE_VERSION = '2.0.0';
+export const ENGINE_VERSION = '3.0.0';
+export const CALENDAR_VERSION = '1.0.0';
 
-export const RULE_SET_2_0_0: RuleSet = Object.freeze({
-  rulesetVersion: '2.0.0',
+export const RULE_SET_3_0_0: RuleSet = Object.freeze({
+  rulesetVersion: '3.0.0',
   commissionTiers: Object.freeze([
     300,
     700,
@@ -24,9 +25,14 @@ export const RULE_SET_2_0_0: RuleSet = Object.freeze({
     eligiblePvpTarget: 700,
     recommendedDays: 8,
   }),
+  qualificationPolicy: Object.freeze({
+    threshold: 300,
+    accumulation: 'OPENING_PLUS_DIRECT_INCLUSIVE_NON_RESETTING',
+    belowThresholdSettlement: 'RESET_AND_WARN_NOT_FULL_COMMISSION',
+  }),
 });
 
-export const DEFAULT_RULE_SET = RULE_SET_2_0_0;
+export const DEFAULT_RULE_SET = RULE_SET_3_0_0;
 
 export function isAllowedPvpTarget(
   value: number,

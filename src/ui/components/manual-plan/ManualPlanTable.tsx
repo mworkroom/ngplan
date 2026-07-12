@@ -65,7 +65,7 @@ function worksheetView(
   date: string,
   memberKey: string,
  ) {
-  if (calculation.status !== 'CURRENT') {
+  if (calculation.status === 'BLOCKED') {
     return undefined;
   }
   return deriveManualPlanWorksheetCellView(calculation.result, date, memberKey) ?? undefined;
@@ -109,7 +109,7 @@ export function ManualPlanTable({
   onSelect,
   onEdit,
 }: ManualPlanTableProps) {
-  const issues = calculation.status === 'BLOCKED' ? calculation.issues : [];
+  const issues = calculation.status === 'CURRENT' ? [] : calculation.issues;
   const firstEditableDate = schema.dates.find(
     (date) => date.settlementMode === 'SETTLE',
   );
@@ -280,7 +280,7 @@ export function ManualPlanTable({
                 FIELD_DEFINITIONS.map(({ field, label }) => {
                   const openingValue =
                     field === 'pvp'
-                      ? member.openingState.fortnightPvpOpeningCredit
+                      ? member.openingState.dailyCarryPvp
                       : field === 'selfLeft'
                         ? member.openingState.dailyCarryLeft
                         : member.openingState.dailyCarryRight;

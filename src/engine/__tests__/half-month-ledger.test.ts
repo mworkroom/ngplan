@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_RULE_SET } from '../../domain/constants';
 import { PvAggregateOutOfRangeError } from '../../domain/pv';
 import type {
+  BelowQualificationSettlementOccurrence,
   CommissionOccurrence,
   CommissionTier,
   IsoDate,
@@ -40,7 +41,9 @@ const opening = (
   dailyCarryPvp = 0,
   dailyCarryLeft = 0,
   dailyCarryRight = 0,
+  openingQualificationPvp = 0,
 ): OpeningStateInput => ({
+  openingQualificationPvp,
   fortnightPvpOpeningCredit,
   dailyCarryPvp,
   dailyCarryLeft,
@@ -69,11 +72,13 @@ const accumulator = (
   left: number,
   right: number,
   commissionOccurrences: readonly CommissionOccurrence[] = [],
+  belowQualificationSettlementOccurrences: readonly BelowQualificationSettlementOccurrence[] = [],
 ): FortnightAccumulator => ({
   newPvpTotal: pv(pvp),
   rawLeftTotal: pv(left),
   rawRightTotal: pv(right),
   commissionOccurrences,
+  belowQualificationSettlementOccurrences,
 });
 const occurrences = (tiers: readonly CommissionTier[]): CommissionOccurrence[] =>
   tiers.map((tier, index) => ({
@@ -246,13 +251,14 @@ describe('half-month-ledger', () => {
     });
   });
 
-  it('[OPEN-001] [OPEN-P01] 네 시작값의 일일·보름 역할을 분리', () => {
+  it('[OPEN-001] [OPEN-P01] qualification·일일·보름 시작값 역할을 분리', () => {
     const memberA = member(700);
-    const openingState = opening(300, 100, 200, 100);
+    const openingState = opening(300, 100, 200, 100, 33);
     const performance = raw(400, 0, 200);
     const daily = settleDaily({
       carryIn: balance(100, 200, 100),
       rawPerformance: performance,
+      qualificationPvp: pv(433),
     });
     const day = accumulateFortnightDay({
       previous: createFortnightAccumulator(),
@@ -279,8 +285,11 @@ describe('half-month-ledger', () => {
       rawRightTotal: 200,
       personalPvpTotal: 700,
       remainingPvp: 0,
+      qualificationPvp: 433,
     });
     expect(final).toMatchObject({
+      openingQualificationPvp: 33,
+      closingQualificationPvp: 433,
       periodPvpForSide: 700,
       assessedLeft: 700,
       assessedRight: 200,
@@ -294,6 +303,7 @@ describe('half-month-ledger', () => {
     const firstDaily = settleDaily({
       carryIn: balance(0, 0, 0),
       rawPerformance: firstRaw,
+      qualificationPvp: pv(300),
     });
     const first = accumulateFortnightDay({
       previous: createFortnightAccumulator(),
@@ -306,6 +316,7 @@ describe('half-month-ledger', () => {
     const secondDaily = settleDaily({
       carryIn: firstDaily.carryOut,
       rawPerformance: secondRaw,
+      qualificationPvp: pv(400),
     });
     const second = accumulateFortnightDay({
       previous: first.accumulator,
@@ -326,12 +337,47 @@ describe('half-month-ledger', () => {
     ]);
   });
 
+  it('[QUAL-005] below-300 settlement은 별도 추적하고 full commission 일수에서 제외', () => {
+    const memberA = member(700);
+    const openingState = opening(0, 0, 0, 0, 33);
+    const performance = raw(266, 300, 300, D1);
+    const daily = settleDaily({
+      carryIn: balance(0, 0, 0),
+      rawPerformance: performance,
+      qualificationPvp: pv(299),
+    });
+    const day = accumulateFortnightDay({
+      previous: createFortnightAccumulator(),
+      rawPerformance: performance,
+      dailySettlement: daily,
+      member: memberA,
+      openingState,
+    });
+    const final = evaluateFortnight({
+      member: memberA,
+      openingState,
+      accumulator: day.accumulator,
+    });
+
+    expect(final).toMatchObject({
+      closingQualificationPvp: 299,
+      qualificationThresholdMet: false,
+      commissionDays: 0,
+      commissionOccurrences: [],
+      belowQualificationSettlementDays: 1,
+      belowQualificationSettlementOccurrences: [
+        { date: D1, tier: 300, qualificationPvp: 299 },
+      ],
+    });
+  });
+
   it('[CAL-P02] 마지막 일요일에도 같은 진행 누계를 감사 행으로 남김', () => {
     const previous = accumulator(100, 200, 100);
     const sundayRaw = raw(0, 0, 0, SUNDAY);
     const sundayDaily = settleDaily({
       carryIn: balance(100, 200, 100),
       rawPerformance: sundayRaw,
+      qualificationPvp: pv(300),
     });
 
     const result = accumulateFortnightDay({
@@ -401,6 +447,7 @@ describe('half-month-ledger', () => {
     const daily = settleDaily({
       carryIn: balance(0, 0, 0),
       rawPerformance: performance,
+      qualificationPvp: pv(300),
     });
 
     expect(() => accumulateFortnightDay({

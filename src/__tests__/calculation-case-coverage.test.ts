@@ -85,7 +85,7 @@ describe('Phase 1 calculation-case traceability', () => {
     const documentedCases = parsePhaseOneCalculationCases(markdown);
     const documentedIds = documentedCases.map(({ id }) => id);
 
-    expect(documentedCases).toHaveLength(50);
+    expect(documentedCases).toHaveLength(59);
     expect(new Set(documentedIds).size).toBe(documentedIds.length);
 
     const testFiles = await findTestFiles(sourceRoot);

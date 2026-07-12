@@ -56,7 +56,9 @@ export function MemberFortnightSummary({
       </div>
 
       <dl className="manual-summary-grid">
-        <SummaryValue label="현재/시작 PVP" value={pv(selected.fortnightPvpOpeningCredit)} />
+        <SummaryValue label="자격 PVP 시작" value={pv(selected.openingQualificationPvp)} />
+        <SummaryValue label="자격 PVP 마감" value={pv(selected.closingQualificationPvp)} />
+        <SummaryValue label="보름 PVP 시작" value={pv(selected.fortnightPvpOpeningCredit)} />
         <SummaryValue label="신규 PVP" value={pv(selected.newPvpTotal)} />
         <SummaryValue label="개인 PVP 합계" value={pv(selected.personalPvpTotal)} />
         <SummaryValue label="개인 PVP 목표" value={pv(selected.personalPvpTarget)} />
@@ -68,6 +70,7 @@ export function MemberFortnightSummary({
         <SummaryValue label="판정 좌" value={`${pv(selected.assessedLeft)} · ${selected.leftTargetLabel}`} />
         <SummaryValue label="판정 우" value={`${pv(selected.assessedRight)} · ${selected.rightTargetLabel}`} />
         <SummaryValue label="커미션 발생일" value={`${selected.commissionDays}일`} />
+        <SummaryValue label="자격 미달 정산" value={`${selected.belowQualificationSettlementDays}일`} />
         <SummaryValue label="분산 권장" value={selected.recommendationLabel} />
       </dl>
 
