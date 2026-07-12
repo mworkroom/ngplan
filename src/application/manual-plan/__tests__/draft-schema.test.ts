@@ -145,7 +145,7 @@ describe('WP1 manual-plan draft and worksheet schema', () => {
     expect(draft.cells).toHaveLength(16 * 4);
   });
 
-  it('places every member between its own left and right organizations', () => {
+  it('mirrors complete root branches around the root', () => {
     const setup = bundle([
       member('root', null, null),
       member('branch', 'root', 'LEFT'),
@@ -155,11 +155,38 @@ describe('WP1 manual-plan draft and worksheet schema', () => {
     ]);
 
     expect(deriveManualPlanSchema(setup).members.map((item) => item.memberKey)).toEqual([
+      'branch-right',
       'branch-left',
       'branch',
-      'branch-right',
       'root',
       'root-right',
+    ]);
+  });
+
+  it('mirrors branch distance around the root even when a right branch bends left', () => {
+    const setup = bundle([
+      member('root', null, null, { sheetMarker: 'PINK_1' }),
+      member('left-near', 'root', 'LEFT', { sheetMarker: 'GREEN_2' }),
+      member('left-far', 'left-near', 'RIGHT', { sheetMarker: 'BLUE_3' }),
+      member('right-near', 'root', 'RIGHT', { sheetMarker: 'GREEN_2' }),
+      member('right-far', 'right-near', 'LEFT', { sheetMarker: 'BLUE_3' }),
+    ]);
+
+    const members = deriveManualPlanSchema(setup).members;
+
+    expect(members.map((item) => item.memberKey)).toEqual([
+      'left-far',
+      'left-near',
+      'root',
+      'right-near',
+      'right-far',
+    ]);
+    expect(members.map((item) => item.sheetMarker)).toEqual([
+      'BLUE_3',
+      'GREEN_2',
+      'PINK_1',
+      'GREEN_2',
+      'BLUE_3',
     ]);
   });
 

@@ -67,6 +67,13 @@ export function AutomaticPlanPanel({
         />
       )}
 
+      {latestCandidate === null || pinnedCandidate !== null ? null : (
+        <p className="automatic-plan-panel__apply-notice" role="status">
+          검증 계획을 찾았습니다. 아래 계획표와 확인 안내는 아직 기존 입력 기준입니다.{' '}
+          <strong>검증 계획 확인·적용</strong>을 눌러 계획표에 넣어 주세요.
+        </p>
+      )}
+
       {pinnedCandidate === null ? null : (
         <AutomaticPlanPreview
           metrics={pinnedCandidate}

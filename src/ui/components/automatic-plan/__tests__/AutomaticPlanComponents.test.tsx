@@ -143,7 +143,7 @@ describe('automatic plan operator components', () => {
       />,
     );
     await user.click(screen.getByRole('button', { name: '계산 중지' }));
-    await user.click(screen.getByRole('button', { name: '현재 계획 사용' }));
+    await user.click(screen.getByRole('button', { name: '검증 계획 확인·적용' }));
     expect(onStop).toHaveBeenCalledOnce();
     expect(onPreview).toHaveBeenCalledOnce();
     expect(screen.queryByText(/3시간|사용자 지정/)).toBeNull();

@@ -181,9 +181,9 @@ export function ManualPlanWorkspace({
       <aside className="storage-notice" aria-label="저장 안내">
         <span aria-hidden="true">ⓘ</span>
         <div>
-          <strong>현재 탭에 자동으로 임시 저장됩니다.</strong>
+          <strong>이 브라우저에 자동으로 저장됩니다.</strong>
           <div>
-            설정으로 돌아갔다 다시 와도 입력 내용이 유지됩니다. 탭을 닫으면 사라집니다.
+            브라우저를 닫아도 입력 내용이 유지됩니다. 사이트 데이터를 삭제하면 저장 자료도 삭제됩니다.
           </div>
         </div>
       </aside>

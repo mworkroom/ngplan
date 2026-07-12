@@ -280,7 +280,8 @@ describe('App automatic-plan integration', () => {
     expect(await screen.findByText('계산은 멈췄지만 검증 계획은 사용 가능')).toBeDefined();
     expect(screen.getByRole('alert').textContent).toContain('정확한 최소값 증명');
     expect(firstWorker.terminated).toBe(true);
-    await user.click(screen.getByRole('button', { name: '현재 계획 사용' }));
+    expect(screen.getByText(/아래 계획표와 확인 안내는 아직 기존 입력 기준/)).toBeDefined();
+    await user.click(screen.getByRole('button', { name: '검증 계획 확인·적용' }));
     expect(within(previewRegion()).getByText(`후보 ID ${pinnedCandidateId}`)).toBeDefined();
     expect(within(previewRegion()).getByText('5,800')).toBeDefined();
 
@@ -315,6 +316,7 @@ describe('App automatic-plan integration', () => {
     expect(
       screen.getByText('선택한 자동 계획을 계획표에 적용했습니다. 이제 각 값을 직접 수정할 수 있습니다.'),
     ).toBeDefined();
+    expect(screen.queryByText(/확인이 필요한 안내/)).toBeNull();
     expect(secondWorker.sent.at(-1)).toMatchObject({ type: 'CANCEL' });
     expect(secondWorker.terminated).toBe(true);
   });
@@ -347,7 +349,7 @@ describe('App automatic-plan integration', () => {
     act(() => emitIncumbent(worker, constructive, 2, 200));
 
     expect(screen.queryByText(/더 나은 새 계획을 찾았습니다/)).toBeNull();
-    await user.click(screen.getByRole('button', { name: '현재 계획 사용' }));
+    await user.click(screen.getByRole('button', { name: '검증 계획 확인·적용' }));
     expect(within(previewRegion()).getByText(`후보 ID ${incumbentId}`)).toBeDefined();
     expect(within(previewRegion()).getByText('5,800')).toBeDefined();
   });
@@ -364,9 +366,9 @@ describe('App automatic-plan integration', () => {
     const user = userEvent.setup();
     render(<App createAutomaticPlanWorker={factory.create} />);
 
-    await screen.findByRole('button', { name: '현재 계획 사용' });
+    await screen.findByRole('button', { name: '검증 계획 확인·적용' });
     expect(factory.workers).toHaveLength(0);
-    await user.click(screen.getByRole('button', { name: '현재 계획 사용' }));
+    await user.click(screen.getByRole('button', { name: '검증 계획 확인·적용' }));
     expect(
       within(previewRegion()).getByText(`후보 ID ${candidate.candidateId}`),
     ).toBeDefined();

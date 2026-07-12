@@ -33,7 +33,7 @@ export function AutomaticPlanControls({
       ) : null}
       {hasCandidate ? (
         <button type="button" className="primary-button" onClick={onPreview}>
-          현재 계획 사용
+          검증 계획 확인·적용
         </button>
       ) : null}
       {canRestart ? (

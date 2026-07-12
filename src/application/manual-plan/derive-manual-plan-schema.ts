@@ -77,16 +77,24 @@ function findRoot(members: readonly MemberSnapshot[]): MemberSnapshot {
 function centeredMembers(members: readonly MemberSnapshot[]): readonly MemberSnapshot[] {
   const root = findRoot(members);
   const organization = buildOrganizationIndex(members);
-  const ordered: MemberSnapshot[] = [];
-
-  const appendInorder = (memberKey: string): void => {
+  const collectBranch = (memberKey: string): MemberSnapshot[] => {
+    const member = organization.membersByKey.get(memberKey)!;
     const children = organization.childrenByMemberKey.get(memberKey)!;
-    if (children.left !== null) appendInorder(children.left);
-    ordered.push(organization.membersByKey.get(memberKey)!);
-    if (children.right !== null) appendInorder(children.right);
+    return [
+      member,
+      ...(children.left === null ? [] : collectBranch(children.left)),
+      ...(children.right === null ? [] : collectBranch(children.right)),
+    ];
   };
 
-  appendInorder(root.memberKey);
+  const rootChildren = organization.childrenByMemberKey.get(root.memberKey)!;
+  const left = rootChildren.left === null
+    ? []
+    : collectBranch(rootChildren.left).reverse();
+  const right = rootChildren.right === null
+    ? []
+    : collectBranch(rootChildren.right);
+  const ordered = [...left, root, ...right];
 
   if (ordered.length !== members.length) {
     throw new Error('모든 회원을 맨 위 회원부터 이어지는 조직 그림에 연결해 주세요.');
