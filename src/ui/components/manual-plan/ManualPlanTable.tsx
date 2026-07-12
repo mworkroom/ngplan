@@ -147,12 +147,13 @@ export function ManualPlanTable({
       return;
     }
     onSelect({ date: date.date, memberKey });
-    document.getElementById(manualPlanMemberGroupDomId(memberKey))?.scrollIntoView?.({
-      block: 'nearest',
-      inline: 'center',
-    });
     window.setTimeout(() => {
-      document.getElementById(manualPlanFieldDomId(date.date, memberKey, 'pvp'))?.focus();
+      const heading = document.getElementById(manualPlanMemberGroupDomId(memberKey));
+      const field = document.getElementById(
+        manualPlanFieldDomId(date.date, memberKey, 'pvp'),
+      );
+      field?.focus({ preventScroll: true });
+      heading?.scrollIntoView?.({ block: 'nearest', inline: 'center' });
     }, 0);
   };
 
@@ -162,16 +163,15 @@ export function ManualPlanTable({
       return;
     }
     onSelect({ date: date.date, memberKey: selection.memberKey });
-    document.getElementById(manualPlanDateHeaderDomId(date.date))?.scrollIntoView?.({
-      block: 'nearest',
-      inline: 'nearest',
-    });
     window.setTimeout(() => {
       const targetId =
         date.settlementMode === 'SETTLE'
           ? manualPlanFieldDomId(date.date, selection.memberKey, 'pvp')
           : manualPlanDateHeaderDomId(date.date);
-      document.getElementById(targetId)?.focus();
+      const target = document.getElementById(targetId);
+      const dateHeading = document.getElementById(manualPlanDateHeaderDomId(date.date));
+      target?.focus({ preventScroll: true });
+      dateHeading?.scrollIntoView?.({ block: 'center', inline: 'nearest' });
     }, 0);
   };
 
@@ -239,7 +239,11 @@ export function ManualPlanTable({
         </div>
       </div>
 
-      <div className="manual-plan-scroll" aria-label="수동 계획표 가로 스크롤 영역" tabIndex={0}>
+      <div
+        className="manual-plan-scroll"
+        aria-label="수동 계획표 가로 스크롤 영역"
+        tabIndex={0}
+      >
         <table className="manual-plan-table">
           <thead>
             <tr>
@@ -257,12 +261,19 @@ export function ManualPlanTable({
                 >
                   <strong>{markedMemberName(member.name, member.sheetMarker)}</strong>
                   <span>
+                    {member.memberId === null ? '' : `회원 번호 ${member.memberId} · `}
                     목표 {member.pvpTarget.toLocaleString('ko-KR')} PV
-                    {member.memberId === null ? '' : ` · ID ${member.memberId}`}
                     {member.duplicateLabel === null ? '' : ` · ${member.duplicateLabel}`}
                   </span>
                 </th>
               ))}
+              <th
+                className="manual-plan-table__date-heading manual-plan-table__date-heading--end"
+                scope="col"
+                rowSpan={2}
+              >
+                날짜
+              </th>
             </tr>
             <tr>
               {schema.members.flatMap((member, memberIndex) =>
@@ -354,6 +365,13 @@ export function ManualPlanTable({
                     );
                   });
                 })}
+                <th
+                  className="manual-plan-table__date-cell manual-plan-table__date-cell--end"
+                  scope="row"
+                  tabIndex={-1}
+                >
+                  <span>{date.displayLabel}</span>
+                </th>
               </tr>
             ))}
           </tbody>

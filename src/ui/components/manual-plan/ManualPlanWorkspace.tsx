@@ -1,20 +1,17 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   calculateManualPlan,
-  createManualPlanDraft,
   deriveAllManualPlanMemberSummaryRows,
   deriveManualPlanDailyAuditView,
   deriveManualPlanMemberSummaryView,
   deriveManualPlanSchema,
   editManualPlanField,
-  isManualPlanDraftModified,
   type ManualPlanCalculationState,
   type ManualPlanDraft,
   type ManualPlanField,
   type ManualPlanIssue,
 } from '../../../application/manual-plan';
 import type { ProjectSetupBundle } from '../../../application/project-setup';
-import { DiscardManualPlanDialog } from './DiscardManualPlanDialog';
 import { DailyResultDetails } from './DailyResultDetails';
 import { MemberFortnightSummary } from './MemberFortnightSummary';
 import {
@@ -30,15 +27,12 @@ export type ManualPlanDisplayDensity = 'COMPACT' | 'COMFORTABLE';
 
 export interface ManualPlanWorkspaceProps {
   readonly bundle: ProjectSetupBundle;
+  readonly draft: ManualPlanDraft;
   readonly setupWarnings: readonly ManualPlanIssue[];
   readonly displayDensity: ManualPlanDisplayDensity;
   readonly onDisplayDensityChange: (density: ManualPlanDisplayDensity) => void;
+  readonly onDraftChange: (draft: ManualPlanDraft) => void;
   readonly onReturnToSetup: () => void;
-}
-
-interface ManualPlanSession {
-  readonly draft: ManualPlanDraft;
-  readonly calculation: ManualPlanCalculationState;
 }
 
 function formatDateRange(startDate: string, endDate: string): string {
@@ -62,25 +56,22 @@ function formatDateRange(startDate: string, endDate: string): string {
 
 export function ManualPlanWorkspace({
   bundle,
+  draft,
   setupWarnings,
   displayDensity,
   onDisplayDensityChange,
+  onDraftChange,
   onReturnToSetup,
 }: ManualPlanWorkspaceProps) {
   const schema = useMemo(() => deriveManualPlanSchema(bundle), [bundle]);
-  const [session, setSession] = useState<ManualPlanSession>(() => {
-    const draft = createManualPlanDraft(bundle);
-    return {
-      draft,
-      calculation: calculateManualPlan(bundle, draft, schema, setupWarnings),
-    };
-  });
+  const calculation: ManualPlanCalculationState = useMemo(
+    () => calculateManualPlan(bundle, draft, schema, setupWarnings),
+    [bundle, draft, schema, setupWarnings],
+  );
   const [selection, setSelection] = useState<ManualPlanSelection>(() => ({
     date: schema.dates[0]!.date,
     memberKey: schema.members[0]!.memberKey,
   }));
-  const [discardDialogOpen, setDiscardDialogOpen] = useState(false);
-  const returnTriggerRef = useRef<HTMLButtonElement>(null);
 
   const handleEdit = (
     date: string,
@@ -88,64 +79,44 @@ export function ManualPlanWorkspace({
     field: ManualPlanField,
     value: string,
   ): void => {
-    const outcome = editManualPlanField(schema, session.draft, {
+    const outcome = editManualPlanField(schema, draft, {
       date,
       memberKey,
       field,
       value,
     });
-    if (outcome.status !== 'SUCCESS' || outcome.draft === session.draft) {
+    if (outcome.status !== 'SUCCESS' || outcome.draft === draft) {
       return;
     }
-    setSession({
-      draft: outcome.draft,
-      calculation: calculateManualPlan(
-        bundle,
-        outcome.draft,
-        schema,
-        setupWarnings,
-      ),
-    });
-  };
-
-  const requestReturnToSetup = (): void => {
-    if (!isManualPlanDraftModified(schema, session.draft)) {
-      onReturnToSetup();
-      return;
-    }
-    setDiscardDialogOpen(true);
-  };
-
-  const cancelDiscard = (): void => {
-    setDiscardDialogOpen(false);
+    onDraftChange(outcome.draft);
   };
 
   const visibleIssues =
-    session.calculation.status === 'BLOCKED'
-      ? [...session.calculation.issues, ...setupWarnings]
-      : session.calculation.warnings;
+    calculation.status === 'BLOCKED'
+      ? [...calculation.issues, ...setupWarnings]
+      : calculation.warnings;
   const resultViews = useMemo(() => {
-    if (session.calculation.status !== 'CURRENT') {
+    if (calculation.status !== 'CURRENT') {
       return { daily: null, selectedMember: null, allMembers: null };
     }
     return {
       daily: deriveManualPlanDailyAuditView(
-        session.calculation.result,
+        calculation.result,
         schema,
         selection.date,
         selection.memberKey,
       ),
       selectedMember: deriveManualPlanMemberSummaryView(
-        session.calculation.result,
+        calculation.result,
         schema,
         selection.memberKey,
       ),
       allMembers: deriveAllManualPlanMemberSummaryRows(
-        session.calculation.result,
+        calculation.result,
         schema,
       ),
     };
-  }, [schema, selection, session.calculation]);
+  }, [calculation, schema, selection]);
 
   return (
     <main
@@ -165,13 +136,13 @@ export function ManualPlanWorkspace({
         <div className="app-header__actions">
           <span
             className={`status-badge ${
-              session.calculation.status === 'CURRENT'
+              calculation.status === 'CURRENT'
                 ? 'status-badge--ready'
                 : 'status-badge--error'
             }`}
             role="status"
           >
-            {session.calculation.status === 'CURRENT'
+            {calculation.status === 'CURRENT'
               ? '✓ 계산 완료'
               : '⚠ 입력 확인 필요'}
           </span>
@@ -190,10 +161,9 @@ export function ManualPlanWorkspace({
             </select>
           </label>
           <button
-            ref={returnTriggerRef}
             type="button"
             className="secondary-button"
-            onClick={requestReturnToSetup}
+            onClick={onReturnToSetup}
           >
             설정으로 돌아가기
           </button>
@@ -203,10 +173,9 @@ export function ManualPlanWorkspace({
       <aside className="storage-notice" aria-label="저장 안내">
         <span aria-hidden="true">ⓘ</span>
         <div>
-          <strong>설정과 계획은 아직 저장되지 않습니다.</strong>
+          <strong>현재 탭에 자동으로 임시 저장됩니다.</strong>
           <div>
-            브라우저를 새로고침하거나 닫으면 모두 사라집니다. 화면 크기 설정만
-            저장됩니다.
+            설정으로 돌아갔다 다시 와도 입력 내용이 유지됩니다. 탭을 닫으면 사라집니다.
           </div>
         </div>
       </aside>
@@ -214,20 +183,20 @@ export function ManualPlanWorkspace({
       <ManualPlanValidationSummary
         issues={visibleIssues}
         schema={schema}
-        blocked={session.calculation.status === 'BLOCKED'}
+        blocked={calculation.status === 'BLOCKED'}
         onSelectContext={(date, memberKey) => setSelection({ date, memberKey })}
       />
 
       <p className="visually-hidden" aria-live="polite" aria-atomic="true">
-        {session.calculation.status === 'BLOCKED'
-          ? `입력 오류 ${session.calculation.issues.length}개`
+        {calculation.status === 'BLOCKED'
+          ? `입력 오류 ${calculation.issues.length}개`
           : '현재 계획 계산 완료'}
       </p>
 
       <ManualPlanTable
         schema={schema}
-        draft={session.draft}
-        calculation={session.calculation}
+        draft={draft}
+        calculation={calculation}
         selection={selection}
         onSelect={setSelection}
         onEdit={handleEdit}
@@ -248,22 +217,15 @@ export function ManualPlanWorkspace({
       <div className="manual-result-layout">
         <DailyResultDetails
           view={resultViews.daily}
-          blocked={session.calculation.status === 'BLOCKED'}
+          blocked={calculation.status === 'BLOCKED'}
         />
         <MemberFortnightSummary
           selected={resultViews.selectedMember}
           rows={resultViews.allMembers}
-          blocked={session.calculation.status === 'BLOCKED'}
+          blocked={calculation.status === 'BLOCKED'}
         />
       </div>
 
-      {discardDialogOpen ? (
-        <DiscardManualPlanDialog
-          onCancel={cancelDiscard}
-          onConfirm={onReturnToSetup}
-          returnFocusRef={returnTriggerRef}
-        />
-      ) : null}
     </main>
   );
 }

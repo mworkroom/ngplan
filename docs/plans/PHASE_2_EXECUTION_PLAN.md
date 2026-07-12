@@ -144,7 +144,7 @@ Usage rules:
 ### 4.2 Member Draft Data
 
 - Stable in-session `memberKey` that is not derived from array order, name, or company member ID.
-- Company member ID, member name, selected PVP target (`2400 | 1500 | 700`), and optional sheet marker (`NONE | PINK_1 | GREEN_2 | BLUE_3`).
+- Company member ID, member name, selected PVP target (`2400 | 1500 | 700`), and optional sheet marker (`NONE | PINK_1 | GREEN_2 | BLUE_3 | PURPLE_4`).
 - Active or excluded project participation state.
 - Parent member key and `LEFT/RIGHT` placement for active placed members.
 - Four independent opening value strings and per-member confirmation state.

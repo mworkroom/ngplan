@@ -9,7 +9,12 @@ export type SettlementMode = 'SETTLE' | 'SKIP_NO_INPUT';
 export type SettlementStatus = 'SETTLED' | 'SKIPPED';
 export type CommissionTier = 300 | 700 | 1500 | 2400 | 6000 | 20000 | 60000;
 export type PvpTarget = 700 | 1500 | 2400;
-export type SheetMarker = 'NONE' | 'PINK_1' | 'GREEN_2' | 'BLUE_3';
+export type SheetMarker =
+  | 'NONE'
+  | 'PINK_1'
+  | 'GREEN_2'
+  | 'BLUE_3'
+  | 'PURPLE_4';
 export type PvpApplicationReason = 'SMALLER_LEFT' | 'SMALLER_RIGHT' | 'TIE_LEFT';
 export type RecommendationStatus =
   | 'NOT_APPLICABLE'

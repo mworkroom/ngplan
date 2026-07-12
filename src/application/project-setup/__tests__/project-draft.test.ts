@@ -261,6 +261,18 @@ describe('P2-OPEN / P2-MEMBER 회원 편집과 파싱', () => {
     expect(editMemberIdentity(edited, 'A', {})).toBe(edited);
     expect(editMemberIdentity(edited, 'UNKNOWN', { name: '없음' })).toBe(edited);
   });
+
+  it('확인한 회원의 이름을 바꾸면 시작값 확인을 다시 받는다', () => {
+    const root = expectTopologySuccess(addRootMember(createEmptyDraft(), 'A')).draft;
+    const confirmed = editOpeningState(root, 'A', {
+      openingStateConfirmed: true,
+    });
+    const renamed = editMemberIdentity(confirmed, 'A', { name: '새 이름' });
+
+    expect(renamed.members[0]?.openingState.openingStateConfirmed).toBe(false);
+    expect(editMemberIdentity(confirmed, 'A', { memberId: '1000' }).members[0]
+      ?.openingState.openingStateConfirmed).toBe(true);
+  });
 });
 
 describe('Draft 검증, 준비 상태와 공개 위치 매핑', () => {

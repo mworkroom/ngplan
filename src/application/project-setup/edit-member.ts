@@ -89,12 +89,17 @@ export function editMemberIdentity(
   patch: MemberIdentityPatch,
 ): ProjectSetupDraft {
   return replaceMember(draft, memberKey, (member) => {
+    const name = patch.name ?? member.name;
+    const nameChanged = name !== member.name;
     const next = {
       ...member,
       memberId: patch.memberId ?? member.memberId,
-      name: patch.name ?? member.name,
+      name,
       pvpTarget: patch.pvpTarget ?? member.pvpTarget,
       sheetMarker: patch.sheetMarker ?? member.sheetMarker,
+      openingState: nameChanged
+        ? { ...member.openingState, openingStateConfirmed: false }
+        : member.openingState,
     };
     return next.memberId === member.memberId &&
       next.name === member.name &&

@@ -156,6 +156,11 @@ describe('project and opening forms', () => {
 
     expect((screen.getByLabelText('이번 기간 PVP 목표') as HTMLSelectElement).value).toBe('700');
 
+    const openingPvp = screen.getByLabelText('현재 보유 PVP') as HTMLInputElement;
+    fireEvent.focus(openingPvp);
+    expect(openingPvp.selectionStart).toBe(0);
+    expect(openingPvp.selectionEnd).toBe(1);
+
     fireEvent.change(screen.getByLabelText('이번 기간 PVP 목표'), {
       target: { value: '1500' },
     });
@@ -276,14 +281,16 @@ describe('tree cards and child slots', () => {
     const sharedProps = {
       issues: [] as readonly ProjectSetupIssue[],
       collapsedMemberKeys: new Set<string>(),
+      scale: 1,
       onAddRoot,
       onSelectMember: vi.fn(),
       onToggleCollapsed: vi.fn(),
+      onScaleChange: vi.fn(),
       onOpenSlot: vi.fn(),
       onNavigateIssue: vi.fn(),
       onRemoveMember: vi.fn(),
     };
-    const { rerender } = render(
+    const { rerender, container } = render(
       <OrganizationTree draft={draft} topology={deriveTopology(draft)} {...sharedProps} />,
     );
     fireEvent.click(screen.getByRole('button', { name: '최상위 회원 만들기' }));
@@ -300,6 +307,16 @@ describe('tree cards and child slots', () => {
     );
     expect(screen.getByLabelText('좌우 조직도')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'right-child 위치 바꾸기 또는 명단에서 빼기' })).toBeTruthy();
+    expect(container.querySelector('.tree-children')?.getAttribute('data-child-layout')).toBe(
+      'right',
+    );
+    expect(container.querySelectorAll('.tree-node--connected')).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: '− 작게' }));
+    expect(sharedProps.onScaleChange).toHaveBeenCalledWith(0.9);
+    fireEvent.click(screen.getByRole('button', { name: '+ 크게' }));
+    expect(sharedProps.onScaleChange).toHaveBeenCalledWith(1.1);
+    fireEvent.click(screen.getByRole('button', { name: '100%' }));
+    expect(sharedProps.onScaleChange).toHaveBeenCalledWith(1);
     fireEvent.click(screen.getByRole('button', { name: '접기' }));
     expect(sharedProps.onToggleCollapsed).toHaveBeenCalledWith('root-tree');
   });
@@ -334,6 +351,7 @@ describe('member topology controls', () => {
     fireEvent.change(screen.getByLabelText('이름 강조'), {
       target: { value: 'GREEN_2' },
     });
+    expect(screen.getByRole('option', { name: '4 · 연보라색' })).toBeTruthy();
     fireEvent.change(screen.getByLabelText('상위 회원 선택'), {
       target: { value: '' },
     });
@@ -422,7 +440,7 @@ describe('queue, dialog, and validation feedback', () => {
     fireEvent.click(screen.getByLabelText(/아래 회원들의 새 위치를 나중에 정하기/));
     fireEvent.click(screen.getByLabelText(/아래 회원을 이 자리로 올리기/));
     fireEvent.click(screen.getByLabelText(/아래 회원들의 새 위치를 나중에 정하기/));
-    fireEvent.click(screen.getByRole('button', { name: '명단에서 빼기' }));
+    fireEvent.click(screen.getByRole('button', { name: '삭제하기' }));
     expect(onConfirm).toHaveBeenCalledWith('DETACH_CHILDREN');
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(onCancel).toHaveBeenCalledOnce();
@@ -442,7 +460,7 @@ describe('queue, dialog, and validation feedback', () => {
     );
     expect(screen.getByText(/현재 자리만 비게 됩니다/)).toBeTruthy();
     const cancel = screen.getByRole('button', { name: '취소' });
-    const confirm = screen.getByRole('button', { name: '명단에서 빼기' });
+    const confirm = screen.getByRole('button', { name: '삭제하기' });
     confirm.focus();
     fireEvent.keyDown(document, { key: 'Tab' });
     expect(document.activeElement).toBe(cancel);
@@ -465,7 +483,7 @@ describe('queue, dialog, and validation feedback', () => {
       />,
     );
     expect(screen.getByText(/맨 위 자리가 비게 됩니다/)).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: '명단에서 빼기' }));
+    fireEvent.click(screen.getByRole('button', { name: '삭제하기' }));
     expect(onConfirm).toHaveBeenCalledWith('DETACH_CHILDREN');
   });
 

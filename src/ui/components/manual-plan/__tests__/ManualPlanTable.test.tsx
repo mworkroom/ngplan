@@ -1,8 +1,13 @@
+import { useState } from 'react';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { OpeningStateInput } from '../../../../engine';
-import type { ManualPlanIssue } from '../../../../application/manual-plan';
+import {
+  createManualPlanDraft,
+  type ManualPlanDraft,
+  type ManualPlanIssue,
+} from '../../../../application/manual-plan';
 import type { ProjectSetupBundle } from '../../../../application/project-setup';
 import { ManualPlanWorkspace } from '../ManualPlanWorkspace';
 
@@ -58,14 +63,23 @@ function renderWorkspace(
   setupWarnings: readonly ManualPlanIssue[] = [],
 ) {
   const user = userEvent.setup();
+  const bundle = createTreeBundle();
+  function Harness() {
+    const [draft, setDraft] = useState<ManualPlanDraft>(() => createManualPlanDraft(bundle));
+    return (
+      <ManualPlanWorkspace
+        bundle={bundle}
+        draft={draft}
+        setupWarnings={setupWarnings}
+        displayDensity="COMPACT"
+        onDisplayDensityChange={vi.fn()}
+        onDraftChange={setDraft}
+        onReturnToSetup={onReturnToSetup}
+      />
+    );
+  }
   render(
-    <ManualPlanWorkspace
-      bundle={createTreeBundle()}
-      setupWarnings={setupWarnings}
-      displayDensity="COMPACT"
-      onDisplayDensityChange={vi.fn()}
-      onReturnToSetup={onReturnToSetup}
-    />,
+    <Harness />,
   );
   return { user, onReturnToSetup };
 }
@@ -100,7 +114,8 @@ describe('WP4 manual planning worksheet', () => {
     expect(headers.map((header) => header.textContent)).toEqual([
       '날짜',
       '하위목표 700 PV',
-      '1. 루트목표 700 PV · ID 1000',
+      '1. 루트회원 번호 1000 · 목표 700 PV',
+      '날짜',
       'PVP0',
       '좌0',
       '우0',
@@ -108,6 +123,7 @@ describe('WP4 manual planning worksheet', () => {
       '좌0',
       '우0',
     ]);
+    expect(within(table).getAllByText('1 (수)')).toHaveLength(2);
 
     expect(pvInput('1 (수) 1. 루트 · 회원 ID 1000 PVP 계획 PV').disabled).toBe(false);
     expect(pvInput('1 (수) 1. 루트 · 회원 ID 1000 우 계획 PV').disabled).toBe(false);
@@ -251,24 +267,33 @@ describe('WP4 manual planning worksheet', () => {
     expect(screen.getByText('정산 제외 · 커미션 없음')).toBeDefined();
   });
 
-  it('requires explicit discard after an edit, preserves on cancel, and confirms removal', async () => {
+  it('moves the visible table row and focus when a working date is selected', async () => {
+    const { user } = renderWorkspace();
+    const dateSelect = screen.getByLabelText('날짜 결과 보기');
+    await user.selectOptions(dateSelect, '2026-07-10');
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(
+        pvInput('10 (금) 하위 PVP 계획 PV'),
+      );
+    });
+    expect(HTMLElement.prototype.scrollIntoView).toHaveBeenCalledWith({
+      block: 'center',
+      inline: 'nearest',
+    });
+    expect(screen.getByText('선택: 10 (금) · 하위')).toBeDefined();
+  });
+
+  it('returns to setup immediately after an edit because the controlled draft is preserved', async () => {
     const onReturnToSetup = vi.fn();
     const { user } = renderWorkspace(onReturnToSetup);
     const input = pvInput('1 (수) 하위 PVP 계획 PV');
     await user.type(input, '1');
     const back = screen.getByRole('button', { name: '설정으로 돌아가기' });
     await user.click(back);
-    expect(screen.getByRole('dialog', { name: '수동 계획을 버릴까요?' })).toBeDefined();
-    await user.click(screen.getByRole('button', { name: '계속 계획하기' }));
-    await waitFor(() => expect(document.activeElement).toBe(back));
     expect(input.value).toBe('1');
-    expect(onReturnToSetup).not.toHaveBeenCalled();
-
-    await user.click(back);
-    await user.click(
-      screen.getByRole('button', { name: '계획 버리고 설정으로 돌아가기' }),
-    );
     expect(onReturnToSetup).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('preserves nonblocking setup warnings while a plan input blocks calculation', async () => {

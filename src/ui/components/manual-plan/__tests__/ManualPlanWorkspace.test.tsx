@@ -8,6 +8,7 @@ import {
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { createManualPlanDraft } from '../../../../application/manual-plan';
 import type { ProjectSetupBundle } from '../../../../application/project-setup';
 import { DiscardManualPlanDialog } from '../DiscardManualPlanDialog';
 import { ManualPlanWorkspace } from '../ManualPlanWorkspace';
@@ -126,9 +127,11 @@ describe('WP3 manual-plan workspace boundary', () => {
     const { rerender } = render(
       <ManualPlanWorkspace
         bundle={createBundle()}
+        draft={createManualPlanDraft(createBundle())}
         setupWarnings={[]}
         displayDensity="COMPACT"
         onDisplayDensityChange={onDensityChange}
+        onDraftChange={vi.fn()}
         onReturnToSetup={onReturnToSetup}
       />,
     );
@@ -147,9 +150,11 @@ describe('WP3 manual-plan workspace boundary', () => {
     rerender(
       <ManualPlanWorkspace
         bundle={createBundle()}
+        draft={createManualPlanDraft(createBundle())}
         setupWarnings={[]}
         displayDensity="COMFORTABLE"
         onDisplayDensityChange={onDensityChange}
+        onDraftChange={vi.fn()}
         onReturnToSetup={onReturnToSetup}
       />,
     );
@@ -166,9 +171,11 @@ describe('WP3 manual-plan workspace boundary', () => {
     const { container } = render(
       <ManualPlanWorkspace
         bundle={createIdentityBundle()}
+        draft={createManualPlanDraft(createIdentityBundle())}
         setupWarnings={[]}
         displayDensity="COMPACT"
         onDisplayDensityChange={vi.fn()}
+        onDraftChange={vi.fn()}
         onReturnToSetup={vi.fn()}
       />,
     );

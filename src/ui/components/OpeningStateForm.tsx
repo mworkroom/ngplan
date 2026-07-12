@@ -95,6 +95,16 @@ export function OpeningStateForm({
                 id={fieldId}
                 inputMode="numeric"
                 value={member.openingState[field]}
+                onFocus={(event) => {
+                  if (event.currentTarget.value === '0') {
+                    event.currentTarget.select();
+                  }
+                }}
+                onClick={(event) => {
+                  if (event.currentTarget.value === '0') {
+                    event.currentTarget.select();
+                  }
+                }}
                 aria-invalid={fieldIssue !== undefined}
                 aria-describedby={fieldIssue === undefined ? undefined : errorId}
                 onChange={(event) => onChange({ [field]: event.currentTarget.value })}

@@ -333,7 +333,8 @@ function validateOrganization(
       member.sheetMarker !== 'NONE' &&
       member.sheetMarker !== 'PINK_1' &&
       member.sheetMarker !== 'GREEN_2' &&
-      member.sheetMarker !== 'BLUE_3'
+      member.sheetMarker !== 'BLUE_3' &&
+      member.sheetMarker !== 'PURPLE_4'
     ) {
       pushIssue(
         issues,

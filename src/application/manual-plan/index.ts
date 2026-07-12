@@ -10,6 +10,7 @@ export {
 } from './derive-manual-plan-schema';
 export { editManualPlanField } from './edit-manual-plan';
 export { isManualPlanDraftModified } from './is-manual-plan-draft-modified';
+export { reconcileManualPlanDraft } from './reconcile-manual-plan-draft';
 export {
   deriveAllManualPlanMemberSummaryRows,
   deriveManualPlanDailyAuditView,

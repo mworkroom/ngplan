@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   mapProjectSetupIssueToManualPlanIssue,
-  type ManualPlanIssue,
+  reconcileManualPlanDraft,
+  type ManualPlanDraft,
 } from '../application/manual-plan';
 import {
   activateProjectSetupBundle,
@@ -19,6 +20,7 @@ import {
   excludeMember,
   getDescendantKeys,
   memberCardId,
+  memberFieldId,
   moveSubtree,
   normalizeProjectSetup,
   queueEntryId,
@@ -34,7 +36,6 @@ import {
   type IdKind,
   type MemberDraft,
   type ProjectSetupDraft,
-  type ProjectSetupBundle,
   type ProjectSetupIssue,
   type ProjectSetupValidation,
   type TopologyCommandOutcome,
@@ -46,17 +47,17 @@ import { OrganizationTree } from './components/OrganizationTree';
 import { ProjectPeriodForm } from './components/ProjectPeriodForm';
 import { ReassignmentQueue } from './components/ReassignmentQueue';
 import { ManualPlanWorkspace } from './components/manual-plan/ManualPlanWorkspace';
+import {
+  clearWorkspaceSession,
+  readWorkspaceSession,
+  writeWorkspaceSession,
+  type WorkspaceSessionSnapshot,
+} from './workspace-session-storage';
 
 type Side = ChildSlotState['side'];
 type DisplayDensity = 'COMPACT' | 'COMFORTABLE';
 
-type AppScreen =
-  | { readonly kind: 'SETUP' }
-  | {
-      readonly kind: 'MANUAL_PLAN';
-      readonly bundle: ProjectSetupBundle;
-      readonly setupWarnings: readonly ManualPlanIssue[];
-    };
+type AppScreen = 'SETUP' | 'MANUAL_PLAN';
 
 const DISPLAY_DENSITY_STORAGE_KEY = 'ngplan.display-density';
 
@@ -126,8 +127,16 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
   }
   const generateId = generateIdRef.current;
   const initialDateRef = useRef(initialDate ?? new Date());
+  const restoredSessionRef = useRef<WorkspaceSessionSnapshot | null | undefined>(undefined);
+  if (restoredSessionRef.current === undefined) {
+    restoredSessionRef.current = readWorkspaceSession();
+  }
+  const restoredSession = restoredSessionRef.current;
   const [draft, setDraft] = useState<ProjectSetupDraft>(() =>
-    createInitialDraft(generateId, initialDateRef.current),
+    restoredSession?.draft ?? createInitialDraft(generateId, initialDateRef.current),
+  );
+  const [manualPlanDraft, setManualPlanDraft] = useState<ManualPlanDraft | null>(
+    restoredSession?.manualPlanDraft ?? null,
   );
   const [submittedValidation, setSubmittedValidation] =
     useState<ProjectSetupValidation | null>(null);
@@ -139,7 +148,16 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
   const [excludedMemberKey, setExcludedMemberKey] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState('');
   const [displayDensity, setDisplayDensity] = useState<DisplayDensity>(readDisplayDensity);
-  const [screenState, setScreenState] = useState<AppScreen>({ kind: 'SETUP' });
+  const [screenState, setScreenState] = useState<AppScreen>(() =>
+    restoredSession?.screen === 'MANUAL_PLAN' &&
+    restoredSession.draft.activeBundle !== null &&
+    restoredSession.manualPlanDraft !== null
+      ? 'MANUAL_PLAN'
+      : 'SETUP',
+  );
+  const [organizationScale, setOrganizationScale] = useState(
+    restoredSession?.organizationScale ?? 1,
+  );
   const slotFirstActionRef = useRef<HTMLButtonElement>(null);
   const excludeTriggerRef = useRef<HTMLElement | null>(null);
 
@@ -178,6 +196,25 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
     }
   }, [displayDensity]);
 
+  useEffect(() => {
+    writeWorkspaceSession({
+      version: 1,
+      draft,
+      manualPlanDraft,
+      screen: screenState,
+      organizationScale,
+    });
+  }, [draft, manualPlanDraft, organizationScale, screenState]);
+
+  const generateUniqueMemberKey = (): string => {
+    const usedKeys = new Set(draft.members.map((member) => member.memberKey));
+    let candidate = generateId('MEMBER');
+    while (usedKeys.has(candidate)) {
+      candidate = generateId('MEMBER');
+    }
+    return candidate;
+  };
+
   const focusTopologyMember = (memberKey: string | null): void => {
     window.setTimeout(() => {
       const target =
@@ -185,6 +222,17 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
           ? document.getElementById('project-rootMemberKey')
           : document.getElementById(memberCardId(memberKey)) ??
             document.getElementById(queueEntryId(memberKey));
+      target?.focus();
+      target?.scrollIntoView?.({ block: 'center', inline: 'nearest' });
+    }, 0);
+  };
+
+  const focusMemberName = (memberKey: string | null): void => {
+    if (memberKey === null) {
+      return;
+    }
+    window.setTimeout(() => {
+      const target = document.getElementById(memberFieldId(memberKey, 'name'));
       target?.focus();
       target?.scrollIntoView?.({ block: 'center', inline: 'nearest' });
     }, 0);
@@ -254,41 +302,57 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
     setSlotAction(null);
     setCollapsedMemberKeys(new Set());
     setExcludedMemberKey(null);
+    setManualPlanDraft(null);
+    setScreenState('SETUP');
+    clearWorkspaceSession();
     setAnnouncement('새 플랜을 시작했습니다. 이전에 입력한 회원 정보는 가져오지 않았습니다.');
   };
 
   const handleAddRoot = (): void => {
-    applyTopologyOutcome(
-      addRootMember(draft, generateId('MEMBER')),
+    const outcome = addRootMember(draft, generateUniqueMemberKey());
+    if (applyTopologyOutcome(
+      outcome,
       '최상위 회원을 만들었습니다.',
-    );
+    )) {
+      focusMemberName(outcome.draft.selectedMemberKey);
+    }
   };
 
   const handleAddMemberToOpenSlot = (): void => {
     if (slotAction === null) {
       return;
     }
+    const outcome = addMemberToSlot(
+      draft,
+      slotAction.parentMemberKey,
+      slotAction.side,
+      generateUniqueMemberKey(),
+    );
     const succeeded = applyTopologyOutcome(
-      addMemberToSlot(
-        draft,
-        slotAction.parentMemberKey,
-        slotAction.side,
-        generateId('MEMBER'),
-      ),
+      outcome,
       `${slotAction.side === 'LEFT' ? '왼쪽' : '오른쪽'} 자리에 새 회원을 추가했습니다.`,
     );
     if (succeeded) {
       setSlotAction(null);
+      focusMemberName(outcome.draft.selectedMemberKey);
     }
   };
 
   const handleOpenSlot = (parentMemberKey: string, side: Side): void => {
     setCommandError(null);
     if (topology.reassignmentQueue.length === 0) {
-      applyTopologyOutcome(
-        addMemberToSlot(draft, parentMemberKey, side, generateId('MEMBER')),
-        `${side === 'LEFT' ? '왼쪽' : '오른쪽'} 자리에 새 회원을 추가했습니다.`,
+      const outcome = addMemberToSlot(
+        draft,
+        parentMemberKey,
+        side,
+        generateUniqueMemberKey(),
       );
+      if (applyTopologyOutcome(
+        outcome,
+        `${side === 'LEFT' ? '왼쪽' : '오른쪽'} 자리에 새 회원을 추가했습니다.`,
+      )) {
+        focusMemberName(outcome.draft.selectedMemberKey);
+      }
       return;
     }
     setSlotAction({ parentMemberKey, side });
@@ -340,13 +404,8 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
     if (activeBundle === null) {
       return;
     }
-    setScreenState({
-      kind: 'MANUAL_PLAN',
-      bundle: activeBundle,
-      setupWarnings: Object.freeze(
-        displayedValidation.warnings.map(mapProjectSetupIssueToManualPlanIssue),
-      ),
-    });
+    setManualPlanDraft(reconcileManualPlanDraft(activeBundle, manualPlanDraft));
+    setScreenState('MANUAL_PLAN');
   };
 
   const candidateParents = useMemo(() => {
@@ -366,14 +425,22 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
       ? undefined
       : topology.memberByKey.get(slotAction.parentMemberKey);
 
-  if (screenState.kind === 'MANUAL_PLAN') {
+  if (
+    screenState === 'MANUAL_PLAN' &&
+    draft.activeBundle !== null &&
+    manualPlanDraft !== null
+  ) {
     return (
       <ManualPlanWorkspace
-        bundle={screenState.bundle}
-        setupWarnings={screenState.setupWarnings}
+        bundle={draft.activeBundle}
+        draft={manualPlanDraft}
+        setupWarnings={Object.freeze(
+          liveValidation.warnings.map(mapProjectSetupIssueToManualPlanIssue),
+        )}
         displayDensity={displayDensity}
         onDisplayDensityChange={setDisplayDensity}
-        onReturnToSetup={() => setScreenState({ kind: 'SETUP' })}
+        onDraftChange={setManualPlanDraft}
+        onReturnToSetup={() => setScreenState('SETUP')}
       />
     );
   }
@@ -424,9 +491,9 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
       <aside className="storage-notice" aria-label="저장 안내">
         <span aria-hidden="true">ⓘ</span>
         <div>
-          <strong>아직 자동 저장되지 않습니다.</strong>
+          <strong>현재 탭에 자동으로 임시 저장됩니다.</strong>
           <div>
-            새로고침하거나 창을 닫으면 입력한 내용이 사라집니다. 화면 크기만 기억합니다.
+            설정과 계획표를 오가거나 새로고침해도 입력 내용이 유지됩니다. 탭을 닫으면 사라집니다.
           </div>
         </div>
       </aside>
@@ -499,6 +566,7 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
             topology={topology}
             issues={displayedValidation.issues}
             collapsedMemberKeys={collapsedMemberKeys}
+            scale={organizationScale}
             onAddRoot={handleAddRoot}
             onSelectMember={(memberKey) => setDraft(selectMember(draft, memberKey))}
             onToggleCollapsed={(memberKey) =>
@@ -512,6 +580,7 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
                 return next;
               })
             }
+            onScaleChange={setOrganizationScale}
             onOpenSlot={handleOpenSlot}
             onNavigateIssue={focusIssue}
             onRemoveMember={handleRequestExclude}
@@ -638,7 +707,7 @@ export function App({ generateId: injectedGenerateId, initialDate }: AppProps = 
             );
             const succeeded = applyTopologyOutcome(
               outcome,
-              '선택한 회원을 화면에서 뺐습니다. 하위 회원들의 연결은 그대로 유지됩니다.',
+              '선택한 회원을 삭제했습니다. 필요한 하위 회원의 새 위치를 정해 주세요.',
             );
             if (succeeded) {
               setExcludedMemberKey(null);

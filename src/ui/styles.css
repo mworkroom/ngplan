@@ -468,6 +468,53 @@ fieldset {
   min-width: 0;
 }
 
+.organization-tree__header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.organization-zoom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.organization-zoom button {
+  min-height: 34px;
+  padding: 5px 9px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 7px;
+  background: var(--color-panel);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.organization-zoom button:hover:not(:disabled),
+.organization-zoom button:focus-visible {
+  border-color: var(--color-accent-action);
+  background: var(--color-accent-soft);
+}
+
+.organization-zoom button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.organization-zoom output {
+  min-width: 68px;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-align: right;
+}
+
 .organization-tree__viewport {
   width: 100%;
   min-height: 340px;
@@ -486,9 +533,11 @@ fieldset {
   width: max-content;
   min-width: 100%;
   justify-content: center;
+  zoom: var(--organization-scale, 1);
 }
 
 .tree-node {
+  position: relative;
   display: flex;
   min-width: max-content;
   flex-direction: column;
@@ -497,10 +546,54 @@ fieldset {
 }
 
 .tree-children {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(2, minmax(240px, max-content));
   align-items: start;
   gap: 20px;
+  padding-top: 24px;
+}
+
+.tree-children::before,
+.tree-children::after,
+.tree-node--connected::before {
+  position: absolute;
+  content: '';
+  pointer-events: none;
+}
+
+.tree-children::before {
+  top: -12px;
+  left: 50%;
+  height: 24px;
+  border-left: 2px solid #aebccc;
+}
+
+.tree-children::after {
+  top: 12px;
+  border-top: 2px solid #aebccc;
+}
+
+.tree-children[data-child-layout="both"]::after {
+  right: 25%;
+  left: 25%;
+}
+
+.tree-children[data-child-layout="left"]::after {
+  right: 50%;
+  left: 25%;
+}
+
+.tree-children[data-child-layout="right"]::after {
+  right: 25%;
+  left: 50%;
+}
+
+.tree-node--connected::before {
+  top: -12px;
+  left: 50%;
+  height: 12px;
+  border-left: 2px solid #aebccc;
 }
 
 .tree-children[hidden] {
@@ -516,12 +609,6 @@ fieldset {
   box-shadow: var(--shadow-panel);
 }
 
-.member-card--selected,
-.member-card[aria-current="true"] {
-  border-color: var(--color-accent-action);
-  box-shadow: 0 0 0 2px var(--color-accent-soft);
-}
-
 .member-card--complete {
   border-color: var(--color-success);
 }
@@ -529,6 +616,12 @@ fieldset {
 .member-card--incomplete,
 .member-card--error {
   border-color: var(--color-danger);
+}
+
+.member-card.member-card--selected,
+.member-card[aria-current="true"] {
+  border: 3px solid var(--color-accent-action);
+  box-shadow: 0 0 0 4px var(--color-accent-soft);
 }
 
 .member-card__header,
@@ -609,6 +702,11 @@ fieldset {
 .member-card.sheet-marker--blue-3 .member-card__select,
 .manual-plan-table thead .sheet-marker--blue-3 {
   background: #cfe2f3;
+}
+
+.member-card.sheet-marker--purple-4 .member-card__select,
+.manual-plan-table thead .sheet-marker--purple-4 {
+  background: #e4d7f5;
 }
 
 .member-card[class*="sheet-marker--"] .member-card__select {
@@ -1023,7 +1121,7 @@ fieldset {
 .manual-plan-table th,
 .manual-plan-table td {
   box-sizing: border-box;
-  min-width: 108px;
+  min-width: 76px;
   padding: 7px;
   border-right: 1px solid var(--color-line);
   border-bottom: 1px solid var(--color-line);
@@ -1109,6 +1207,14 @@ fieldset {
   border-right: 2px solid #c9d2dc;
 }
 
+.manual-plan-table__date-heading--end,
+.manual-plan-table__date-cell--end {
+  right: 0;
+  left: auto;
+  border-left: 2px solid #c9d2dc;
+  border-right: 0;
+}
+
 .manual-plan-table thead tr:nth-child(2) th:nth-child(3n + 1),
 .manual-plan-table tbody td:nth-child(3n + 2) {
   border-left: 2px solid #c9d2dc;
@@ -1154,8 +1260,8 @@ fieldset {
 }
 
 .manual-plan-input {
-  width: 92px;
-  min-width: 82px;
+  width: 64px;
+  min-width: 60px;
   padding: 7px 8px;
   border: 1px solid #b9c2cc;
   border-radius: 6px;

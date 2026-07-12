@@ -106,6 +106,8 @@ function markedName(member: MemberSnapshot): string {
         ? '2'
         : member.sheetMarker === 'BLUE_3'
           ? '3'
+          : member.sheetMarker === 'PURPLE_4'
+            ? '4'
           : null;
   return number === null ? member.name : `${number}. ${member.name}`;
 }

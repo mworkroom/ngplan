@@ -14,6 +14,7 @@ import {
   manualPlanCellKey,
   manualPlanFieldDomId,
   manualPlanMemberGroupDomId,
+  reconcileManualPlanDraft,
 } from '../index';
 
 const ZERO_OPENING: OpeningStateInput = Object.freeze({
@@ -90,6 +91,28 @@ function treeBundle(half: 'FIRST_HALF' | 'SECOND_HALF' = 'FIRST_HALF') {
 }
 
 describe('WP1 manual-plan draft and worksheet schema', () => {
+  it('keeps matching manual entries when a setup bundle is reopened', () => {
+    const originalBundle = bundle([
+      member('root', null, null),
+      member('left', 'root', 'LEFT'),
+    ]);
+    const draft = createManualPlanDraft(originalBundle);
+    const schema = deriveManualPlanSchema(originalBundle);
+    const edited = editManualPlanField(schema, draft, {
+      date: schema.dates[0]!.date,
+      memberKey: 'left',
+      field: 'pvp',
+      value: '321',
+    });
+    if (edited.status !== 'SUCCESS') throw new Error('manual edit failed');
+
+    const reopened = reconcileManualPlanDraft(originalBundle, edited.draft);
+    const firstLeftCell = reopened.cells.find(
+      (cell) => cell.date === schema.dates[0]!.date && cell.memberKey === 'left',
+    );
+    expect(firstLeftCell?.pvp).toBe('321');
+  });
+
   it('P3-DRAFT-001: first half centers the root between its left and right organizations', () => {
     const setup = treeBundle();
     const schema = deriveManualPlanSchema(setup);
@@ -250,6 +273,18 @@ describe('WP1 manual-plan draft and worksheet schema', () => {
     expect(deriveManualPlanSchema(setup).members[0]).toMatchObject({
       memberId: ' 007-A ',
       displayLabel: '민지 · 회원 ID  007-A ',
+    });
+  });
+
+  it('shows the optional purple number 4 marker without changing member identity', () => {
+    const setup = bundle([
+      member('root', null, null, { name: '민지', sheetMarker: 'PURPLE_4' }),
+    ]);
+
+    expect(deriveManualPlanSchema(setup).members[0]).toMatchObject({
+      name: '민지',
+      displayLabel: '4. 민지',
+      sheetMarker: 'PURPLE_4',
     });
   });
 

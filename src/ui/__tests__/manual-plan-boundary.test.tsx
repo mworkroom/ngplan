@@ -32,6 +32,7 @@ function selectById(id: string): HTMLSelectElement {
 afterEach(() => {
   cleanup();
   window.localStorage.clear();
+  window.sessionStorage.clear();
 });
 
 describe('WP3 App setup handoff', () => {

@@ -153,7 +153,7 @@ These defaults are part of the implementation contract and do not require anothe
 - Plan confirmation, `AllocationRevision`, version history, or approval workflow.
 - Actual values, completed-date locking, plan-versus-actual differences, or partial resimulation.
 - Editing organization topology or opening values inside an active manual plan.
-- Persistent project storage, autosave, refresh recovery, closed projects, or read-only history.
+- Persistent project storage, cross-tab/device recovery, closed projects, or read-only history. A single current-work snapshot may use `sessionStorage` only to preserve setup and manual inputs while the same browser tab moves between the two Phase 3 screens or refreshes; it is not a Phase 6 project store.
 - Excel/CSV/PDF/image export or import.
 - Member favorites or reusable member address books.
 - Multi-user editing, authentication, authorization, or server APIs.
@@ -338,7 +338,7 @@ Add an explicit top-level screen union in `App.tsx` or a small application shell
 
 The Phase 2 ready state gains a primary `수동 계획표 열기` action. The action is enabled only while the exact active bundle remains valid.
 
-The manual-plan screen keeps its own reference to that frozen bundle. It must not read changing values from the setup form. Returning to setup discards the Phase 3 session. If any editable planning value differs from the initial blank/zero plan, require an explicit discard confirmation and restore focus to the triggering control when canceled.
+The manual-plan screen keeps its own reference to that frozen bundle while it is open. It must not read changing values from the setup form. Returning to setup retains the manual draft in the current-tab workspace. After setup is validated again, reopening reconciles cells by stable member key and date: matching editable fields keep their strings, new cells use blank/zero defaults, and cells or direction fields no longer present are dropped.
 
 Do not add in-place member, topology, PVP-target, sheet-marker, or opening-value editing to the planning screen.
 
@@ -349,7 +349,7 @@ Show:
 - project title;
 - first/second-half date range;
 - `설정으로 돌아가기` action;
-- in-memory warning explaining that refresh or browser close discards the setup and plan, while only the screen-size preference is stored;
+- current-tab warning explaining that setup and manual inputs survive screen changes and refresh through `sessionStorage`, but closing the tab removes them;
 - current calculation status: `계산 완료` or `입력 확인 필요` with text/icon, not color alone.
 
 Do not show internal project IDs, organization snapshot IDs, member keys, engine versions, or ruleset versions in the normal operator UI.
@@ -559,16 +559,16 @@ Tasks:
 - Add the `SETUP | MANUAL_PLAN` top-level state.
 - Add the `수동 계획표 열기` action to the ready setup state.
 - Freeze/retain the exact bundle consumed by the manual session.
-- Reuse the existing display-density preference and no-storage messaging.
-- Implement return-to-setup behavior and modified-draft discard confirmation.
+- Reuse the existing display-density preference. Clearly describe the current-tab-only `sessionStorage` safety net and that closing the tab removes it.
+- Implement immediate return-to-setup behavior while retaining the controlled manual draft.
 - Ensure a later setup mutation cannot silently update an existing manual session.
 
 Exit gate:
 
 - Manual planning cannot start without an active bundle.
 - The planning screen never imports mutable Phase 2 React draft values.
-- Canceling discard preserves the plan and restores focus.
-- Confirming discard removes the entire Phase 3 draft without creating a revision.
+- Returning to setup preserves matching manual cells for the next validated bundle.
+- Starting a new plan explicitly removes the current setup and manual working drafts without creating a revision.
 
 ### WP4 — Manual Planning Worksheet
 
@@ -621,7 +621,7 @@ Exit gate:
 
 - Every actionable issue can move focus to its source.
 - No stale result is represented as current.
-- Core entry, correction, navigation, and discard flows work without a mouse.
+- Core entry, correction, navigation, and setup/plan round-trip flows work without a mouse.
 
 ### WP7 — Regression, Documentation, and Delivery Verification
 
@@ -699,8 +699,8 @@ Do not reduce a threshold to make Phase 3 pass.
 | P3-UI-002 | Density modes | Sticky headers, scroll, focus, and readable controls work in both modes |
 | P3-BOUNDARY-001 | Start without bundle | Manual workspace cannot open |
 | P3-BOUNDARY-002 | Setup changes after readiness | Old bundle cannot start a new session |
-| P3-BOUNDARY-003 | Cancel discard | Plan retained; focus restored |
-| P3-BOUNDARY-004 | Confirm discard | Plan removed; no revision/persistence created |
+| P3-BOUNDARY-003 | Return after manual edit | Setup opens immediately; manual strings remain in the current-tab workspace |
+| P3-BOUNDARY-004 | Revalidate and reopen | Matching member/date/field strings remain; obsolete cells/fields are dropped |
 | P3-PAGES-001 | Production build | `/ngplan/` assets and smoke artifacts are valid |
 
 ### 10.3 Calculation-Case Traceability
@@ -728,14 +728,14 @@ Read the cases themselves before writing tests. Do not copy expected values from
 9. Verify daily carry and half-month remaining targets against a finalized calculation case.
 10. Navigate with Tab, Enter, Shift+Enter, member jump, and first-error focus.
 11. Verify both display-density modes at browser 100%; include Windows 125% scaling when available.
-12. Attempt to return to setup, cancel once, then confirm discard.
+12. Return to setup after entering manual values, correct setup, validate again, and confirm matching values remain after reopening.
 13. Record the observed result in the Korean development log.
 
 ## 11. Review Checkpoints
 
 ### A — Phase Boundary
 
-- Manual planning only; no optimizer, actual values, revision history, storage, or export.
+- Manual planning only; no optimizer, actual values, revision history, durable project storage, or export. The current tab may retain one unversioned working draft in `sessionStorage`.
 - No organization or opening-value edits inside the planning session.
 
 ### B — Setup Handoff
@@ -791,12 +791,12 @@ Read the cases themselves before writing tests. Do not copy expected values from
 | Too much result data in the grid | Entry becomes unreadable | Keep grid focused on three fields; move audit detail and summaries to panels |
 | Duplicate names with empty IDs | Operator edits the wrong member | Deterministic plain-language disambiguation without exposing member keys |
 | Member ordering differs across views | Inputs and results appear under the wrong person | One authoritative worksheet schema and centralized lookups |
-| Setup draft changes under an active plan | Result uses mixed organization versions | Retain the frozen bundle and require discard before setup editing |
+| Setup draft changes after manual input | Result uses mixed organization versions | Never mutate the open bundle; on validated reopen reconcile only matching member/date/editable-field strings into the new schema |
 | `App.tsx` absorbs all Phase 3 logic | Fragile state coupling and low testability | Dedicated application module and manual-plan components |
 | CSS density breaks sticky positioning | Headers scroll away or overlap | Avoid nested transforms; test both density modes and real preview |
 | Immediate full recalculation becomes slow at unknown scale | Input lag | Keep orchestration pure, smoke-test 31×16, measure before adding debounce/worker/virtualization; formal performance in Phase 7 |
 | Requirements text crosses Phase 5 boundary | Premature revision model | Follow roadmap boundary and explicitly exclude actual/diff/resimulation features |
-| Convenience storage is added ad hoc | Phase 6 lifecycle and migration policy preempted | Keep plan data in memory; persist only the existing UI density preference |
+| Current-tab continuity grows into an ad hoc project database | Phase 6 lifecycle and migration policy preempted | Store only one versioned working snapshot in `sessionStorage`; no project list, history, cross-tab sync, or durable recovery |
 
 ## 13. Definition of Done
 
@@ -815,7 +815,7 @@ Phase 3 is complete only when:
 - Daily audit, running progress, final assessments, shortages, commission days, and recommendations are visible.
 - The worksheet works with keyboard-only entry, member jump, sticky navigation, and both display-density modes.
 - Duplicate names and optional IDs cannot cause identity confusion.
-- Returning to setup safely discards the in-memory plan after confirmation when needed.
+- Returning to setup preserves the manual working draft, and reopening after setup correction safely reconciles matching cells.
 - No automatic optimizer, revision, actual-value, persistence, closure, import, or export feature is included.
 - All Phase 1–3 tests pass without reducing coverage thresholds.
 - Production build, `/ngplan/` smoke check, and manual preview pass.

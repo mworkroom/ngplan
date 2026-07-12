@@ -545,9 +545,15 @@ describe('[VAL-P01] — PVP 목표와 찾기 표지판', () => {
     expect(validatePlan(planFor([root('A', { pvpTarget })])).isValid).toBe(true);
   });
 
+  it('연보라색 4번 표지판을 허용한다', () => {
+    expect(
+      validatePlan(planFor([root('A', { sheetMarker: 'PURPLE_4' })])).isValid,
+    ).toBe(true);
+  });
+
   it('지원하지 않는 찾기 표지판을 거부한다', () => {
     expect(
-      issueCodes(planFor([root('A', { sheetMarker: 'PURPLE_4' as 'NONE' })])),
+      issueCodes(planFor([root('A', { sheetMarker: 'ORANGE_5' as 'NONE' })])),
     ).toContain('SHEET_MARKER_INVALID');
   });
 });

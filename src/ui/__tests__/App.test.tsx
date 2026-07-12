@@ -155,6 +155,7 @@ function expectZeroOpeningDefaults(): void {
 afterEach(() => {
   cleanup();
   window.localStorage.clear();
+  window.sessionStorage.clear();
   vi.restoreAllMocks();
 });
 
@@ -209,6 +210,7 @@ describe('App project setup flow', () => {
     );
     expect(screen.getByRole('heading', { name: '회원 정보 입력' })).toBeDefined();
     expect(inputByLabel('ID').value).toBe('');
+    expect(document.activeElement).toBe(inputByLabel('이름'));
   });
 
   it('adds a root and both child sides by keyboard using explicit accessible labels', async () => {
@@ -351,7 +353,7 @@ describe('App project setup flow', () => {
     await user.click(excludeButton);
 
     expect(
-      screen.getByRole('heading', { name: 'Middle님을 명단에서 뺄까요?' }),
+      screen.getByRole('heading', { name: 'Middle님을 삭제할까요?' }),
     ).toBeDefined();
     await waitFor(() => {
       expect(document.activeElement).toBe(
@@ -369,7 +371,9 @@ describe('App project setup flow', () => {
     expect((promoteOption as HTMLInputElement).checked).toBe(true);
 
     await user.click(
-      screen.getByRole('button', { name: '명단에서 빼기' }),
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: '삭제하기',
+      }),
     );
 
     await waitFor(() => {
@@ -403,7 +407,9 @@ describe('App project setup flow', () => {
     ).toBeDefined();
     expect(screen.queryByRole('radio')).toBeNull();
     await user.click(
-      screen.getByRole('button', { name: '명단에서 빼기' }),
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: '삭제하기',
+      }),
     );
 
     const queueHeading = screen.getByRole('heading', {
@@ -442,7 +448,9 @@ describe('App project setup flow', () => {
       screen.getByText(/남은 회원 중 한 명을 새로운 최상위 회원으로 정해 주세요/),
     ).toBeDefined();
     await user.click(
-      screen.getByRole('button', { name: '명단에서 빼기' }),
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: '삭제하기',
+      }),
     );
 
     expect(screen.getByText('맨 위에 놓을 회원 카드를 만들어 주세요.')).toBeDefined();
@@ -511,6 +519,11 @@ describe('App project setup flow', () => {
     expect(viewport.tabIndex).toBe(0);
     expect(viewport.querySelector('.organization-tree__canvas')).not.toBeNull();
     expect(viewport.querySelectorAll('.member-card')).toHaveLength(3);
+    expect(screen.getByLabelText('조직 그림 크기')).toBeDefined();
+    await user.click(screen.getByRole('button', { name: '− 작게' }));
+    expect(screen.getByText('현재 90%')).toBeDefined();
+    await user.click(screen.getByRole('button', { name: '100%' }));
+    expect(screen.getByText('현재 100%')).toBeDefined();
 
     const collapseButton = screen.getByRole('button', {
       name: '접기',
@@ -538,6 +551,41 @@ describe('App project setup flow', () => {
         'aria-expanded',
       ),
     ).toBe('true');
+  });
+
+  it('keeps manual entries while moving between setup and the plan in the same tab', async () => {
+    const user = renderApp();
+    await createNamedRoot(user);
+    await user.click(screen.getByRole('button', { name: '플래너 생성' }));
+    await user.click(screen.getByRole('button', { name: '플랜 열기' }));
+
+    const pvpInput = screen.getByRole('textbox', {
+      name: /1 \(수\).*Root.*PVP 계획 PV/,
+    }) as HTMLInputElement;
+    await user.type(pvpInput, '123');
+    expect(pvpInput.value).toBe('123');
+
+    await user.click(screen.getByRole('button', { name: '설정으로 돌아가기' }));
+    expect(screen.getByRole('heading', { name: '애터미 직급 플랜 설정' })).toBeDefined();
+    await user.click(screen.getByRole('button', { name: '플랜 열기' }));
+
+    expect(
+      (screen.getByRole('textbox', {
+        name: /1 \(수\).*Root.*PVP 계획 PV/,
+      }) as HTMLInputElement).value,
+    ).toBe('123');
+    await waitFor(() => {
+      expect(window.sessionStorage.getItem('ngplan.workspace-session.v1')).toContain('123');
+    });
+
+    cleanup();
+    render(<App initialDate={INITIAL_DATE} />);
+    expect(document.getElementById('manual-plan-workspace')).not.toBeNull();
+    expect(
+      (screen.getByRole('textbox', {
+        name: /1 \(수\).*Root.*PVP 계획 PV/,
+      }) as HTMLInputElement).value,
+    ).toBe('123');
   });
 
   it('moves an existing subtree through explicit parent and side controls', async () => {

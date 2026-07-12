@@ -8,6 +8,7 @@ export const SHEET_MARKER_OPTIONS: readonly {
   { value: 'PINK_1', label: '1 · 분홍색' },
   { value: 'GREEN_2', label: '2 · 연두색' },
   { value: 'BLUE_3', label: '3 · 하늘색' },
+  { value: 'PURPLE_4', label: '4 · 연보라색' },
 ];
 
 export function sheetMarkerNumber(marker: SheetMarker): string | null {
@@ -18,6 +19,8 @@ export function sheetMarkerNumber(marker: SheetMarker): string | null {
       return '2';
     case 'BLUE_3':
       return '3';
+    case 'PURPLE_4':
+      return '4';
     default:
       return null;
   }

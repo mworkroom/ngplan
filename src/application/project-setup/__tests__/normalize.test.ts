@@ -54,6 +54,7 @@ describe('P2-NORM 정본 Setup Bundle', () => {
       dailyCarryPvp: '200',
       dailyCarryLeft: '300',
       dailyCarryRight: '400',
+      openingStateConfirmed: true,
     });
     const before = structuredClone(draft);
     const outcome = expectNormalizeSuccess(normalizeProjectSetup(draft));

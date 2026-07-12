@@ -88,9 +88,9 @@ export function ExcludeMemberDialog({
         aria-labelledby="exclude-dialog-title"
         aria-describedby="exclude-dialog-description"
       >
-        <h2 id="exclude-dialog-title">{displayName}님을 명단에서 뺄까요?</h2>
+        <h2 id="exclude-dialog-title">{displayName}님을 삭제할까요?</h2>
         <p id="exclude-dialog-description">
-          저장된 이름과 숫자는 지우지 않고, 이번 계획의 조직 그림에서만 뺍니다.
+          이 회원의 이름과 입력한 숫자가 화면에서 사라지며, 현재는 되돌릴 수 없습니다.
         </p>
 
         {directChildren.length === 0 ? (
@@ -170,7 +170,7 @@ export function ExcludeMemberDialog({
             className="danger-button"
             onClick={() => onConfirm(strategy)}
           >
-            명단에서 빼기
+            삭제하기
           </button>
         </div>
       </section>
