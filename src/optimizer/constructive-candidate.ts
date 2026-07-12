@@ -16,6 +16,8 @@ import type {
 } from './types';
 
 const FORTNIGHT_SIDE_TARGET = 2_500;
+const RECOMMENDED_COMMISSION_DAYS = 8;
+const MINIMUM_COMMISSION_TIER = 300;
 
 interface MutableCell {
   date: string;
@@ -43,6 +45,15 @@ function setCoordinate(
   }
 }
 
+function distribute(total: number, count: number): readonly number[] {
+  if (count <= 0) return Object.freeze([]);
+  const quotient = Math.floor(total / count);
+  const remainder = total % count;
+  return Object.freeze(
+    Array.from({ length: count }, (_, index) => quotient + Number(index < remainder)),
+  );
+}
+
 /**
  * Deterministic feasibility-first warm start. It deliberately over-allocates raw
  * SELF sides and makes no optimality or infeasibility claim.
@@ -55,7 +66,8 @@ export function buildConstructiveCandidate(
     return requestValidation;
   }
   const skipDates = new Set(request.calendar.skipDateSet);
-  const firstSettlementDate = request.calendar.dates.find((date) => !skipDates.has(date));
+  const settlementDates = request.calendar.dates.filter((date) => !skipDates.has(date));
+  const firstSettlementDate = settlementDates[0];
   if (firstSettlementDate === undefined) {
     return {
       status: 'FAILURE',
@@ -85,6 +97,7 @@ export function buildConstructiveCandidate(
     }
     setCoordinate(cell, coordinate, 0);
   }
+  const planDates = settlementDates.slice(0, RECOMMENDED_COMMISSION_DAYS);
   for (const memberKey of request.canonicalMemberKeys) {
     const member = request.organization.members.find(
       (candidate) => candidate.memberKey === memberKey,
@@ -106,12 +119,24 @@ export function buildConstructiveCandidate(
       0,
       300 - opening.openingQualificationPvp,
     );
-    firstCell.pvp = Math.max(personalDeficit, qualificationDeficit);
-    if (Object.hasOwn(firstCell, 'selfLeft')) {
-      firstCell.selfLeft = FORTNIGHT_SIDE_TARGET;
+    const requiredPvp = Math.max(personalDeficit, qualificationDeficit);
+    const remainingAfterQualification = requiredPvp - qualificationDeficit;
+    const distributedPvp = distribute(remainingAfterQualification, planDates.length);
+    for (let index = 0; index < planDates.length; index += 1) {
+      const cell = cells.get(cellKey(planDates[index]!, memberKey))!;
+      cell.pvp = distributedPvp[index]! + (index === 0 ? qualificationDeficit : 0);
     }
-    if (Object.hasOwn(firstCell, 'selfRight')) {
-      firstCell.selfRight = FORTNIGHT_SIDE_TARGET;
+  }
+  const firstSideAllocation =
+    FORTNIGHT_SIDE_TARGET - MINIMUM_COMMISSION_TIER * (planDates.length - 1);
+  for (const memberKey of request.canonicalMemberKeys) {
+    for (let index = 0; index < planDates.length; index += 1) {
+      const cell = cells.get(cellKey(planDates[index]!, memberKey))!;
+      const sideAllocation = index === 0
+        ? firstSideAllocation
+        : MINIMUM_COMMISSION_TIER;
+      if (Object.hasOwn(cell, 'selfLeft')) cell.selfLeft = sideAllocation;
+      if (Object.hasOwn(cell, 'selfRight')) cell.selfRight = sideAllocation;
     }
   }
   const allocations: NormalizedAllocationCell[] = [];

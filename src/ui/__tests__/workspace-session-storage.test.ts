@@ -106,8 +106,8 @@ describe('persistent workspace storage v2', () => {
     expect(migrated?.manualPlanDraft).toEqual(manualPlanDraft);
     expect(migrated?.automaticPlanCheckpoint).toBeNull();
     expect(migrated?.draft.members[0]?.openingState).toEqual({
-      openingQualificationPvp: '0',
-      fortnightPvpOpeningCredit: '700',
+      openingQualificationPvp: '300',
+      fortnightPvpOpeningCredit: '300',
       dailyCarryPvp: '300',
       dailyCarryLeft: '20',
       dailyCarryRight: '30',

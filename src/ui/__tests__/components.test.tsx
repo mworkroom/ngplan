@@ -162,6 +162,7 @@ describe('project and opening forms', () => {
     fireEvent.focus(openingPvp);
     expect(openingPvp.selectionStart).toBe(0);
     expect(openingPvp.selectionEnd).toBe(1);
+    fireEvent.change(openingPvp, { target: { value: '33' } });
 
     fireEvent.change(screen.getByLabelText('이번 기간 PVP 목표'), {
       target: { value: '1500' },
@@ -171,6 +172,11 @@ describe('project and opening forms', () => {
       screen.getByRole('checkbox', { name: /시작값이 맞게 입력되었으면 확인 버튼을 클릭해주세요/ }),
     );
     expect(onChange).toHaveBeenCalledWith({ dailyCarryLeft: '39' });
+    expect(onChange).toHaveBeenCalledWith({
+      openingQualificationPvp: '33',
+      fortnightPvpOpeningCredit: '33',
+      dailyCarryPvp: '33',
+    });
     expect(onPvpTargetChange).toHaveBeenCalledWith('1500');
     expect(onChange).toHaveBeenCalledWith({ openingStateConfirmed: true });
     expect(screen.getByText('dailyCarryLeft 문제')).toBeTruthy();

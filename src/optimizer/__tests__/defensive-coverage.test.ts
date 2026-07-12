@@ -556,7 +556,7 @@ describe('optimizer arithmetic, construction, objective, and oracle defenses', (
     );
     expect(verified.status).toBe('SUCCESS');
     if (verified.status === 'SUCCESS') {
-      expect(verified.candidate.objective.nonHundredCellCount).toBe(1);
+      expect(verified.candidate.objective.nonHundredCellCount).toBe(8);
     }
   });
 

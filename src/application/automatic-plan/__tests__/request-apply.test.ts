@@ -150,9 +150,9 @@ describe('automatic plan request and atomic application', () => {
     if (applied.status !== 'SUCCESS') return;
     expect(applied.draft).not.toBe(before);
     expect(applied.draft.cells[0]).toMatchObject({
-      pvp: '700',
-      selfLeft: '2500',
-      selfRight: '2500',
+      pvp: '350',
+      selfLeft: '400',
+      selfRight: '400',
     });
     expect(Object.isFrozen(applied.draft.cells)).toBe(true);
   });

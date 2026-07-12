@@ -1254,7 +1254,7 @@ fieldset {
 .manual-plan-table th,
 .manual-plan-table td {
   box-sizing: border-box;
-  min-width:50px;
+  max-width:54px;
   padding: 1px;
   border-right: 1px solid var(--color-line);
   border-bottom: 1px solid var(--color-line);
@@ -1309,7 +1309,7 @@ fieldset {
   width: 50px;
   padding: 4px !important;
   text-align: left !important;
-  font-size: 0.78rem;
+  font-size: 0.68rem;
 }
 
 .manual-plan-table__date-heading {

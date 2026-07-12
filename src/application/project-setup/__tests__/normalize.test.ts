@@ -40,7 +40,7 @@ function member(draft: ProjectSetupDraft, memberKey: string) {
 }
 
 describe('P2-NORM 정본 Setup Bundle', () => {
-  it('P2-NORM-001 / P2-OPEN-002/006: 다섯 opening 의미를 독립적으로 정규화한다', () => {
+  it('P2-NORM-001: 화면의 PVP 시작값 하나를 세 내부 PVP 장부에 정규화한다', () => {
     let draft = createSingleMemberDraft('A');
     draft = addCompletedChild(draft, 'A', 'LEFT', 'B');
     draft = editMemberIdentity(draft, 'A', {
@@ -93,8 +93,8 @@ describe('P2-NORM 정본 Setup Bundle', () => {
         ],
         openingStateByMember: {
           A: {
-            openingQualificationPvp: 33,
-            fortnightPvpOpeningCredit: 100,
+            openingQualificationPvp: 200,
+            fortnightPvpOpeningCredit: 200,
             dailyCarryPvp: 200,
             dailyCarryLeft: 300,
             dailyCarryRight: 400,

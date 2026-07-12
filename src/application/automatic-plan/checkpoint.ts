@@ -13,7 +13,7 @@ import {
 import { createAutomaticPlanCandidateId } from './candidate-identity';
 import { canonicalStringify } from './fingerprint';
 
-export const AUTOMATIC_PLAN_CHECKPOINT_VERSION = '1.0.0' as const;
+export const AUTOMATIC_PLAN_CHECKPOINT_VERSION = '1.1.0' as const;
 
 export interface AutomaticPlanCheckpoint
   extends Readonly<Record<string, unknown>> {

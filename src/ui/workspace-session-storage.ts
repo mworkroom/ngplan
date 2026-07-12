@@ -1,4 +1,5 @@
 import type { ManualPlanDraft } from '../application/manual-plan';
+import type { OpeningStateInput } from '../engine';
 import type {
   MemberDraft,
   OpeningStateDraft,
@@ -209,6 +210,53 @@ function withSafeActiveBundle(draft: ProjectSetupDraft): ProjectSetupDraft {
     : { ...draft, activeBundle: null };
 }
 
+function withUnifiedVisiblePvpOpenings(draft: ProjectSetupDraft): ProjectSetupDraft {
+  const members = draft.members.map((member) => {
+    const pvp = member.openingState.dailyCarryPvp;
+    return member.openingState.openingQualificationPvp === pvp &&
+      member.openingState.fortnightPvpOpeningCredit === pvp
+      ? member
+      : {
+          ...member,
+          openingState: {
+            ...member.openingState,
+            openingQualificationPvp: pvp,
+            fortnightPvpOpeningCredit: pvp,
+          },
+        };
+  });
+  if (draft.activeBundle === null) {
+    return members.every((member, index) => member === draft.members[index])
+      ? draft
+      : { ...draft, members };
+  }
+  const openings = Object.create(null) as Record<string, OpeningStateInput>;
+  for (const member of draft.activeBundle.organization.members) {
+    const opening = draft.activeBundle.organization.openingStateByMember[member.memberKey]!;
+    Object.defineProperty(openings, member.memberKey, {
+      value: {
+        ...opening,
+        openingQualificationPvp: opening.dailyCarryPvp,
+        fortnightPvpOpeningCredit: opening.dailyCarryPvp,
+      },
+      enumerable: true,
+      configurable: false,
+      writable: false,
+    });
+  }
+  return {
+    ...draft,
+    members,
+    activeBundle: {
+      ...draft.activeBundle,
+      organization: {
+        ...draft.activeBundle.organization,
+        openingStateByMember: openings,
+      },
+    },
+  };
+}
+
 function normalizeV2Snapshot(value: unknown): WorkspaceSessionSnapshot | null {
   if (
     !isRecord(value) ||
@@ -217,7 +265,7 @@ function normalizeV2Snapshot(value: unknown): WorkspaceSessionSnapshot | null {
   ) {
     return null;
   }
-  const draft = withSafeActiveBundle(value.draft);
+  const draft = withUnifiedVisiblePvpOpenings(withSafeActiveBundle(value.draft));
   const manualPlanDraft = looksLikeManualPlanDraft(value.manualPlanDraft)
     ? value.manualPlanDraft
     : null;
@@ -266,11 +314,11 @@ function migrateV1Snapshot(value: unknown): WorkspaceSessionSnapshot | null {
     return null;
   }
   const legacyDraft = value.draft;
-  const draft: ProjectSetupDraft = {
+  const draft = withUnifiedVisiblePvpOpenings({
     ...legacyDraft,
     members: legacyDraft.members.map(migrateLegacyMember),
     activeBundle: null,
-  };
+  });
   return deepFreeze({
     version: WORKSPACE_SESSION_VERSION,
     draft,

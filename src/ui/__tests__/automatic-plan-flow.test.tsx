@@ -308,9 +308,9 @@ describe('App automatic-plan integration', () => {
     await user.click(within(dialog).getByRole('button', { name: '적용' }));
 
     await waitFor(() => expect(pvpInput().value).toBe(String(pinnedPvp)));
-    expect(pvpInput().value).toBe('800');
-    expect(sideInput('좌').value).toBe('2500');
-    expect(sideInput('우').value).toBe('2500');
+    expect(pvpInput().value).toBe('450');
+    expect(sideInput('좌').value).toBe('400');
+    expect(sideInput('우').value).toBe('400');
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(screen.queryByRole('heading', { name: '적용 전 확인' })).toBeNull();
     expect(

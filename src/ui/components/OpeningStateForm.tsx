@@ -107,7 +107,18 @@ export function OpeningStateForm({
                 }}
                 aria-invalid={fieldIssue !== undefined}
                 aria-describedby={fieldIssue === undefined ? undefined : errorId}
-                onChange={(event) => onChange({ [field]: event.currentTarget.value })}
+                onChange={(event) => {
+                  const value = event.currentTarget.value;
+                  onChange(
+                    field === 'dailyCarryPvp'
+                      ? {
+                          openingQualificationPvp: value,
+                          fortnightPvpOpeningCredit: value,
+                          dailyCarryPvp: value,
+                        }
+                      : { [field]: value },
+                  );
+                }}
               />
               {help === undefined ? null : <p className="field-help">{help}</p>}
               {fieldIssue !== undefined ? (

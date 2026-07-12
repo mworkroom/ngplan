@@ -184,7 +184,7 @@ Phase 4 호환성 식별자는 다음 값으로 고정한다.
 | `dailyCarryLeft` | 첫 계산일의 일일 좌 잔액 |
 | `dailyCarryRight` | 첫 계산일의 일일 우 잔액 |
 
-다섯 값은 역할이 다르므로 합쳐 저장하거나 서로 대신 사용하지 않는다. 현재 Phase 2가 이미 `fortnightPvpOpeningCredit`과 `dailyCarryPvp`를 독립 입력으로 받으므로 하나의 기존 필드를 세 PVP 의미로 조용히 복사하지 않는다. 보름 작은 쪽 적용량에는 `fortnightPvpOpeningCredit`과 이번 보름 신규 PVP만 포함하며 `dailyCarryPvp`와 `openingQualificationPvp`는 포함하지 않는다.
+엔진의 다섯 값은 역할이 다르므로 계산 과정에서는 합치거나 서로 대신 사용하지 않는다. 다만 제품 설정 UI는 사용자가 확인할 PVP 시작값을 하나로 단순화했으므로 Phase 2 정규화 어댑터가 그 값을 `openingQualificationPvp`, `fortnightPvpOpeningCredit`, `dailyCarryPvp`의 공통 최초값으로 기록한다. 이후 보름 작은 쪽 적용량에는 `fortnightPvpOpeningCredit`과 이번 보름 신규 PVP만 포함하며 `dailyCarryPvp`와 `openingQualificationPvp`는 포함하지 않는다.
 
 ### 5.6 NormalizedAllocationCell
 
@@ -528,7 +528,7 @@ Phase 4 자동 계획은 불변 `ProjectSetupBundle` 하나에서 시작하며 �
 - calendar·problem fingerprint·checkpoint·model certificate `1.0.0`
 - 제품 실행 제한 상수 `AUTOMATIC_PLAN_PRODUCT_TIME_LIMIT_MS = 1_800_000`
 
-정규 요청은 canonical date-only 날짜 목록과 skip 집합, 루트부터 LEFT 후 RIGHT로 순회한 canonical 회원 키 목록, 회원별 세 PVP opening 의미, 문제 fingerprint를 명시한다. Policy `2.0.0`은 고정된 `deterministicSeed`를 가지되 실행 시간 선택값은 갖지 않는다. Warm start는 검색 속도만 바꾸며 fingerprint에 포함하지 않는다. 제품 정책에는 `runMode`, 사용자 선택 `timeLimitMs`, 3시간·custom duration을 두지 않는다.
+정규 요청은 canonical date-only 날짜 목록과 skip 집합, 루트부터 LEFT 후 RIGHT로 순회한 canonical 회원 키 목록, 회원별 세 PVP opening 의미, 문제 fingerprint를 명시한다. Policy `2.1.0`은 고정된 `deterministicSeed`와 최대 8개 영업일에 분산하는 constructive warm start를 가지되 실행 시간 선택값은 갖지 않는다. Warm start는 검색 속도만 바꾸며 exact 문제 정의에는 영향을 주지 않지만, 구형 첫날 집중 후보 재사용을 막기 위해 policy version은 fingerprint에 포함한다. 제품 정책에는 `runMode`, 사용자 선택 `timeLimitMs`, 3시간·custom duration을 두지 않는다.
 
 ### 12.2 결정 변수와 candidate shape
 
@@ -829,6 +829,7 @@ Phase 1 계산 질문은 모두 확정되었다. 이후 Phase 질문은 해당 �
 | **Q-SIM-03** | 높은 목적이 같은 경우 목표 700 회원 중 8일 이상인 회원 수를 먼저 최대화하고, 이어 전체 counted-day 오름차순 vector를 사전식 최대화한다. 8일 cap은 없으며 total commission days는 display-only다. | `[0,8,8] > [7,7,7]`, dead total-days stage 제거 | 2026-07-12 |
 | **Q-SIM-04** | Exact 1 PV 값을 허용한다. 높은 목적이 모두 같을 때 0이 아닌 non-100-multiple 직접 셀 수를 최소화하고, 완전 동률은 date → root/LEFT/RIGHT canonical member → PVP/SELF_LEFT/SELF_RIGHT allocation vector로 결정한다. | 반올림으로 총 PV를 늘리는 오류 방지와 최적해 단일화 | 2026-07-12 |
 | **Q-SIM-05** | `openingQualificationPvp`, `fortnightPvpOpeningCredit`, `dailyCarryPvp`를 별도 장부로 둔다. Qualification은 opening과 당일 포함 direct PVP 누계이며 reset되지 않는다. 300 미만 정산도 실제 reset하되 full commission으로 세지 않고 경고하며 자동 후보는 거부한다. | Ruleset·engine `3.0.0`, inclusive gate와 full-only count 고정 | 2026-07-12 |
+| **Q-UI-OPEN-01** | 회원 설정은 PVP 시작값 하나만 받고 Phase 2 정규화 시 세 내부 PVP 장부의 공통 최초값으로 기록한다. 엔진 안의 장부 역할과 이후 변화는 계속 분리한다. | 실제 입력 항목 단순화와 qualification 누계 누락 방지 | 2026-07-13 |
 | **Q-SIM-06** | Exact PVP 100은 독립 목적이 아니다. 공동 하위 기여도 독립 보상이 아니라 총 PV에서 반영한다. Non-100 셀 수 다음에 max direct PVP를 최소화하고, PVP 100의 자식·부모 위치는 전체 트리의 총 PV·discarded excess·후속 목적에 따라 선택한다. | 과거 관습적 PVP-100 배치 제거와 objective `2.0.0` 고정 | 2026-07-12 |
 
 ### 17.3 이후 Phase 차단 질문

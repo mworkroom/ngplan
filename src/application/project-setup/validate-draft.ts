@@ -94,10 +94,11 @@ export function parseMemberOpeningState(
     return null;
   }
   const values = parsed as readonly { readonly ok: true; readonly value: number }[];
+  const visiblePvpOpening = values[2]!.value;
   return {
-    openingQualificationPvp: values[0]!.value,
-    fortnightPvpOpeningCredit: values[1]!.value,
-    dailyCarryPvp: values[2]!.value,
+    openingQualificationPvp: visiblePvpOpening,
+    fortnightPvpOpeningCredit: visiblePvpOpening,
+    dailyCarryPvp: visiblePvpOpening,
     dailyCarryLeft: values[3]!.value,
     dailyCarryRight: values[4]!.value,
   };

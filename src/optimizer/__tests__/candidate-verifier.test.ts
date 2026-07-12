@@ -319,7 +319,9 @@ describe('Phase 4 request and candidate boundary', () => {
       built.candidate.allocations,
       request.calendar.skipDateSet,
     );
-    let allocations = replaceCell(built.candidate.allocations, first, {
+    let allocations: readonly NormalizedAllocationCell[] =
+      built.candidate.allocations.map((cell) => ({ ...cell, pvp: 0 }));
+    allocations = replaceCell(allocations, first, {
       pvp: 400,
       selfLeft: 0,
       selfRight: 200,
@@ -357,6 +359,32 @@ describe('Phase 4 request and candidate boundary', () => {
       newPvpTotal: 400,
       personalPvpTotal: 700,
     });
+  });
+
+  it('spreads the constructive plan across eight qualified commission dates', () => {
+    const request = createOptimizerRequest();
+    const built = buildConstructiveCandidate(request);
+    if (built.status !== 'SUCCESS') throw new Error('constructive fixture failed');
+    const verified = verifyAutomaticPlanCandidate(
+      request,
+      built.candidate,
+      { candidateId: 'spread-eight-days', sequence: 1, foundAtElapsedMs: 0 },
+    );
+    expect(verified.status).toBe('SUCCESS');
+    if (verified.status !== 'SUCCESS') return;
+    const settlements = Object.values(
+      verified.candidate.calculation.dailySettlementByDateAndMember,
+    ).flatMap((byMember) => Object.values(byMember));
+    const fullCommissionDates = settlements.filter(
+      (settlement) => settlement.settlementKind === 'FULL_COMMISSION',
+    );
+    expect(new Set(fullCommissionDates.map((settlement) => settlement.date)).size).toBe(8);
+    expect(
+      fullCommissionDates.every(
+        (settlement) =>
+          settlement.qualificationThresholdMet && settlement.qualificationPvp >= 300,
+      ),
+    ).toBe(true);
   });
 
   it('QUAL-002/005 rejects a mechanically reset settlement at qualification 299', () => {
