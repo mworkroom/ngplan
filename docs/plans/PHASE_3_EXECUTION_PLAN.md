@@ -125,7 +125,7 @@ These defaults are part of the implementation contract and do not require anothe
 | Arrow keys | Preserve native input behavior | Do not hijack cursor movement without a complete spreadsheet interaction model. |
 | Bulk operations | No multi-cell paste, fill handle, undo stack, import, or export | These are useful future enhancements but are not Phase 3 exit requirements. |
 | Result layout | Compact grid plus selected-cell audit panel plus member summary | Putting every result in every cell would make the worksheet unreadable. |
-| Member display order | Mirror the two root branches around the root: reverse root-first order on the left, then root, then root-first order on the right | This is a presentation choice only. Phase 4 business identity uses a separate root-first, `LEFT`-before-`RIGHT` canonical order. |
+| Member display order | Recursively use inorder on the root's left branch and mirrored inorder on its right branch, with the root between them | This is a presentation choice only. Phase 4 business identity uses a separate root-first, `LEFT`-before-`RIGHT` canonical order. |
 | Return to setup | Retain the manual draft in the current-tab workspace and reconcile matching member/date/field cells after setup is validated again | Operators must be able to correct setup without losing manual work; Phase 5 revision semantics are still not introduced. |
 | Storage | Store one versioned current-work snapshot in `sessionStorage` | Same-tab screen changes and refresh are protected, while durable records, cross-tab/device recovery, and export remain Phase 6 work. |
 | Routing and global state | Keep the current top-level React screen state; add no router or global state library | Two in-memory screens do not justify new infrastructure. |
@@ -254,7 +254,7 @@ Rules:
 Derive one immutable schema from the setup bundle:
 
 - `period.dates` from `derivePeriod` supplies row order.
-- Worksheet member order is deterministic and root-centered: reverse the left branch's root-first sequence, render the root, then render the right branch's root-first sequence. This keeps depth markers visually symmetric (`3, 2, 1, 2, 3`) even when a branch bends across local child sides.
+- Worksheet member order is deterministic and recursively root-centered: render the root's left branch as `LEFT subtree → member → RIGHT subtree`, render the root, then render the root's right branch as `RIGHT subtree → member → LEFT subtree`. Every member remains beside and between its own children while the right half mirrors the left half.
 - The worksheet inorder is UI-only. Phase 4 separately derives the canonical business sequence as root-first preorder with every `LEFT` subtree before `RIGHT`; optimizer fingerprints, objectives, checkpoints, and tie-breaks must never reuse the worksheet order.
 - The current engine `orderedMemberKeys` is a stable member-key sort used by calculation output; it is neither the worksheet inorder nor the Phase 4 canonical business preorder. Derive both topology orders explicitly from the root and child relationships and lock their separation with application tests.
 - Each member descriptor contains its stable key, display label, selected PVP target, optional sheet marker, optional company ID, all five opening values, and left/right `SELF | CHILD` modes.

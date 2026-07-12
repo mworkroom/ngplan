@@ -145,7 +145,7 @@ describe('WP1 manual-plan draft and worksheet schema', () => {
     expect(draft.cells).toHaveLength(16 * 4);
   });
 
-  it('mirrors complete root branches around the root', () => {
+  it('keeps every left-branch member between its own children', () => {
     const setup = bundle([
       member('root', null, null),
       member('branch', 'root', 'LEFT'),
@@ -155,19 +155,19 @@ describe('WP1 manual-plan draft and worksheet schema', () => {
     ]);
 
     expect(deriveManualPlanSchema(setup).members.map((item) => item.memberKey)).toEqual([
-      'branch-right',
       'branch-left',
       'branch',
+      'branch-right',
       'root',
       'root-right',
     ]);
   });
 
-  it('mirrors branch distance around the root even when a right branch bends left', () => {
+  it('mirrors recursive inorder on the right side of the root', () => {
     const setup = bundle([
       member('root', null, null, { sheetMarker: 'PINK_1' }),
       member('left-near', 'root', 'LEFT', { sheetMarker: 'GREEN_2' }),
-      member('left-far', 'left-near', 'RIGHT', { sheetMarker: 'BLUE_3' }),
+      member('left-far', 'left-near', 'LEFT', { sheetMarker: 'BLUE_3' }),
       member('right-near', 'root', 'RIGHT', { sheetMarker: 'GREEN_2' }),
       member('right-far', 'right-near', 'LEFT', { sheetMarker: 'BLUE_3' }),
     ]);

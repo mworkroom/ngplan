@@ -1250,10 +1250,11 @@ fieldset {
   font-variant-numeric: tabular-nums;
 }
 
+/* PVP·좌·우 셀 전체 너비 */
 .manual-plan-table th,
 .manual-plan-table td {
   box-sizing: border-box;
-  min-width: 47px;
+  min-width:50px;
   padding: 1px;
   border-right: 1px solid var(--color-line);
   border-bottom: 1px solid var(--color-line);
@@ -1378,9 +1379,9 @@ fieldset {
   background: #f6f7f9;
 }
 
+/* PVP·좌·우 본문 셀의 안쪽 여백 */
 .manual-plan-cell {
   position: relative;
-
   padding: 0px !important;
   text-align: right !important;
 }
@@ -1393,11 +1394,12 @@ fieldset {
   background: var(--color-danger-soft) !important;
 }
 
+/* 실제 숫자 입력창 너비 */
 .manual-plan-input {
   width: 48px;
   min-width: 45px;
-  padding: 2px px;
-  margin-right: 2px;
+  padding: 2px;
+  margin-right: 3px;
   border: 1px solid #d2d4d5;
   border-radius: 6px;
   background: #fff;
