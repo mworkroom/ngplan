@@ -158,7 +158,7 @@ describe('project and opening forms', () => {
 
     expect((screen.getByLabelText('이번 기간 PVP 목표') as HTMLSelectElement).value).toBe('700');
 
-    const openingPvp = screen.getByLabelText('수당 자격 PVP 시작값') as HTMLInputElement;
+    const openingPvp = screen.getByLabelText('PVP 시작값') as HTMLInputElement;
     fireEvent.focus(openingPvp);
     expect(openingPvp.selectionStart).toBe(0);
     expect(openingPvp.selectionEnd).toBe(1);
@@ -166,7 +166,7 @@ describe('project and opening forms', () => {
     fireEvent.change(screen.getByLabelText('이번 기간 PVP 목표'), {
       target: { value: '1500' },
     });
-    fireEvent.change(screen.getByLabelText('일일 좌 잔액'), { target: { value: '39' } });
+    fireEvent.change(screen.getByLabelText('좌 시작값'), { target: { value: '39' } });
     fireEvent.click(
       screen.getByRole('checkbox', { name: /시작값이 맞게 입력되었으면 확인 버튼을 클릭해주세요/ }),
     );
@@ -260,7 +260,7 @@ describe('tree cards and child slots', () => {
       />,
     );
     expect(screen.getByText('확인')).toBeTruthy();
-    expect(screen.getByLabelText('다섯 시작값').textContent).toContain('자격 PVP 0');
+    expect(screen.getByLabelText('세 시작값').textContent).toContain('PVP 0');
     expect(screen.getAllByText('스스로')).toHaveLength(2);
     const collapse = screen.getByRole('button', { name: '펼치기' });
     expect(collapse.getAttribute('aria-controls')).toBe('root-children');

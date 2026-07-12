@@ -283,17 +283,17 @@ function migrateV1Snapshot(value: unknown): WorkspaceSessionSnapshot | null {
   });
 }
 
-function removeStorageKey(key: string): void {
+function removeStorageKey(storage: Storage, key: string): void {
   try {
-    window.sessionStorage.removeItem(key);
+    storage.removeItem(key);
   } catch {
-    // 현재 탭 저장소 정리가 차단되어도 인메모리 작업은 계속할 수 있습니다.
+    // 브라우저 저장소 정리가 차단되어도 인메모리 작업은 계속할 수 있습니다.
   }
 }
 
 function persistV2Snapshot(snapshot: WorkspaceSessionSnapshot): boolean {
   try {
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       WORKSPACE_SESSION_STORAGE_KEY,
       JSON.stringify(snapshot),
     );
@@ -303,41 +303,65 @@ function persistV2Snapshot(snapshot: WorkspaceSessionSnapshot): boolean {
   }
 }
 
+function readAndNormalizeV2(storage: Storage): WorkspaceSessionSnapshot | null {
+  const raw = storage.getItem(WORKSPACE_SESSION_STORAGE_KEY);
+  if (raw === null) return null;
+  try {
+    const normalized = normalizeV2Snapshot(JSON.parse(raw));
+    if (normalized !== null) return normalized;
+  } catch {
+    // 손상된 현재 세대 저장값은 제거하고 다른 저장 위치 또는 v1을 시도합니다.
+  }
+  removeStorageKey(storage, WORKSPACE_SESSION_STORAGE_KEY);
+  return null;
+}
+
+function readAndMigrateV1(storage: Storage): WorkspaceSessionSnapshot | null {
+  const raw = storage.getItem(LEGACY_WORKSPACE_SESSION_STORAGE_KEY);
+  if (raw === null) return null;
+  try {
+    const migrated = migrateV1Snapshot(JSON.parse(raw));
+    if (migrated !== null) return migrated;
+  } catch {
+    // 손상된 구형 저장값은 아래에서 제거합니다.
+  }
+  removeStorageKey(storage, LEGACY_WORKSPACE_SESSION_STORAGE_KEY);
+  return null;
+}
+
+function promoteToLocalStorage(
+  snapshot: WorkspaceSessionSnapshot,
+  source: Storage,
+): WorkspaceSessionSnapshot {
+  if (persistV2Snapshot(snapshot)) {
+    removeStorageKey(source, WORKSPACE_SESSION_STORAGE_KEY);
+    removeStorageKey(source, LEGACY_WORKSPACE_SESSION_STORAGE_KEY);
+  }
+  return snapshot;
+}
+
 export function readWorkspaceSession(): WorkspaceSessionSnapshot | null {
   try {
-    const currentRaw = window.sessionStorage.getItem(WORKSPACE_SESSION_STORAGE_KEY);
-    if (currentRaw !== null) {
-      try {
-        const current = normalizeV2Snapshot(JSON.parse(currentRaw));
-        if (current !== null) {
-          return current;
-        }
-      } catch {
-        // 손상된 v2만 버리고 아래의 안전한 v1 migration을 시도합니다.
-      }
-      removeStorageKey(WORKSPACE_SESSION_STORAGE_KEY);
+    const localCurrent = readAndNormalizeV2(window.localStorage);
+    if (localCurrent !== null) {
+      return localCurrent;
     }
 
-    const legacyRaw = window.sessionStorage.getItem(
-      LEGACY_WORKSPACE_SESSION_STORAGE_KEY,
-    );
-    if (legacyRaw === null) {
-      return null;
+    const localLegacy = readAndMigrateV1(window.localStorage);
+    if (localLegacy !== null) {
+      return promoteToLocalStorage(localLegacy, window.localStorage);
     }
-    try {
-      const migrated = migrateV1Snapshot(JSON.parse(legacyRaw));
-      if (migrated === null) {
-        removeStorageKey(LEGACY_WORKSPACE_SESSION_STORAGE_KEY);
-        return null;
-      }
-      if (persistV2Snapshot(migrated)) {
-        removeStorageKey(LEGACY_WORKSPACE_SESSION_STORAGE_KEY);
-      }
-      return migrated;
-    } catch {
-      removeStorageKey(LEGACY_WORKSPACE_SESSION_STORAGE_KEY);
-      return null;
+
+    const sessionCurrent = readAndNormalizeV2(window.sessionStorage);
+    if (sessionCurrent !== null) {
+      return promoteToLocalStorage(sessionCurrent, window.sessionStorage);
     }
+
+    const sessionLegacy = readAndMigrateV1(window.sessionStorage);
+    if (sessionLegacy !== null) {
+      return promoteToLocalStorage(sessionLegacy, window.sessionStorage);
+    }
+    return null;
   } catch {
     return null;
   }
@@ -353,7 +377,9 @@ export function writeWorkspaceSession(snapshot: WorkspaceSessionWriteSnapshot): 
     automaticPlanCheckpoint: snapshot.automaticPlanCheckpoint ?? null,
   };
   if (persistV2Snapshot(current)) {
-    removeStorageKey(LEGACY_WORKSPACE_SESSION_STORAGE_KEY);
+    removeStorageKey(window.localStorage, LEGACY_WORKSPACE_SESSION_STORAGE_KEY);
+    removeStorageKey(window.sessionStorage, WORKSPACE_SESSION_STORAGE_KEY);
+    removeStorageKey(window.sessionStorage, LEGACY_WORKSPACE_SESSION_STORAGE_KEY);
   }
 }
 
@@ -368,6 +394,8 @@ export function replaceWorkspaceAutomaticPlanCheckpoint(
 }
 
 export function clearWorkspaceSession(): void {
-  removeStorageKey(WORKSPACE_SESSION_STORAGE_KEY);
-  removeStorageKey(LEGACY_WORKSPACE_SESSION_STORAGE_KEY);
+  removeStorageKey(window.localStorage, WORKSPACE_SESSION_STORAGE_KEY);
+  removeStorageKey(window.localStorage, LEGACY_WORKSPACE_SESSION_STORAGE_KEY);
+  removeStorageKey(window.sessionStorage, WORKSPACE_SESSION_STORAGE_KEY);
+  removeStorageKey(window.sessionStorage, LEGACY_WORKSPACE_SESSION_STORAGE_KEY);
 }

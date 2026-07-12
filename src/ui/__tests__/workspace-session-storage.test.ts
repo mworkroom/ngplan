@@ -32,10 +32,11 @@ function createDraftWithMember(): ProjectSetupDraft {
 }
 
 afterEach(() => {
+  window.localStorage.clear();
   window.sessionStorage.clear();
 });
 
-describe('workspace session storage v2', () => {
+describe('persistent workspace storage v2', () => {
   it('persists and reads only the current schema v2 write contract', () => {
     const draft = createDraft();
     writeWorkspaceSession({
@@ -47,8 +48,8 @@ describe('workspace session storage v2', () => {
     });
 
     expect(Object.isFrozen(draft)).toBe(false);
-    expect(window.sessionStorage.getItem(LEGACY_WORKSPACE_SESSION_STORAGE_KEY)).toBeNull();
-    expect(JSON.parse(window.sessionStorage.getItem(WORKSPACE_SESSION_STORAGE_KEY)!))
+    expect(window.localStorage.getItem(LEGACY_WORKSPACE_SESSION_STORAGE_KEY)).toBeNull();
+    expect(JSON.parse(window.localStorage.getItem(WORKSPACE_SESSION_STORAGE_KEY)!))
       .toMatchObject({ version: 2, automaticPlanCheckpoint: null });
     expect(readWorkspaceSession()).toEqual({
       version: 2,
@@ -113,7 +114,7 @@ describe('workspace session storage v2', () => {
       openingStateConfirmed: false,
     });
     expect(window.sessionStorage.getItem(LEGACY_WORKSPACE_SESSION_STORAGE_KEY)).toBeNull();
-    expect(JSON.parse(window.sessionStorage.getItem(WORKSPACE_SESSION_STORAGE_KEY)!))
+    expect(JSON.parse(window.localStorage.getItem(WORKSPACE_SESSION_STORAGE_KEY)!))
       .toMatchObject({ version: 2, screen: 'SETUP', automaticPlanCheckpoint: null });
   });
 
@@ -132,9 +133,9 @@ describe('workspace session storage v2', () => {
       candidateId: 'candidate-1',
     });
 
-    const raw = JSON.parse(window.sessionStorage.getItem(WORKSPACE_SESSION_STORAGE_KEY)!);
+    const raw = JSON.parse(window.localStorage.getItem(WORKSPACE_SESSION_STORAGE_KEY)!);
     raw.automaticPlanCheckpoint = 'broken-checkpoint';
-    window.sessionStorage.setItem(WORKSPACE_SESSION_STORAGE_KEY, JSON.stringify(raw));
+    window.localStorage.setItem(WORKSPACE_SESSION_STORAGE_KEY, JSON.stringify(raw));
 
     const restored = readWorkspaceSession();
     expect(restored?.draft).toEqual(draft);
@@ -143,11 +144,11 @@ describe('workspace session storage v2', () => {
   });
 
   it('ignores malformed or unknown v2 data and clears both workspace generations', () => {
-    window.sessionStorage.setItem(WORKSPACE_SESSION_STORAGE_KEY, '{broken');
+    window.localStorage.setItem(WORKSPACE_SESSION_STORAGE_KEY, '{broken');
     expect(readWorkspaceSession()).toBeNull();
-    expect(window.sessionStorage.getItem(WORKSPACE_SESSION_STORAGE_KEY)).toBeNull();
+    expect(window.localStorage.getItem(WORKSPACE_SESSION_STORAGE_KEY)).toBeNull();
 
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       WORKSPACE_SESSION_STORAGE_KEY,
       JSON.stringify({ version: 99, draft: {} }),
     );
@@ -162,8 +163,30 @@ describe('workspace session storage v2', () => {
       organizationScale: 1,
     });
     window.sessionStorage.setItem(LEGACY_WORKSPACE_SESSION_STORAGE_KEY, '{}');
+    window.localStorage.setItem(LEGACY_WORKSPACE_SESSION_STORAGE_KEY, '{}');
     clearWorkspaceSession();
+    expect(window.localStorage.getItem(WORKSPACE_SESSION_STORAGE_KEY)).toBeNull();
+    expect(window.localStorage.getItem(LEGACY_WORKSPACE_SESSION_STORAGE_KEY)).toBeNull();
     expect(window.sessionStorage.getItem(WORKSPACE_SESSION_STORAGE_KEY)).toBeNull();
     expect(window.sessionStorage.getItem(LEGACY_WORKSPACE_SESSION_STORAGE_KEY)).toBeNull();
+  });
+
+  it('promotes an existing v2 session snapshot into persistent local storage', () => {
+    const draft = createDraftWithMember();
+    window.sessionStorage.setItem(
+      WORKSPACE_SESSION_STORAGE_KEY,
+      JSON.stringify({
+        version: 2,
+        draft,
+        manualPlanDraft: null,
+        screen: 'SETUP',
+        organizationScale: 1,
+        automaticPlanCheckpoint: null,
+      }),
+    );
+
+    expect(readWorkspaceSession()?.draft).toEqual(draft);
+    expect(window.sessionStorage.getItem(WORKSPACE_SESSION_STORAGE_KEY)).toBeNull();
+    expect(window.localStorage.getItem(WORKSPACE_SESSION_STORAGE_KEY)).not.toBeNull();
   });
 });
