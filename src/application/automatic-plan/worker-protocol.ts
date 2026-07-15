@@ -1,11 +1,24 @@
-import type {
-  AutomaticPlanProofProgress,
-  AutomaticPlanRequest,
-  RawAutomaticPlanCandidate,
-  SafeAutomaticPlanError,
+import {
+  AUTOMATIC_PLAN_OBJECTIVE_STAGE_ORDER,
+  AUTOMATIC_PLAN_PROVEN_SCALAR_OBJECTIVE_COUNT,
+  AUTOMATIC_PLAN_VECTOR_OBJECTIVE_STAGES,
+  isCanonicalNonNegativeSafeInteger,
+  type AutomaticPlanProofProgress,
+  type AutomaticPlanRequest,
+  type RawAutomaticPlanCandidate,
+  type SafeAutomaticPlanError,
 } from '../../optimizer';
 
-export const AUTOMATIC_PLAN_WORKER_PROTOCOL_VERSION = '1.0.0' as const;
+export const AUTOMATIC_PLAN_WORKER_PROTOCOL_VERSION = '2.0.0' as const;
+
+const PROOF_STAGE_SET: ReadonlySet<string> = new Set([
+  ...AUTOMATIC_PLAN_OBJECTIVE_STAGE_ORDER,
+  'COMPLETE',
+]);
+
+const PROOF_VECTOR_OBJECTIVE_SET: ReadonlySet<string> = new Set(
+  AUTOMATIC_PLAN_VECTOR_OBJECTIVE_STAGES,
+);
 
 export type AutomaticPlanWorkerRequest =
   | {
@@ -73,16 +86,26 @@ export function isAutomaticPlanWorkerResponse(
 
   const isRecord = (candidate: unknown): candidate is Readonly<Record<string, unknown>> =>
     typeof candidate === 'object' && candidate !== null && !Array.isArray(candidate);
+  const isVectorPrefix = (candidate: unknown): boolean => {
+    if (!isRecord(candidate)) return false;
+    return (
+      typeof candidate.objective === 'string' &&
+      PROOF_VECTOR_OBJECTIVE_SET.has(candidate.objective) &&
+      isCanonicalNonNegativeSafeInteger(candidate.length)
+    );
+  };
   const isProof = (candidate: unknown): boolean => {
     if (!isRecord(candidate)) return false;
     return (
       typeof candidate.stage === 'string' &&
-      Number.isSafeInteger(candidate.provenScalarObjectiveCount) &&
-      (candidate.provenScalarObjectiveCount as number) >= 0 &&
+      PROOF_STAGE_SET.has(candidate.stage) &&
+      isCanonicalNonNegativeSafeInteger(candidate.provenScalarObjectiveCount) &&
+      candidate.provenScalarObjectiveCount <=
+        AUTOMATIC_PLAN_PROVEN_SCALAR_OBJECTIVE_COUNT &&
       (candidate.primaryLowerBound === null ||
-        (typeof candidate.primaryLowerBound === 'number' &&
-          Number.isSafeInteger(candidate.primaryLowerBound))) &&
-      (candidate.provenVectorPrefix === null || isRecord(candidate.provenVectorPrefix))
+        isCanonicalNonNegativeSafeInteger(candidate.primaryLowerBound)) &&
+      (candidate.provenVectorPrefix === null ||
+        isVectorPrefix(candidate.provenVectorPrefix))
     );
   };
 

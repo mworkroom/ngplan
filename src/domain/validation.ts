@@ -491,17 +491,17 @@ function validateOpeningStates(
       );
       continue;
     }
-    validatePvField(
+    const openingQualificationPvp = validatePvField(
       state.openingQualificationPvp,
       { snapshotId: input.snapshotId, memberKey, field: 'openingQualificationPvp' },
       issues,
     );
-    validatePvField(
+    const fortnightPvpOpeningCredit = validatePvField(
       state.fortnightPvpOpeningCredit,
       { snapshotId: input.snapshotId, memberKey, field: 'fortnightPvpOpeningCredit' },
       issues,
     );
-    validatePvField(
+    const dailyCarryPvp = validatePvField(
       state.dailyCarryPvp,
       { snapshotId: input.snapshotId, memberKey, field: 'dailyCarryPvp' },
       issues,
@@ -516,6 +516,53 @@ function validateOpeningStates(
       { snapshotId: input.snapshotId, memberKey, field: 'dailyCarryRight' },
       issues,
     );
+
+    if (
+      openingQualificationPvp !== undefined &&
+      openingQualificationPvp > DEFAULT_RULE_SET.cumulativePvpCap
+    ) {
+      pushIssue(
+        issues,
+        'CUMULATIVE_PVP_OPENING_EXCEEDS_CAP',
+        { snapshotId: input.snapshotId, memberKey, field: 'openingQualificationPvp' },
+        `누적 PVP 시작값은 ${DEFAULT_RULE_SET.cumulativePvpCap.toLocaleString('ko-KR')}을 넘을 수 없습니다.`,
+        '회사에서 확인한 현재 누적 PVP를 0~2,400 범위로 입력해 주세요.',
+      );
+    }
+    if (
+      fortnightPvpOpeningCredit !== undefined &&
+      fortnightPvpOpeningCredit > DEFAULT_RULE_SET.cumulativePvpCap &&
+      fortnightPvpOpeningCredit !== openingQualificationPvp
+    ) {
+      pushIssue(
+        issues,
+        'CUMULATIVE_PVP_OPENING_EXCEEDS_CAP',
+        { snapshotId: input.snapshotId, memberKey, field: 'fortnightPvpOpeningCredit' },
+        `보름 계산에 쓰는 누적 PVP 시작값은 ${DEFAULT_RULE_SET.cumulativePvpCap.toLocaleString('ko-KR')}을 넘을 수 없습니다.`,
+      );
+    }
+    if (
+      openingQualificationPvp !== undefined &&
+      fortnightPvpOpeningCredit !== undefined &&
+      openingQualificationPvp !== fortnightPvpOpeningCredit
+    ) {
+      pushIssue(
+        issues,
+        'CUMULATIVE_PVP_OPENING_MISMATCH',
+        { snapshotId: input.snapshotId, memberKey, field: 'fortnightPvpOpeningCredit' },
+        '수당 자격과 보름 계산은 같은 누적 PVP 시작값을 사용해야 합니다.',
+        '화면의 누적 PVP 하나를 두 내부 장부의 공통 시작값으로 사용해 주세요.',
+      );
+    }
+    if (dailyCarryPvp !== undefined && dailyCarryPvp !== 0) {
+      pushIssue(
+        issues,
+        'DAILY_PVP_OPENING_NONZERO',
+        { snapshotId: input.snapshotId, memberKey, field: 'dailyCarryPvp' },
+        '첫날 일일 PVP 시작 잔액은 항상 0이어야 합니다.',
+        '회사 누적 PVP는 자격·보름 시작값에만 넣고 좌·우 시작 잔액은 별도로 입력해 주세요.',
+      );
+    }
   }
 
   for (const memberKey of Object.keys(states)) {
@@ -609,6 +656,7 @@ function validateAllocations(
 ): void {
   const dateSet = period === undefined ? new Set<string>() : new Set(period.dates);
   const presentCells = new Set<string>();
+  const directPvpTotalByMember = new Map<string, number>();
   let identityError = false;
 
   allocations.forEach((cell, index) => {
@@ -668,6 +716,16 @@ function validateAllocations(
     }
 
     const parsed = validateAllocationPvFields(cell, baseLocation, issues);
+    if (memberKeyValid && parsed.pvp !== undefined) {
+      const previous = directPvpTotalByMember.get(rawMemberKey) ?? 0;
+      const cappedOverflow = DEFAULT_RULE_SET.cumulativePvpCap + 1;
+      directPvpTotalByMember.set(
+        rawMemberKey,
+        parsed.pvp > cappedOverflow - previous
+          ? cappedOverflow
+          : previous + parsed.pvp,
+      );
+    }
     if (organizationState.topologyUsable && memberKeyValid) {
       const leftConnected = organizationState.connectedSlots.has(
         slotKey(rawMemberKey, 'LEFT'),
@@ -693,6 +751,34 @@ function validateAllocations(
       }
     }
   });
+
+  for (const [memberKey, directPvpTotal] of directPvpTotalByMember) {
+    const opening = organization.openingStateByMember[memberKey];
+    const cumulativePvpOpening = opening?.openingQualificationPvp;
+    if (
+      typeof cumulativePvpOpening !== 'number' ||
+      !Number.isSafeInteger(cumulativePvpOpening) ||
+      Object.is(cumulativePvpOpening, -0) ||
+      cumulativePvpOpening < 0 ||
+      cumulativePvpOpening > DEFAULT_RULE_SET.cumulativePvpCap
+    ) {
+      continue;
+    }
+    const headroom = DEFAULT_RULE_SET.cumulativePvpCap - cumulativePvpOpening;
+    if (directPvpTotal > headroom) {
+      pushIssue(
+        issues,
+        'CUMULATIVE_PVP_ALLOCATION_EXCEEDS_CAP',
+        {
+          snapshotId: organization.snapshotId,
+          memberKey,
+          field: 'pvp',
+        },
+        `누적 PVP ${cumulativePvpOpening.toLocaleString('ko-KR')}에 이번 기간 신규 PVP ${directPvpTotal.toLocaleString('ko-KR')}을 더하면 평생 상한 ${DEFAULT_RULE_SET.cumulativePvpCap.toLocaleString('ko-KR')}을 넘습니다.`,
+        `이 회원의 이번 기간 신규 PVP 합계를 ${headroom.toLocaleString('ko-KR')} 이하로 줄여 주세요.`,
+      );
+    }
+  }
 
   if (
     period !== undefined &&
@@ -747,6 +833,7 @@ function hasCanonicalRuleSetBody(rules: RuleSet): boolean {
       rules.allowedPvpTargets.every(
         (target, index) => target === expected.allowedPvpTargets[index],
       ) &&
+      rules.cumulativePvpCap === expected.cumulativePvpCap &&
       rules.fortnightSideTarget === expected.fortnightSideTarget &&
       rules.businessCalendarPolicy === expected.businessCalendarPolicy &&
       rules.pvpTiePolicy === expected.pvpTiePolicy &&
@@ -860,8 +947,8 @@ export function validatePlan(
       issues,
       'RULESET_BODY_MISMATCH',
       { snapshotId, field: 'ruleset' },
-      '규칙 버전 3.0.0의 본문이 확정된 규칙과 일치하지 않습니다.',
-      '내보낸 기본 RuleSet 3.0.0을 변경하지 않고 사용해 주세요.',
+      '규칙 버전 4.0.0의 본문이 확정된 규칙과 일치하지 않습니다.',
+      '내보낸 기본 RuleSet 4.0.0을 변경하지 않고 사용해 주세요.',
     );
   }
 

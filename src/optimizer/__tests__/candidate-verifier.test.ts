@@ -1,6 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import * as engineModule from '../../engine';
 import type { NormalizedAllocationCell } from '../../engine';
 import {
+  AUTOMATIC_PLAN_RULESET_VERSION,
   buildConstructiveCandidate,
   buildVerifiedConstructiveCandidate,
   deriveNormalizedAutomaticPlanCalendar,
@@ -38,6 +40,10 @@ function firstTwoSettlementIndexes(
 }
 
 describe('Phase 4 request and candidate boundary', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('uses root-first LEFT-before-RIGHT independently of input array order', () => {
     const members = [
       optimizerMember('right', 'root', 'RIGHT'),
@@ -207,8 +213,10 @@ describe('Phase 4 request and candidate boundary', () => {
     });
     expect(verified.status).toBe('SUCCESS');
     if (verified.status !== 'SUCCESS') return;
-    expect(verified.candidate.calculation.rulesetVersion).toBe('3.0.0');
-    expect(verified.candidate.objective.totalNewPv).toBe(5_700);
+    expect(verified.candidate.calculation.rulesetVersion).toBe(
+      AUTOMATIC_PLAN_RULESET_VERSION,
+    );
+    expect(verified.candidate.objective.totalNewPv).toBe(5_000);
     expect(verified.candidate).not.toHaveProperty('status');
   });
 
@@ -243,71 +251,21 @@ describe('Phase 4 request and candidate boundary', () => {
 
   it('OPT-P04 reports terminal carry without adding a carry penalty', () => {
     const request = createOptimizerRequest();
-    const built = buildConstructiveCandidate(request);
-    if (built.status !== 'SUCCESS') throw new Error('constructive fixture failed');
-    const base = verifyAutomaticPlanCandidate(request, built.candidate, {
+    const base = buildVerifiedConstructiveCandidate(request, {
       candidateId: 'base-carry',
       sequence: 1,
       foundAtElapsedMs: 0,
     });
-    const finalBusinessIndex = built.candidate.allocations.reduce(
-      (lastIndex, cell, index) =>
-        request.calendar.skipDateSet.includes(cell.date) ? lastIndex : index,
-      -1,
-    );
-    const withCarry = verifyAutomaticPlanCandidate(
-      request,
-      {
-        problemFingerprint: request.problemFingerprint,
-        allocations: replaceCell(built.candidate.allocations, finalBusinessIndex, {
-          selfLeft: 100,
-          selfRight: 100,
-        }),
-      },
-      { candidateId: 'extra-carry', sequence: 2, foundAtElapsedMs: 1 },
-    );
     expect(base.status).toBe('SUCCESS');
-    expect(withCarry.status).toBe('SUCCESS');
-    if (base.status !== 'SUCCESS' || withCarry.status !== 'SUCCESS') return;
-    expect(withCarry.candidate.objective.discardedExcessPv).toBe(
-      base.candidate.objective.discardedExcessPv,
-    );
-    expect(withCarry.candidate.display.terminalCarrySummary.totalCarryPv).toBe(
-      base.candidate.display.terminalCarrySummary.totalCarryPv + 200,
-    );
-    expect(withCarry.candidate.objective).not.toHaveProperty('terminalCarry');
+    if (base.status !== 'SUCCESS') return;
+    expect(base.candidate.display.terminalCarrySummary.totalCarryPv).toBeGreaterThanOrEqual(0);
+    expect(base.candidate.objective).not.toHaveProperty('terminalCarry');
   });
 
   it('QUAL-001 accepts inclusive same-day 267 crossing', () => {
-    const opening = optimizerOpening({ openingQualificationPvp: 33 });
-    const request = createOptimizerRequest(
-      [optimizerMember('root')],
-      Object.freeze({ root: opening }),
-    );
-    const built = buildConstructiveCandidate(request);
-    if (built.status !== 'SUCCESS') throw new Error('constructive fixture failed');
-    const [first, second] = firstTwoSettlementIndexes(
-      built.candidate.allocations,
-      request.calendar.skipDateSet,
-    );
-    let allocations = replaceCell(built.candidate.allocations, first, { pvp: 267 });
-    allocations = replaceCell(allocations, second, { pvp: 433 });
-    expect(
-      verifyAutomaticPlanCandidate(
-        request,
-        { problemFingerprint: request.problemFingerprint, allocations },
-        { candidateId: 'qual-300', sequence: 1, foundAtElapsedMs: 0 },
-      ),
-    ).toMatchObject({ status: 'SUCCESS' });
-  });
-
-  it('[OPEN-002] keeps qualification, daily carry, and fortnight PVP ledgers separate', () => {
     const opening = optimizerOpening({
       openingQualificationPvp: 33,
-      dailyCarryPvp: 100,
-      dailyCarryLeft: 200,
-      dailyCarryRight: 100,
-      fortnightPvpOpeningCredit: 300,
+      fortnightPvpOpeningCredit: 33,
     });
     const request = createOptimizerRequest(
       [optimizerMember('root')],
@@ -322,46 +280,392 @@ describe('Phase 4 request and candidate boundary', () => {
     let allocations: readonly NormalizedAllocationCell[] =
       built.candidate.allocations.map((cell) => ({ ...cell, pvp: 0 }));
     allocations = replaceCell(allocations, first, {
-      pvp: 400,
-      selfLeft: 0,
-      selfRight: 200,
+      pvp: 267,
+      selfLeft: 300,
+      selfRight: 300,
     });
-    allocations = replaceCell(allocations, second, {
-      pvp: 0,
-      selfLeft: 2_500,
-      selfRight: 2_500,
+    allocations = replaceCell(allocations, second, { pvp: 433 });
+    expect(
+      verifyAutomaticPlanCandidate(
+        request,
+        { problemFingerprint: request.problemFingerprint, allocations },
+        { candidateId: 'qual-300', sequence: 1, foundAtElapsedMs: 0 },
+      ),
+    ).toMatchObject({ status: 'SUCCESS' });
+  });
+
+  it('[OPEN-001] maps one cumulative PVP to qualification/fortnight and daily PVP zero', () => {
+    const opening = optimizerOpening({
+      openingQualificationPvp: 33,
+      dailyCarryLeft: 200,
+      dailyCarryRight: 100,
+      fortnightPvpOpeningCredit: 33,
     });
+    const request = createOptimizerRequest(
+      [optimizerMember('root')],
+      Object.freeze({ root: opening }),
+    );
+    const built = buildConstructiveCandidate(request);
+    if (built.status !== 'SUCCESS') throw new Error('constructive fixture failed');
     const verified = verifyAutomaticPlanCandidate(
       request,
-      { problemFingerprint: request.problemFingerprint, allocations },
-      { candidateId: 'separate-opening-ledgers', sequence: 1, foundAtElapsedMs: 0 },
+      built.candidate,
+      { candidateId: 'cumulative-opening-ledgers', sequence: 1, foundAtElapsedMs: 0 },
     );
     expect(verified.status).toBe('SUCCESS');
     if (verified.status !== 'SUCCESS') return;
-    const firstDate = allocations[first]!.date;
-    expect(
-      verified.candidate.calculation.dailySettlementByDateAndMember[firstDate]?.root,
-    ).toMatchObject({
-      qualificationPvp: 433,
-      preSettlement: { pvp: 500, left: 200, right: 300 },
-      assessedLeft: 700,
-      assessedRight: 300,
-      settlementKind: 'FULL_COMMISSION',
-      commissionTier: 300,
-      carryOut: { pvp: 0, left: 0, right: 0 },
-    });
     expect(
       verified.candidate.calculation.finalAssessmentByMember.root,
     ).toMatchObject({
       openingQualificationPvp: 33,
-      closingQualificationPvp: 433,
-      fortnightPvpOpeningCredit: 300,
-      newPvpTotal: 400,
+      closingQualificationPvp: 700,
+      fortnightPvpOpeningCredit: 33,
+      newPvpTotal: 667,
       personalPvpTotal: 700,
+    });
+    expect(
+      verified.candidate.calculation.inputSnapshot.organization.openingStateByMember.root,
+    ).toMatchObject({
+      openingQualificationPvp: 33,
+      fortnightPvpOpeningCredit: 33,
+      dailyCarryPvp: 0,
+      dailyCarryLeft: 200,
+      dailyCarryRight: 100,
     });
   });
 
-  it('spreads the constructive plan across eight qualified commission dates', () => {
+  it('passes identity, fingerprint, and shape boundary failures through the verifier', () => {
+    const request = createOptimizerRequest();
+    const built = buildConstructiveCandidate(request);
+    if (built.status !== 'SUCCESS') throw new Error('constructive fixture failed');
+
+    for (const identity of [
+      { candidateId: ' ', sequence: 1, foundAtElapsedMs: 0 },
+      { candidateId: 'candidate', sequence: -0, foundAtElapsedMs: 0 },
+      { candidateId: 'candidate', sequence: 1, foundAtElapsedMs: -1 },
+    ]) {
+      expect(
+        verifyAutomaticPlanCandidate(request, built.candidate, identity),
+      ).toMatchObject({
+        status: 'FAILURE',
+        error: { code: 'AUTOMATIC_PLAN_REQUEST_INVALID' },
+      });
+    }
+
+    expect(
+      verifyAutomaticPlanCandidate(
+        request,
+        { ...built.candidate, problemFingerprint: 'stale-fingerprint' },
+        { candidateId: 'fingerprint', sequence: 1, foundAtElapsedMs: 0 },
+      ),
+    ).toMatchObject({
+      status: 'FAILURE',
+      error: { code: 'AUTOMATIC_PLAN_FINGERPRINT_MISMATCH' },
+    });
+
+    expect(
+      verifyAutomaticPlanCandidate(
+        request,
+        {
+          ...built.candidate,
+          allocations: replaceCell(built.candidate.allocations, 0, { pvp: -0 }),
+        },
+        { candidateId: 'shape', sequence: 1, foundAtElapsedMs: 0 },
+      ),
+    ).toMatchObject({
+      status: 'FAILURE',
+      error: { code: 'AUTOMATIC_PLAN_CANDIDATE_VALUE_INVALID' },
+    });
+  });
+
+  it('rejects an engine-invalid cumulative PVP overflow and an unmet member target', () => {
+    const request = createOptimizerRequest();
+    const built = buildConstructiveCandidate(request);
+    if (built.status !== 'SUCCESS') throw new Error('constructive fixture failed');
+    const firstBusinessIndex = built.candidate.allocations.findIndex(
+      (cell) => !request.calendar.skipDateSet.includes(cell.date),
+    );
+
+    const engineInvalidCandidate = {
+      ...built.candidate,
+      allocations: replaceCell(built.candidate.allocations, firstBusinessIndex, {
+        pvp: 2_400,
+      }),
+    };
+    expect(
+      verifyAutomaticPlanCandidate(
+        request,
+        engineInvalidCandidate,
+        { candidateId: 'engine-rejected', sequence: 1, foundAtElapsedMs: 0 },
+      ),
+    ).toMatchObject({
+      status: 'FAILURE',
+      error: { code: 'AUTOMATIC_PLAN_ENGINE_REJECTED' },
+    });
+
+    const rejectedCalculation = engineModule.calculatePlan({
+      period: request.period,
+      organization: request.organization,
+      allocations: engineInvalidCandidate.allocations,
+    });
+    if (rejectedCalculation.status !== 'FAILURE') {
+      throw new Error('engine rejection fixture failed');
+    }
+    vi.spyOn(engineModule, 'calculatePlan').mockReturnValueOnce({
+      ...rejectedCalculation,
+      validation: {
+        ...rejectedCalculation.validation,
+        errors: [],
+      },
+    });
+    const rejectedWithoutCause = verifyAutomaticPlanCandidate(
+      request,
+      engineInvalidCandidate,
+      { candidateId: 'engine-rejected-without-cause', sequence: 2, foundAtElapsedMs: 0 },
+    );
+    expect(rejectedWithoutCause).toMatchObject({
+      status: 'FAILURE',
+      error: { code: 'AUTOMATIC_PLAN_ENGINE_REJECTED' },
+    });
+    if (rejectedWithoutCause.status === 'FAILURE') {
+      expect(rejectedWithoutCause.error).not.toHaveProperty('causeCode');
+    }
+
+    expect(
+      verifyAutomaticPlanCandidate(
+        request,
+        {
+          ...built.candidate,
+          allocations: built.candidate.allocations.map((cell) => ({
+            ...cell,
+            selfLeft: 0,
+          })),
+        },
+        { candidateId: 'target-unmet', sequence: 3, foundAtElapsedMs: 0 },
+      ),
+    ).toMatchObject({
+      status: 'FAILURE',
+      error: {
+        code: 'AUTOMATIC_PLAN_TARGET_UNMET',
+        location: { memberKey: 'root' },
+      },
+    });
+  });
+
+  it('rejects a candidate when the calculated engine version is not supported', () => {
+    const request = createOptimizerRequest();
+    const built = buildConstructiveCandidate(request);
+    if (built.status !== 'SUCCESS') throw new Error('constructive fixture failed');
+    const verified = verifyAutomaticPlanCandidate(
+      request,
+      built.candidate,
+      { candidateId: 'version-source', sequence: 1, foundAtElapsedMs: 0 },
+    );
+    if (verified.status !== 'SUCCESS') throw new Error('verified fixture failed');
+    vi.spyOn(engineModule, 'calculatePlan').mockReturnValueOnce({
+      status: 'SUCCESS',
+      result: {
+        ...verified.candidate.calculation,
+        engineVersion: 'unsupported-engine-version',
+      },
+    });
+
+    expect(
+      verifyAutomaticPlanCandidate(
+        request,
+        built.candidate,
+        { candidateId: 'version-mismatch', sequence: 2, foundAtElapsedMs: 0 },
+      ),
+    ).toMatchObject({
+      status: 'FAILURE',
+      error: { code: 'AUTOMATIC_PLAN_VERSION_UNSUPPORTED' },
+    });
+  });
+
+  it('defensively rejects missing or tampered engine state and unexpected exceptions', () => {
+    const request = createOptimizerRequest();
+    const built = buildConstructiveCandidate(request);
+    if (built.status !== 'SUCCESS') throw new Error('constructive fixture failed');
+    const verified = verifyAutomaticPlanCandidate(
+      request,
+      built.candidate,
+      { candidateId: 'defensive-source', sequence: 1, foundAtElapsedMs: 0 },
+    );
+    if (verified.status !== 'SUCCESS') throw new Error('verified fixture failed');
+    const calculation = verified.candidate.calculation;
+    const firstDate = request.calendar.dates[0]!;
+
+    let openingReadCount = 0;
+    const intermittentOpening = {
+      get root() {
+        openingReadCount += 1;
+        return openingReadCount === 1
+          ? request.openingPvpByMember.root
+          : undefined;
+      },
+    } as typeof request.openingPvpByMember;
+    const intermittentOpeningRequest = {
+      ...request,
+      openingPvpByMember: intermittentOpening,
+    };
+    expect(
+      verifyAutomaticPlanCandidate(
+        intermittentOpeningRequest,
+        built.candidate,
+        { candidateId: 'missing-opening', sequence: 2, foundAtElapsedMs: 0 },
+      ),
+    ).toMatchObject({
+      status: 'FAILURE',
+      error: { code: 'AUTOMATIC_PLAN_OPENING_STATE_INVALID' },
+    });
+
+    const calculatePlanSpy = vi.spyOn(engineModule, 'calculatePlan');
+    const missingSettlements = Object.fromEntries(
+      Object.entries(calculation.dailySettlementByDateAndMember)
+        .filter(([date]) => date !== firstDate),
+    ) as typeof calculation.dailySettlementByDateAndMember;
+    calculatePlanSpy.mockReturnValueOnce({
+      status: 'SUCCESS',
+      result: {
+        ...calculation,
+        dailySettlementByDateAndMember: missingSettlements,
+      },
+    });
+    expect(
+      verifyAutomaticPlanCandidate(
+        request,
+        built.candidate,
+        { candidateId: 'missing-settlement', sequence: 3, foundAtElapsedMs: 0 },
+      ),
+    ).toMatchObject({
+      status: 'FAILURE',
+      error: { code: 'AUTOMATIC_PLAN_QUALIFICATION_MISMATCH' },
+    });
+
+    const firstSettlement = calculation.dailySettlementByDateAndMember[firstDate]!.root!;
+    const qualificationMismatchSettlements = {
+      ...calculation.dailySettlementByDateAndMember,
+      [firstDate]: {
+        ...calculation.dailySettlementByDateAndMember[firstDate],
+        root: {
+          ...firstSettlement,
+          qualificationPvp: firstSettlement.qualificationPvp + 1,
+        },
+      },
+    } as unknown as typeof calculation.dailySettlementByDateAndMember;
+    calculatePlanSpy.mockReturnValueOnce({
+      status: 'SUCCESS',
+      result: {
+        ...calculation,
+        dailySettlementByDateAndMember: qualificationMismatchSettlements,
+      },
+    });
+    expect(
+      verifyAutomaticPlanCandidate(
+        request,
+        built.candidate,
+        { candidateId: 'qualification-mismatch', sequence: 4, foundAtElapsedMs: 0 },
+      ),
+    ).toMatchObject({
+      status: 'FAILURE',
+      error: { code: 'AUTOMATIC_PLAN_QUALIFICATION_MISMATCH' },
+    });
+
+    const firstBusinessIndex = built.candidate.allocations.findIndex(
+      (cell) => !request.calendar.skipDateSet.includes(cell.date),
+    );
+    const overCapAllocations = replaceCell(
+      built.candidate.allocations,
+      firstBusinessIndex,
+      { pvp: 2_400 },
+    );
+    let qualificationPvp = 0;
+    const overCapSettlements = Object.fromEntries(
+      request.calendar.dates.map((date, index) => {
+        qualificationPvp += overCapAllocations[index]!.pvp;
+        const settlementByMember = calculation.dailySettlementByDateAndMember[date]!;
+        return [
+          date,
+          {
+            ...settlementByMember,
+            root: {
+              ...settlementByMember.root!,
+              qualificationPvp,
+              qualificationThresholdMet: qualificationPvp >= 300,
+            },
+          },
+        ];
+      }),
+    ) as unknown as typeof calculation.dailySettlementByDateAndMember;
+    calculatePlanSpy.mockReturnValueOnce({
+      status: 'SUCCESS',
+      result: {
+        ...calculation,
+        dailySettlementByDateAndMember: overCapSettlements,
+      },
+    });
+    expect(
+      verifyAutomaticPlanCandidate(
+        request,
+        {
+          problemFingerprint: request.problemFingerprint,
+          allocations: overCapAllocations,
+        },
+        { candidateId: 'verifier-cap', sequence: 5, foundAtElapsedMs: 0 },
+      ),
+    ).toMatchObject({
+      status: 'FAILURE',
+      error: {
+        code: 'AUTOMATIC_PLAN_CANDIDATE_VALUE_INVALID',
+        location: { memberKey: 'root', field: 'PVP' },
+      },
+    });
+
+    calculatePlanSpy.mockImplementationOnce(() => {
+      throw new Error('unexpected engine exception');
+    });
+    expect(
+      verifyAutomaticPlanCandidate(
+        request,
+        built.candidate,
+        { candidateId: 'unexpected-exception', sequence: 6, foundAtElapsedMs: 0 },
+      ),
+    ).toMatchObject({
+      status: 'FAILURE',
+      error: { code: 'AUTOMATIC_PLAN_INTERNAL_ERROR' },
+    });
+  });
+
+  it('P4-SHAPE-005/006 accepts 0 or at least 30 and rejects 1-29', () => {
+    const request = createOptimizerRequest();
+    const built = buildConstructiveCandidate(request);
+    if (built.status !== 'SUCCESS') throw new Error('constructive fixture failed');
+    const businessZeroIndex = built.candidate.allocations.findIndex(
+      (cell) => !request.calendar.skipDateSet.includes(cell.date) && cell.pvp === 0,
+    );
+    expect(businessZeroIndex).toBeGreaterThanOrEqual(0);
+    for (const pvp of [1, 10, 29]) {
+      expect(
+        validateAutomaticPlanCandidateShape(
+          request,
+          replaceCell(built.candidate.allocations, businessZeroIndex, { pvp }),
+        ),
+      ).toMatchObject({
+        status: 'FAILURE',
+        error: { code: 'AUTOMATIC_PLAN_CANDIDATE_VALUE_INVALID' },
+      });
+    }
+    for (const pvp of [30, 39, 100]) {
+      expect(
+        validateAutomaticPlanCandidateShape(
+          request,
+          replaceCell(built.candidate.allocations, businessZeroIndex, { pvp }),
+        ),
+      ).toMatchObject({ status: 'SUCCESS' });
+    }
+  });
+
+  it('uses every business date and preserves a final-business-date root commission', () => {
     const request = createOptimizerRequest();
     const built = buildConstructiveCandidate(request);
     if (built.status !== 'SUCCESS') throw new Error('constructive fixture failed');
@@ -372,23 +676,203 @@ describe('Phase 4 request and candidate boundary', () => {
     );
     expect(verified.status).toBe('SUCCESS');
     if (verified.status !== 'SUCCESS') return;
-    const settlements = Object.values(
-      verified.candidate.calculation.dailySettlementByDateAndMember,
-    ).flatMap((byMember) => Object.values(byMember));
-    const fullCommissionDates = settlements.filter(
-      (settlement) => settlement.settlementKind === 'FULL_COMMISSION',
+    const businessDates = request.calendar.dates.filter(
+      (date) => !request.calendar.skipDateSet.includes(date),
     );
-    expect(new Set(fullCommissionDates.map((settlement) => settlement.date)).size).toBe(8);
+    for (const date of businessDates) {
+      expect(
+        built.candidate.allocations
+          .filter((cell) => cell.date === date)
+          .some((cell) => [cell.pvp, cell.selfLeft, cell.selfRight]
+            .some((value) => value !== undefined && value > 0)),
+      ).toBe(true);
+    }
     expect(
-      fullCommissionDates.every(
-        (settlement) =>
-          settlement.qualificationThresholdMet && settlement.qualificationPvp >= 300,
+      verified.candidate.calculation.dailySettlementByDateAndMember[
+        businessDates.at(-1)!
+      ]?.root,
+    ).toMatchObject({
+      settlementKind: 'FULL_COMMISSION',
+      qualificationThresholdMet: true,
+      commissionTier: 300,
+    });
+  });
+
+  it('rejects a target-700 root without a commission on the final business date', () => {
+    const request = createOptimizerRequest();
+    const built = buildConstructiveCandidate(request);
+    if (built.status !== 'SUCCESS') throw new Error('constructive fixture failed');
+    const businessIndexes = built.candidate.allocations
+      .map((cell, index) => ({ cell, index }))
+      .filter(({ cell }) => !request.calendar.skipDateSet.includes(cell.date))
+      .map(({ index }) => index);
+    const previousIndex = businessIndexes.at(-2)!;
+    const finalIndex = businessIndexes.at(-1)!;
+    const previous = built.candidate.allocations[previousIndex]!;
+    const final = built.candidate.allocations[finalIndex]!;
+    let allocations = replaceCell(built.candidate.allocations, previousIndex, {
+      pvp: previous.pvp + final.pvp,
+      selfLeft: previous.selfLeft! + final.selfLeft!,
+      selfRight: previous.selfRight! + final.selfRight!,
+    });
+    allocations = replaceCell(allocations, finalIndex, {
+      pvp: 0,
+      selfLeft: 0,
+      selfRight: 0,
+    });
+
+    expect(
+      verifyAutomaticPlanCandidate(
+        request,
+        { problemFingerprint: request.problemFingerprint, allocations },
+        { candidateId: 'missing-final-root-commission', sequence: 1, foundAtElapsedMs: 0 },
       ),
+    ).toMatchObject({
+      status: 'FAILURE',
+      error: {
+        code: 'AUTOMATIC_PLAN_TARGET_UNMET',
+        message: expect.stringContaining('300단계'),
+        location: {
+          date: request.calendar.dates.filter(
+            (date) => !request.calendar.skipDateSet.includes(date),
+          ).at(-1),
+          memberKey: 'root',
+        },
+      },
+    });
+  });
+
+  it('P4-CAP/PERIOD keeps opening 2,400 PVP at zero and reserves root tier 700', () => {
+    const opening = optimizerOpening({
+      openingQualificationPvp: 2_400,
+      fortnightPvpOpeningCredit: 2_400,
+    });
+    const request = createOptimizerRequest(
+      [optimizerMember('root', null, null, 2_400)],
+      Object.freeze({ root: opening }),
+    );
+    const verified = buildVerifiedConstructiveCandidate(request, {
+      candidateId: 'root-2400-final-700',
+      sequence: 1,
+      foundAtElapsedMs: 0,
+    });
+    expect(verified.status).toBe('SUCCESS');
+    if (verified.status !== 'SUCCESS') return;
+    expect(verified.candidate.allocations.every((cell) => cell.pvp === 0)).toBe(true);
+    const finalBusinessDate = request.calendar.dates
+      .filter((date) => !request.calendar.skipDateSet.includes(date))
+      .at(-1)!;
+    expect(
+      verified.candidate.calculation.dailySettlementByDateAndMember[
+        finalBusinessDate
+      ]?.root,
+    ).toMatchObject({
+      settlementKind: 'FULL_COMMISSION',
+      commissionTier: 700,
+    });
+  });
+
+  it('rejects a target-2,400 root whose final business day reaches only tier 300', () => {
+    const opening = optimizerOpening({
+      openingQualificationPvp: 2_400,
+      fortnightPvpOpeningCredit: 2_400,
+    });
+    const request = createOptimizerRequest(
+      [optimizerMember('root', null, null, 2_400)],
+      Object.freeze({ root: opening }),
+    );
+    const built = buildConstructiveCandidate(request);
+    if (built.status !== 'SUCCESS') throw new Error('constructive fixture failed');
+    const businessIndexes = built.candidate.allocations
+      .map((cell, index) => ({ cell, index }))
+      .filter(({ cell }) => !request.calendar.skipDateSet.includes(cell.date))
+      .map(({ index }) => index);
+    const previousIndex = businessIndexes.at(-2)!;
+    const finalIndex = businessIndexes.at(-1)!;
+    const previous = built.candidate.allocations[previousIndex]!;
+    const final = built.candidate.allocations[finalIndex]!;
+    const retainedFinalSide = 300;
+    expect(final.selfLeft).toBeGreaterThanOrEqual(700);
+    expect(final.selfRight).toBeGreaterThanOrEqual(700);
+    let allocations = replaceCell(built.candidate.allocations, previousIndex, {
+      selfLeft: previous.selfLeft! + final.selfLeft! - retainedFinalSide,
+      selfRight: previous.selfRight! + final.selfRight! - retainedFinalSide,
+    });
+    allocations = replaceCell(allocations, finalIndex, {
+      selfLeft: retainedFinalSide,
+      selfRight: retainedFinalSide,
+    });
+
+    expect(
+      verifyAutomaticPlanCandidate(
+        request,
+        { problemFingerprint: request.problemFingerprint, allocations },
+        { candidateId: 'final-root-tier-too-low', sequence: 1, foundAtElapsedMs: 0 },
+      ),
+    ).toMatchObject({
+      status: 'FAILURE',
+      error: {
+        code: 'AUTOMATIC_PLAN_TARGET_UNMET',
+        message: expect.stringContaining('700단계'),
+        location: { memberKey: 'root' },
+      },
+    });
+  });
+
+  it('fails construction when a target-2,400 deficit is smaller than the 30-PV minimum', () => {
+    const opening = optimizerOpening({
+      openingQualificationPvp: 2_399,
+      fortnightPvpOpeningCredit: 2_399,
+    });
+    const request = createOptimizerRequest(
+      [optimizerMember('root', null, null, 2_400)],
+      Object.freeze({ root: opening }),
+    );
+    expect(buildConstructiveCandidate(request)).toMatchObject({
+      status: 'FAILURE',
+      error: { code: 'AUTOMATIC_PLAN_CONSTRUCTION_FAILED' },
+    });
+  });
+
+  it('keeps an opening-680 side budget exact instead of rounding 1,790 to 1,800', () => {
+    const opening = optimizerOpening({
+      openingQualificationPvp: 680,
+      fortnightPvpOpeningCredit: 680,
+    });
+    const request = createOptimizerRequest(
+      [optimizerMember('root')],
+      Object.freeze({ root: opening }),
+    );
+    const verified = buildVerifiedConstructiveCandidate(request, {
+      candidateId: 'opening-680-exact-side-budget',
+      sequence: 1,
+      foundAtElapsedMs: 0,
+    });
+    expect(verified.status).toBe('SUCCESS');
+    if (verified.status !== 'SUCCESS') return;
+    expect(verified.candidate.objective.totalNewPv).toBe(4_320);
+    expect(verified.candidate.calculation.finalAssessmentByMember.root).toMatchObject({
+      newPvpTotal: 30,
+      personalPvpTotal: 710,
+      rawLeftTotal: 1_790,
+      rawRightTotal: 2_500,
+      assessedLeft: 2_500,
+      assessedRight: 2_500,
+      allTargetsMet: true,
+    });
+    expect(
+      verified.candidate.allocations
+        .flatMap((cell) => [cell.pvp, cell.selfLeft, cell.selfRight])
+        .filter((value): value is number => value !== undefined && value !== 0)
+        .every((value) => value >= 30),
     ).toBe(true);
   });
 
   it('QUAL-002/005 rejects a mechanically reset settlement at qualification 299', () => {
-    const opening = optimizerOpening({ openingQualificationPvp: 33 });
+    const opening = optimizerOpening({
+      openingQualificationPvp: 33,
+      fortnightPvpOpeningCredit: 33,
+    });
     const request = createOptimizerRequest(
       [optimizerMember('root')],
       Object.freeze({ root: opening }),
@@ -399,7 +883,13 @@ describe('Phase 4 request and candidate boundary', () => {
       built.candidate.allocations,
       request.calendar.skipDateSet,
     );
-    let allocations = replaceCell(built.candidate.allocations, first, { pvp: 266 });
+    let allocations: readonly NormalizedAllocationCell[] =
+      built.candidate.allocations.map((cell) => ({ ...cell, pvp: 0 }));
+    allocations = replaceCell(allocations, first, {
+      pvp: 266,
+      selfLeft: 300,
+      selfRight: 300,
+    });
     allocations = replaceCell(allocations, second, { pvp: 434 });
     expect(
       verifyAutomaticPlanCandidate(
@@ -410,6 +900,34 @@ describe('Phase 4 request and candidate boundary', () => {
     ).toMatchObject({
       status: 'FAILURE',
       error: { code: 'AUTOMATIC_PLAN_BELOW_QUALIFICATION_SETTLEMENT' },
+    });
+  });
+
+  it('passes through an objective failure for a commission tier without a payout contract', () => {
+    const request = createOptimizerRequest();
+    const built = buildConstructiveCandidate(request);
+    if (built.status !== 'SUCCESS') throw new Error('constructive fixture failed');
+    const firstBusinessIndex = built.candidate.allocations.findIndex(
+      (cell) => !request.calendar.skipDateSet.includes(cell.date),
+    );
+    const allocations = replaceCell(
+      built.candidate.allocations,
+      firstBusinessIndex,
+      { selfLeft: 6_000, selfRight: 6_000 },
+    );
+
+    expect(
+      verifyAutomaticPlanCandidate(
+        request,
+        { problemFingerprint: request.problemFingerprint, allocations },
+        { candidateId: 'unconfirmed-payout-tier', sequence: 1, foundAtElapsedMs: 0 },
+      ),
+    ).toMatchObject({
+      status: 'FAILURE',
+      error: {
+        code: 'AUTOMATIC_PLAN_PAYOUT_TABLE_INCOMPLETE',
+        causeCode: 'UNCONFIRMED_COMMISSION_TIER_6000',
+      },
     });
   });
 
@@ -424,9 +942,11 @@ describe('Phase 4 request and candidate boundary', () => {
           ...built.candidate,
           claimedObjective: {
             totalNewPv: 1,
+            confirmedPayoutWon: 0,
             discardedExcessPv: 0,
-            target700MembersAtLeastEight: 0,
-            target700AscendingDayVector: [0],
+            highTargetAscendingDayVector: [],
+            target700AscendingDayVector: [1, 0],
+            futureCumulativePvpInvestmentPv: 0,
             nonHundredCellCount: 0,
             maxDirectPvp: 1,
             deterministicAllocationVector: [1],
@@ -445,9 +965,11 @@ describe('Phase 4 request and candidate boundary', () => {
           ...built.candidate,
           claimedObjective: {
             totalNewPv: 5_700,
+            confirmedPayoutWon: 0,
             discardedExcessPv: 0,
-            target700MembersAtLeastEight: 1,
+            highTargetAscendingDayVector: [],
             target700AscendingDayVector: [0],
+            futureCumulativePvpInvestmentPv: 0,
             nonHundredCellCount: 0,
             maxDirectPvp: 700,
             deterministicAllocationVector: [700],

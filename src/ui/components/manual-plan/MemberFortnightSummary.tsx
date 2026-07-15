@@ -56,11 +56,9 @@ export function MemberFortnightSummary({
       </div>
 
       <dl className="manual-summary-grid">
-        <SummaryValue label="자격 PVP 시작" value={pv(selected.openingQualificationPvp)} />
-        <SummaryValue label="자격 PVP 마감" value={pv(selected.closingQualificationPvp)} />
-        <SummaryValue label="보름 PVP 시작" value={pv(selected.fortnightPvpOpeningCredit)} />
+        <SummaryValue label="누적 PVP 시작" value={pv(selected.fortnightPvpOpeningCredit)} />
         <SummaryValue label="신규 PVP" value={pv(selected.newPvpTotal)} />
-        <SummaryValue label="개인 PVP 합계" value={pv(selected.personalPvpTotal)} />
+        <SummaryValue label="누적 PVP 마감" value={pv(selected.personalPvpTotal)} />
         <SummaryValue label="개인 PVP 목표" value={pv(selected.personalPvpTarget)} />
         <SummaryValue label="추가 필요 PVP" value={pv(selected.remainingPvp)} />
         <SummaryValue label="개인 PVP 상태" value={selected.personalPvpStatusLabel} />

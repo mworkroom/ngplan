@@ -18,9 +18,7 @@ import type {
 } from './types';
 
 const PV_FIELDS: readonly OpeningStateField[] = [
-  'openingQualificationPvp',
-  'fortnightPvpOpeningCredit',
-  'dailyCarryPvp',
+  'cumulativePvp',
   'dailyCarryLeft',
   'dailyCarryRight',
 ];
@@ -94,13 +92,13 @@ export function parseMemberOpeningState(
     return null;
   }
   const values = parsed as readonly { readonly ok: true; readonly value: number }[];
-  const visiblePvpOpening = values[2]!.value;
+  const cumulativePvp = values[0]!.value;
   return {
-    openingQualificationPvp: visiblePvpOpening,
-    fortnightPvpOpeningCredit: visiblePvpOpening,
-    dailyCarryPvp: visiblePvpOpening,
-    dailyCarryLeft: values[3]!.value,
-    dailyCarryRight: values[4]!.value,
+    openingQualificationPvp: cumulativePvp,
+    fortnightPvpOpeningCredit: cumulativePvp,
+    dailyCarryPvp: 0,
+    dailyCarryLeft: values[1]!.value,
+    dailyCarryRight: values[2]!.value,
   };
 }
 
@@ -264,6 +262,18 @@ function validateMember(
         ),
       );
     }
+  }
+  const cumulativePvp = parseDraftPv(member.openingState.cumulativePvp);
+  if (cumulativePvp.ok && cumulativePvp.value > 2400) {
+    issues.push(
+      issue(
+        'PV_OUT_OF_RANGE',
+        'ERROR',
+        { ...location, field: 'cumulativePvp' },
+        'PVP 시작값은 누적 상한인 2,400 PV 이하여야 합니다.',
+        '회사에 기록된 현재 누적 PVP를 0부터 2,400 사이로 입력해 주세요.',
+      ),
+    );
   }
   if (!member.openingState.openingStateConfirmed) {
     issues.push(

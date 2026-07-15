@@ -117,10 +117,10 @@ describe('WP4 manual planning worksheet', () => {
       '하위목표 700 PV',
       '1. 루트회원 번호 1000 · 목표 700 PV',
       '날짜',
-      'PVP0',
+      'PVP',
       '좌0',
       '우0',
-      'PVP0',
+      'PVP',
       '좌0',
       '우0',
     ]);

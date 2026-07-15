@@ -2,6 +2,7 @@ import type {
   MemberSnapshot,
   NormalizedAllocationCell,
 } from '../engine';
+import { DEFAULT_RULE_SET } from '../engine';
 import {
   AUTOMATIC_PLAN_ENGINE_VERSION,
   AUTOMATIC_PLAN_FINGERPRINT_VERSION,
@@ -44,6 +45,8 @@ interface OpeningStateLike {
   readonly dailyCarryLeft?: unknown;
   readonly dailyCarryRight?: unknown;
 }
+
+const MINIMUM_AUTOMATIC_DIRECT_PV = 30;
 
 function compareArrays(left: readonly string[], right: readonly string[]): boolean {
   return left.length === right.length && left.every((value, index) => value === right[index]);
@@ -187,11 +190,11 @@ export function validateAutomaticPlanRequest(
     openingKeys.some((memberKey) => !memberKeySet.has(memberKey))
   ) {
     return {
-      status: 'FAILURE',
-      error: automaticPlanError(
-        'AUTOMATIC_PLAN_OPENING_STATE_INVALID',
-        '회원별 세 PVP 시작값이 완전하지 않습니다.',
-      ),
+        status: 'FAILURE',
+        error: automaticPlanError(
+          'AUTOMATIC_PLAN_OPENING_STATE_INVALID',
+          '회원별 누적 PVP 시작값이 완전하지 않습니다.',
+        ),
     };
   }
   for (const memberKey of expectedMemberKeys) {
@@ -202,12 +205,11 @@ export function validateAutomaticPlanRequest(
     if (
       normalized === undefined ||
       engineOpening === undefined ||
-      !isCanonicalNonNegativeSafeInteger(normalized.openingQualificationPvp) ||
-      !isCanonicalNonNegativeSafeInteger(normalized.openingDailyPvpBalance) ||
-      !isCanonicalNonNegativeSafeInteger(normalized.openingFortnightPvp) ||
-      normalized.openingQualificationPvp !== engineOpening.openingQualificationPvp ||
-      normalized.openingDailyPvpBalance !== engineOpening.dailyCarryPvp ||
-      normalized.openingFortnightPvp !== engineOpening.fortnightPvpOpeningCredit ||
+      !isCanonicalNonNegativeSafeInteger(normalized.cumulativePvpOpening) ||
+      normalized.cumulativePvpOpening > DEFAULT_RULE_SET.cumulativePvpCap ||
+      normalized.cumulativePvpOpening !== engineOpening.openingQualificationPvp ||
+      normalized.cumulativePvpOpening !== engineOpening.fortnightPvpOpeningCredit ||
+      engineOpening.dailyCarryPvp !== 0 ||
       !isCanonicalNonNegativeSafeInteger(engineOpening.dailyCarryLeft) ||
       !isCanonicalNonNegativeSafeInteger(engineOpening.dailyCarryRight)
     ) {
@@ -215,7 +217,7 @@ export function validateAutomaticPlanRequest(
         status: 'FAILURE',
         error: automaticPlanError(
           'AUTOMATIC_PLAN_OPENING_STATE_INVALID',
-          '자격·일일·보름 PVP 시작값이 엔진 입력과 일치하지 않습니다.',
+          '누적 PVP는 0~2,400에서 자격·보름 장부에 같게 적용되고 첫날 일일 PVP는 0이어야 합니다.',
           { location: { memberKey } },
         ),
       };
@@ -355,6 +357,16 @@ export function validateAutomaticPlanCandidateShape(
             error: automaticPlanError(
               'AUTOMATIC_PLAN_SKIPPED_DATE_NONZERO',
               '일요일과 정산 제외 날짜에는 신규 값을 배정할 수 없습니다.',
+              { location: { date, memberKey, field, index } },
+            ),
+          };
+        }
+        if (value !== 0 && value < MINIMUM_AUTOMATIC_DIRECT_PV) {
+          return {
+            status: 'FAILURE',
+            error: automaticPlanError(
+              'AUTOMATIC_PLAN_CANDIDATE_VALUE_INVALID',
+              '자동 계획의 직접 값은 0이거나 30 이상의 안전한 정수여야 합니다.',
               { location: { date, memberKey, field, index } },
             ),
           };

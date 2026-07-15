@@ -10,6 +10,7 @@ export * from './candidate-verifier';
 export * from './constructive-candidate';
 export * from './model';
 export * from './model-certificate';
+export * from './proof-stages';
 export * from './run-state';
 export * from './solver';
 export * from './exhaustive-oracle';

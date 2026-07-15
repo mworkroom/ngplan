@@ -13,9 +13,7 @@ export type DraftTitleSource = 'DERIVED' | 'MANUAL';
 export type MemberParticipation = 'ACTIVE' | 'EXCLUDED';
 
 export interface OpeningStateDraft {
-  readonly openingQualificationPvp: string;
-  readonly fortnightPvpOpeningCredit: string;
-  readonly dailyCarryPvp: string;
+  readonly cumulativePvp: string;
   readonly dailyCarryLeft: string;
   readonly dailyCarryRight: string;
   readonly openingStateConfirmed: boolean;

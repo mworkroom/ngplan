@@ -575,6 +575,88 @@ describe('[VAL-006] — 회원별 시작값 완전성', () => {
   });
 });
 
+describe('[PVP-CAP] — 회사 누적 PVP 계약', () => {
+  it('누적 PVP 시작값 2,401을 상한 초과로 거부한다', () => {
+    const input = planFor([root('A')], {
+      openings: {
+        A: {
+          ...ZERO_OPENING,
+          openingQualificationPvp: 2401,
+          fortnightPvpOpeningCredit: 2401,
+        },
+      },
+    });
+
+    expect(issueCodes(input)).toContain('CUMULATIVE_PVP_OPENING_EXCEEDS_CAP');
+  });
+
+  it('자격·보름 시작값이 다르거나 일일 PVP 시작값이 0이 아니면 거부한다', () => {
+    const input = planFor([root('A')], {
+      openings: {
+        A: {
+          ...ZERO_OPENING,
+          openingQualificationPvp: 300,
+          fortnightPvpOpeningCredit: 700,
+          dailyCarryPvp: 1,
+        },
+      },
+    });
+
+    expect(issueCodes(input)).toEqual(
+      expect.arrayContaining([
+        'CUMULATIVE_PVP_OPENING_MISMATCH',
+        'DAILY_PVP_OPENING_NONZERO',
+      ]),
+    );
+  });
+
+  it('누적 1,600에서 신규 PVP 800은 허용하고 801은 거부한다', () => {
+    const opening: OpeningStateInput = {
+      ...ZERO_OPENING,
+      openingQualificationPvp: 1600,
+      fortnightPvpOpeningCredit: 1600,
+    };
+    const base = planFor([root('A')], { openings: { A: opening } });
+    const withPvp = (pvp: number) => ({
+      ...base,
+      allocations: replaceCell(
+        base.allocations,
+        '2026-07-01',
+        'A',
+        (cell) => ({ ...cell, pvp }),
+      ),
+    });
+
+    expect(validatePlan(withPvp(800)).isValid).toBe(true);
+    expect(issueCodes(withPvp(801))).toContain(
+      'CUMULATIVE_PVP_ALLOCATION_EXCEEDS_CAP',
+    );
+  });
+
+  it('누적 2,400 회원에게 신규 PVP 1도 허용하지 않는다', () => {
+    const base = planFor([root('A')], {
+      openings: {
+        A: {
+          ...ZERO_OPENING,
+          openingQualificationPvp: 2400,
+          fortnightPvpOpeningCredit: 2400,
+        },
+      },
+    });
+    const input = {
+      ...base,
+      allocations: replaceCell(
+        base.allocations,
+        '2026-07-01',
+        'A',
+        (cell) => ({ ...cell, pvp: 1 }),
+      ),
+    };
+
+    expect(issueCodes(input)).toContain('CUMULATIVE_PVP_ALLOCATION_EXCEEDS_CAP');
+  });
+});
+
 describe('[VAL-P01] — PVP 목표와 찾기 표지판', () => {
   it.each([-1, 0, 1.5, 1000])('지원하지 않는 목표 %s를 거부한다', (pvpTarget) => {
     expect(

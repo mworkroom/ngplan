@@ -17,7 +17,7 @@ import {
 
 const QUALIFIED_OPENING: OpeningStateInput = Object.freeze({
   openingQualificationPvp: 300,
-  fortnightPvpOpeningCredit: 0,
+  fortnightPvpOpeningCredit: 300,
   dailyCarryPvp: 0,
   dailyCarryLeft: 0,
   dailyCarryRight: 0,

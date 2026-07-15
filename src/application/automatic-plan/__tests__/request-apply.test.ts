@@ -19,9 +19,7 @@ describe('automatic plan request and atomic application', () => {
     expect(first.request.canonicalMemberKeys).toEqual(['root']);
     expect(first.request.calendar.skipDateSet).toContain('2026-07-05');
     expect(first.request.openingPvpByMember.root).toEqual({
-      openingQualificationPvp: 0,
-      openingDailyPvpBalance: 0,
-      openingFortnightPvp: 0,
+      cumulativePvpOpening: 0,
     });
     const warmStart = [
       { date: '2026-07-01', memberKey: 'root', pvp: 0, selfLeft: 0, selfRight: 0 },
@@ -149,10 +147,11 @@ describe('automatic plan request and atomic application', () => {
     expect(applied.status).toBe('SUCCESS');
     if (applied.status !== 'SUCCESS') return;
     expect(applied.draft).not.toBe(before);
+    const pinnedFirstAllocation = verified.candidate.allocations[0]!;
     expect(applied.draft.cells[0]).toMatchObject({
-      pvp: '350',
-      selfLeft: '400',
-      selfRight: '400',
+      pvp: String(pinnedFirstAllocation.pvp),
+      selfLeft: String(pinnedFirstAllocation.selfLeft ?? 0),
+      selfRight: String(pinnedFirstAllocation.selfRight ?? 0),
     });
     expect(Object.isFrozen(applied.draft.cells)).toBe(true);
   });

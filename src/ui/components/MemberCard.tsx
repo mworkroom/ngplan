@@ -85,7 +85,7 @@ export function MemberCard({
       </div>
 
       <p className="member-card__opening" aria-label="세 시작값">
-        PVP {member.openingState.dailyCarryPvp || '0'}
+        PVP {member.openingState.cumulativePvp || '0'}
         <span aria-hidden="true"> | </span>
         좌 {member.openingState.dailyCarryLeft || '0'}
         <span aria-hidden="true"> | </span>

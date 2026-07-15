@@ -10,6 +10,7 @@ import type {
   AUTOMATIC_PLAN_FINGERPRINT_VERSION,
   AUTOMATIC_PLAN_MODEL_CERTIFICATE_VERSION,
   AUTOMATIC_PLAN_MODEL_VERSION,
+  AUTOMATIC_PLAN_OBJECTIVE_STAGE_ORDER,
   AUTOMATIC_PLAN_OBJECTIVE_VERSION,
   AUTOMATIC_PLAN_POLICY_VERSION,
   AUTOMATIC_PLAN_REQUEST_VERSION,
@@ -31,9 +32,7 @@ export interface NormalizedAutomaticPlanCalendar {
 }
 
 export interface NormalizedOpeningPvpState {
-  readonly openingQualificationPvp: number;
-  readonly openingDailyPvpBalance: number;
-  readonly openingFortnightPvp: number;
+  readonly cumulativePvpOpening: number;
 }
 
 export interface AutomaticPlanRequest {
@@ -53,12 +52,20 @@ export interface AutomaticPlanRequest {
 
 export interface AutomaticPlanObjectiveVector {
   readonly totalNewPv: number;
+  readonly confirmedPayoutWon: number;
   readonly discardedExcessPv: number;
-  readonly target700MembersAtLeastEight: number;
+  readonly highTargetAscendingDayVector: readonly number[];
   readonly target700AscendingDayVector: readonly number[];
+  readonly futureCumulativePvpInvestmentPv: number;
   readonly nonHundredCellCount: number;
   readonly maxDirectPvp: number;
   readonly deterministicAllocationVector: readonly number[];
+}
+
+export interface HighTargetMemberDayCount {
+  readonly memberKey: string;
+  readonly pvpTarget: 1500 | 2400;
+  readonly commissionDays: number;
 }
 
 export interface Target700MemberDayCount {
@@ -82,6 +89,8 @@ export interface TerminalCarrySummary {
 }
 
 export interface AutomaticPlanDisplayMetrics {
+  readonly highTargetMemberDayCounts: readonly HighTargetMemberDayCount[];
+  readonly target700MembersAtLeastEight: number;
   readonly target700TotalCommissionDays: number;
   readonly target700MemberDayCounts: readonly Target700MemberDayCount[];
   readonly terminalCarrySummary: TerminalCarrySummary;
@@ -109,13 +118,7 @@ export interface VerifiedAutomaticPlanCandidate
 }
 
 export type AutomaticPlanObjectiveStage =
-  | 'TOTAL_NEW_PV'
-  | 'DISCARDED_EXCESS'
-  | 'TARGET_700_AT_LEAST_EIGHT'
-  | 'TARGET_700_ASCENDING_VECTOR'
-  | 'NON_HUNDRED_CELLS'
-  | 'MAX_DIRECT_PVP'
-  | 'DETERMINISTIC_ALLOCATION_VECTOR'
+  | (typeof AUTOMATIC_PLAN_OBJECTIVE_STAGE_ORDER)[number]
   | 'COMPLETE';
 
 export interface AutomaticPlanProofProgress {
@@ -124,6 +127,7 @@ export interface AutomaticPlanProofProgress {
   readonly provenVectorPrefix:
     | {
         readonly objective:
+          | 'HIGH_TARGET_ASCENDING_VECTOR'
           | 'TARGET_700_ASCENDING_VECTOR'
           | 'DETERMINISTIC_ALLOCATION_VECTOR';
         readonly length: number;
@@ -148,6 +152,7 @@ export type AutomaticPlanErrorCode =
   | 'AUTOMATIC_PLAN_TARGET_UNMET'
   | 'AUTOMATIC_PLAN_QUALIFICATION_MISMATCH'
   | 'AUTOMATIC_PLAN_BELOW_QUALIFICATION_SETTLEMENT'
+  | 'AUTOMATIC_PLAN_PAYOUT_TABLE_INCOMPLETE'
   | 'AUTOMATIC_PLAN_OBJECTIVE_MISMATCH'
   | 'OPTIMIZATION_SCORE_OUT_OF_RANGE'
   | 'AUTOMATIC_PLAN_MODEL_CERTIFICATE_MISMATCH'

@@ -71,9 +71,7 @@ export function createOptimizerRequest(
   for (const member of members) {
     const opening = openings[member.memberKey]!;
     openingPvpByMember[member.memberKey] = Object.freeze({
-      openingQualificationPvp: opening.openingQualificationPvp,
-      openingDailyPvpBalance: opening.dailyCarryPvp,
-      openingFortnightPvp: opening.fortnightPvpOpeningCredit,
+      cumulativePvpOpening: opening.openingQualificationPvp,
     });
   }
   return Object.freeze({

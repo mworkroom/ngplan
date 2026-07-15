@@ -45,6 +45,7 @@ import {
   type AutomaticPlanRequest,
   type ModelCertificate,
 } from '..';
+import { AUTOMATIC_PLAN_PROVEN_SCALAR_OBJECTIVE_COUNT } from '../proof-stages';
 import {
   createOptimizerRequest,
   optimizerMember,
@@ -127,7 +128,7 @@ function certifiedFixture() {
   if (certified.status !== 'SUCCESS') throw new Error('certificate fixture failed');
   const progress: AutomaticPlanProofProgress = {
     stage: 'COMPLETE',
-    provenScalarObjectiveCount: 5,
+    provenScalarObjectiveCount: AUTOMATIC_PLAN_PROVEN_SCALAR_OBJECTIVE_COUNT,
     provenVectorPrefix: {
       objective: 'DETERMINISTIC_ALLOCATION_VECTOR',
       length: candidate.objective.deterministicAllocationVector.length,
@@ -273,12 +274,12 @@ describe('optimizer request and shape defensive coverage', () => {
       invalidRequest(request, { openingPvpByMember: { unknown: normalized } }),
       withNormalized(undefined),
       withEngine(undefined),
-      withNormalized({ ...normalized, openingQualificationPvp: -1 }),
-      withNormalized({ ...normalized, openingDailyPvpBalance: -1 }),
-      withNormalized({ ...normalized, openingFortnightPvp: -1 }),
-      withNormalized({ ...normalized, openingQualificationPvp: 1 }),
-      withNormalized({ ...normalized, openingDailyPvpBalance: 1 }),
-      withNormalized({ ...normalized, openingFortnightPvp: 1 }),
+      withNormalized({ cumulativePvpOpening: -1 }),
+      withNormalized({ cumulativePvpOpening: 2_401 }),
+      withNormalized({ cumulativePvpOpening: 1 }),
+      withEngine({ ...engineOpening, openingQualificationPvp: 1 }),
+      withEngine({ ...engineOpening, fortnightPvpOpeningCredit: 1 }),
+      withEngine({ ...engineOpening, dailyCarryPvp: 1 }),
       withEngine({ ...engineOpening, dailyCarryLeft: -1 }),
       withEngine({ ...engineOpening, dailyCarryRight: -1 }),
     ];
@@ -452,9 +453,9 @@ describe('optimizer arithmetic, construction, objective, and oracle defenses', (
     }
   });
 
-  it('constructs zero and qualification-dominant PVP deficits deterministically', () => {
+  it('constructs zero and same-day cumulative-PVP threshold deficits deterministically', () => {
     const fullyOpened = optimizerOpening({
-      openingQualificationPvp: 300,
+      openingQualificationPvp: 700,
       fortnightPvpOpeningCredit: 700,
     });
     const zeroRequest = createOptimizerRequest(
@@ -466,13 +467,16 @@ describe('optimizer arithmetic, construction, objective, and oracle defenses', (
     const qualificationRequest = createOptimizerRequest(
       [optimizerMember('root')],
       Object.freeze({
-        root: optimizerOpening({ fortnightPvpOpeningCredit: 700 }),
+        root: optimizerOpening({
+          openingQualificationPvp: 33,
+          fortnightPvpOpeningCredit: 33,
+        }),
       }),
     );
     const firstBusiness = constructive(qualificationRequest).allocations.find(
       (cell) => !qualificationRequest.calendar.skipDateSet.includes(cell.date),
     );
-    expect(firstBusiness?.pvp).toBe(300);
+    expect(firstBusiness?.pvp).toBe(267);
   });
 
   it('rejects a FULL_COMMISSION settlement without a tier', () => {
@@ -490,9 +494,11 @@ describe('optimizer arithmetic, construction, objective, and oracle defenses', (
   it('rejects unsorted objectives and exercises prefix-length comparison validation', () => {
     const unsorted: AutomaticPlanObjectiveVector = {
       totalNewPv: 1,
+      confirmedPayoutWon: 0,
       discardedExcessPv: 0,
-      target700MembersAtLeastEight: 1,
+      highTargetAscendingDayVector: [],
       target700AscendingDayVector: [8, 7],
+      futureCumulativePvpInvestmentPv: 0,
       nonHundredCellCount: 1,
       maxDirectPvp: 1,
       deterministicAllocationVector: [1],
@@ -527,7 +533,7 @@ describe('optimizer arithmetic, construction, objective, and oracle defenses', (
     let overflowing = replaceCell(candidate.allocations, businessIndexes[0]!, {
       pvp: Number.MAX_SAFE_INTEGER,
     });
-    overflowing = replaceCell(overflowing, businessIndexes[1]!, { pvp: 1 });
+    overflowing = replaceCell(overflowing, businessIndexes[1]!, { pvp: 30 });
     expect(
       evaluateAutomaticPlanObjective(request, overflowing, candidate.calculation),
     ).toMatchObject({ status: 'FAILURE', error: { code: 'OPTIMIZATION_SCORE_OUT_OF_RANGE' } });
@@ -539,6 +545,7 @@ describe('optimizer arithmetic, construction, objective, and oracle defenses', (
       Object.freeze({ root: optimizerOpening() }),
     );
     const target1500 = verifiedFixture(target1500Request);
+    expect(target1500.objective.highTargetAscendingDayVector).toHaveLength(1);
     expect(target1500.objective.target700AscendingDayVector).toEqual([]);
 
     const request = createOptimizerRequest();
@@ -554,9 +561,9 @@ describe('optimizer arithmetic, construction, objective, and oracle defenses', (
       },
       { ...IDENTITY, candidateId: 'non-hundred' },
     );
-    expect(verified.status).toBe('SUCCESS');
+    expect(verified).toMatchObject({ status: 'SUCCESS' });
     if (verified.status === 'SUCCESS') {
-      expect(verified.candidate.objective.nonHundredCellCount).toBe(8);
+      expect(verified.candidate.objective.nonHundredCellCount).toBe(1);
     }
   });
 
@@ -640,7 +647,7 @@ describe('optimizer certificate and run-state defensive coverage', () => {
     const coordinateCount = deriveAutomaticPlanCoordinates(request).length;
     const valid: AutomaticPlanProofProgress = {
       stage: 'COMPLETE',
-      provenScalarObjectiveCount: 5,
+      provenScalarObjectiveCount: AUTOMATIC_PLAN_PROVEN_SCALAR_OBJECTIVE_COUNT,
       provenVectorPrefix: {
         objective: 'DETERMINISTIC_ALLOCATION_VECTOR',
         length: coordinateCount,
@@ -649,7 +656,11 @@ describe('optimizer certificate and run-state defensive coverage', () => {
     };
     const variants: AutomaticPlanProofProgress[] = [
       { ...valid, stage: 'TOTAL_NEW_PV' },
-      { ...valid, provenScalarObjectiveCount: 4 },
+      {
+        ...valid,
+        provenScalarObjectiveCount:
+          AUTOMATIC_PLAN_PROVEN_SCALAR_OBJECTIVE_COUNT - 1,
+      },
       { ...valid, provenVectorPrefix: null },
       {
         ...valid,
@@ -784,7 +795,7 @@ describe('50-member first-candidate scale path', () => {
     });
     const elapsedMs = performance.now() - startedAt;
     console.info(`50-member constructive+verify elapsed: ${elapsedMs.toFixed(2)} ms`);
-    expect(verified.status).toBe('SUCCESS');
+    expect(verified).toMatchObject({ status: 'SUCCESS' });
     expect(elapsedMs).toBeGreaterThanOrEqual(0);
   });
 });

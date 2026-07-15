@@ -14,6 +14,7 @@ import type {
   AutomaticPlanDisplayMetrics,
   AutomaticPlanObjectiveVector,
   AutomaticPlanRequest,
+  HighTargetMemberDayCount,
   SafeAutomaticPlanError,
   Target700MemberDayCount,
   TerminalCarryMemberSummary,
@@ -59,6 +60,23 @@ function isFullCommission(settlement: DailySettlement): boolean {
   return (settlement as QualificationAwareSettlement).settlementKind === 'FULL_COMMISSION';
 }
 
+function confirmedPayoutWonForTier(
+  tier: NonNullable<DailySettlement['commissionTier']>,
+): number | null {
+  switch (tier) {
+    case 300:
+      return 60_000;
+    case 700:
+      return 120_000;
+    case 1500:
+      return 240_000;
+    case 2400:
+      return 480_000;
+    default:
+      return null;
+  }
+}
+
 function compareMin(left: number, right: number): -1 | 0 | 1 {
   return left < right ? -1 : left > right ? 1 : 0;
 }
@@ -81,35 +99,44 @@ function compareMaxVector(
   return compareMax(left.length, right.length);
 }
 
+function assertAscendingDayVector(
+  values: readonly number[],
+  label: string,
+): void {
+  for (const value of values) {
+    assertCanonicalNonNegativeSafeInteger(value, `${label} day count`);
+  }
+  for (let index = 1; index < values.length; index += 1) {
+    if (values[index - 1]! > values[index]!) {
+      throw new TypeError(`${label} day vector must be sorted ascending`);
+    }
+  }
+}
+
 export function assertValidAutomaticPlanObjective(
   objective: AutomaticPlanObjectiveVector,
 ): void {
   for (const [label, value] of [
     ['totalNewPv', objective.totalNewPv],
+    ['confirmedPayoutWon', objective.confirmedPayoutWon],
     ['discardedExcessPv', objective.discardedExcessPv],
-    ['target700MembersAtLeastEight', objective.target700MembersAtLeastEight],
+    [
+      'futureCumulativePvpInvestmentPv',
+      objective.futureCumulativePvpInvestmentPv,
+    ],
     ['nonHundredCellCount', objective.nonHundredCellCount],
     ['maxDirectPvp', objective.maxDirectPvp],
   ] as const) {
     assertCanonicalNonNegativeSafeInteger(value, label);
   }
-  for (const value of objective.target700AscendingDayVector) {
-    assertCanonicalNonNegativeSafeInteger(value, 'target700 day count');
-  }
-  for (let index = 1; index < objective.target700AscendingDayVector.length; index += 1) {
-    if (
-      objective.target700AscendingDayVector[index - 1]! >
-      objective.target700AscendingDayVector[index]!
-    ) {
-      throw new TypeError('target700 day vector must be sorted ascending');
-    }
-  }
-  if (
-    objective.target700MembersAtLeastEight !==
-    objective.target700AscendingDayVector.filter((days) => days >= 8).length
-  ) {
-    throw new TypeError('target700 threshold count must match the complete day vector');
-  }
+  assertAscendingDayVector(
+    objective.highTargetAscendingDayVector,
+    'highTarget',
+  );
+  assertAscendingDayVector(
+    objective.target700AscendingDayVector,
+    'target700',
+  );
   for (const value of objective.deterministicAllocationVector) {
     assertCanonicalNonNegativeSafeInteger(value, 'deterministic allocation value');
   }
@@ -124,14 +151,19 @@ export function compareAutomaticPlanObjectives(
   assertValidAutomaticPlanObjective(right);
   return (
     compareMin(left.totalNewPv, right.totalNewPv) ||
+    compareMax(left.confirmedPayoutWon, right.confirmedPayoutWon) ||
     compareMin(left.discardedExcessPv, right.discardedExcessPv) ||
-    compareMax(
-      left.target700MembersAtLeastEight,
-      right.target700MembersAtLeastEight,
+    compareMaxVector(
+      left.highTargetAscendingDayVector,
+      right.highTargetAscendingDayVector,
     ) ||
     compareMaxVector(
       left.target700AscendingDayVector,
       right.target700AscendingDayVector,
+    ) ||
+    compareMax(
+      left.futureCumulativePvpInvestmentPv,
+      right.futureCumulativePvpInvestmentPv,
     ) ||
     compareMin(left.nonHundredCellCount, right.nonHundredCellCount) ||
     compareMin(left.maxDirectPvp, right.maxDirectPvp) ||
@@ -174,7 +206,10 @@ export function evaluateAutomaticPlanObjective(
       maxDirectPvp = Math.max(maxDirectPvp, cell.pvp);
     }
 
+    let confirmedPayoutWon = 0;
     let discardedExcessPv = 0;
+    let futureCumulativePvpInvestmentPv = 0;
+    const highTargetMemberDayCounts: HighTargetMemberDayCount[] = [];
     const target700MemberDayCounts: Target700MemberDayCount[] = [];
     let target700TotalCommissionDays = 0;
     for (const memberKey of request.canonicalMemberKeys) {
@@ -187,22 +222,69 @@ export function evaluateAutomaticPlanObjective(
       let commissionDays = 0;
       for (const date of request.calendar.dates) {
         const settlement = settlementAt(calculation, date, memberKey);
+        if (isFullCommission(settlement)) {
+          if (settlement.commissionTier === null) {
+            throw new TypeError('FULL_COMMISSION settlement must contain a tier');
+          }
+          const payoutWon = confirmedPayoutWonForTier(settlement.commissionTier);
+          if (payoutWon === null) {
+            return {
+              status: 'FAILURE',
+              error: automaticPlanError(
+                'AUTOMATIC_PLAN_PAYOUT_TABLE_INCOMPLETE',
+                `${settlement.commissionTier.toLocaleString('ko-KR')} 단계 수당 금액이 확정되지 않아 자동 계획 순위를 계산할 수 없습니다.`,
+                {
+                  location: { date, memberKey },
+                  causeCode: `UNCONFIRMED_COMMISSION_TIER_${settlement.commissionTier}`,
+                },
+              ),
+            };
+          }
+          confirmedPayoutWon = checkedAddScore(confirmedPayoutWon, payoutWon);
+          commissionDays = checkedAddScore(commissionDays, 1);
+        }
         discardedExcessPv = checkedAddScore(
           discardedExcessPv,
           discardedExcessForSettlement(settlement),
         );
-        if (member.pvpTarget === 700 && isFullCommission(settlement)) {
-          commissionDays = checkedAddScore(commissionDays, 1);
-        }
       }
-      if (member.pvpTarget === 700) {
+      if (member.pvpTarget === 1500 || member.pvpTarget === 2400) {
+        highTargetMemberDayCounts.push(
+          Object.freeze({
+            memberKey,
+            pvpTarget: member.pvpTarget,
+            commissionDays,
+          }),
+        );
+      } else if (member.pvpTarget === 700) {
         target700MemberDayCounts.push(Object.freeze({ memberKey, commissionDays }));
         target700TotalCommissionDays = checkedAddScore(
           target700TotalCommissionDays,
           commissionDays,
         );
       }
+
+      const opening = request.openingPvpByMember[memberKey];
+      const assessment = calculation.finalAssessmentByMember[memberKey];
+      if (opening === undefined || assessment === undefined) {
+        throw new TypeError(`missing PVP summary for ${memberKey}`);
+      }
+      const futureInvestmentBaseline = Math.max(
+        opening.cumulativePvpOpening,
+        member.pvpTarget,
+      );
+      const futureInvestment = Math.max(
+        0,
+        assessment.personalPvpTotal - futureInvestmentBaseline,
+      );
+      futureCumulativePvpInvestmentPv = checkedAddScore(
+        futureCumulativePvpInvestmentPv,
+        futureInvestment,
+      );
     }
+    const highTargetAscendingDayVector = highTargetMemberDayCounts
+      .map((item) => item.commissionDays)
+      .sort((left, right) => left - right);
     const target700AscendingDayVector = target700MemberDayCounts
       .map((item) => item.commissionDays)
       .sort((left, right) => left - right);
@@ -238,14 +320,20 @@ export function evaluateAutomaticPlanObjective(
     );
     const objective: AutomaticPlanObjectiveVector = Object.freeze({
       totalNewPv,
+      confirmedPayoutWon,
       discardedExcessPv,
-      target700MembersAtLeastEight,
+      highTargetAscendingDayVector: Object.freeze(
+        highTargetAscendingDayVector,
+      ),
       target700AscendingDayVector: Object.freeze(target700AscendingDayVector),
+      futureCumulativePvpInvestmentPv,
       nonHundredCellCount,
       maxDirectPvp,
       deterministicAllocationVector: Object.freeze(deterministicAllocationVector),
     });
     const display: AutomaticPlanDisplayMetrics = Object.freeze({
+      highTargetMemberDayCounts: Object.freeze(highTargetMemberDayCounts),
+      target700MembersAtLeastEight,
       target700TotalCommissionDays,
       target700MemberDayCounts: Object.freeze(target700MemberDayCounts),
       terminalCarrySummary: Object.freeze({

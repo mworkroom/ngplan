@@ -14,6 +14,10 @@ import {
   AUTOMATIC_PLAN_RULESET_VERSION,
 } from './constants';
 import { automaticPlanError } from './errors';
+import {
+  AUTOMATIC_PLAN_FINAL_VECTOR_OBJECTIVE,
+  AUTOMATIC_PLAN_PROVEN_SCALAR_OBJECTIVE_COUNT,
+} from './proof-stages';
 import type {
   AutomaticPlanProofProgress,
   AutomaticPlanRequest,
@@ -112,8 +116,10 @@ export function certifyCompleteProof(
   if (
     !isModelCertificateCompatible(request, certificate) ||
     progress.stage !== 'COMPLETE' ||
-    progress.provenScalarObjectiveCount !== 5 ||
-    progress.provenVectorPrefix?.objective !== 'DETERMINISTIC_ALLOCATION_VECTOR' ||
+    progress.provenScalarObjectiveCount !==
+      AUTOMATIC_PLAN_PROVEN_SCALAR_OBJECTIVE_COUNT ||
+    progress.provenVectorPrefix?.objective !==
+      AUTOMATIC_PLAN_FINAL_VECTOR_OBJECTIVE ||
     !isCanonicalNonNegativeSafeInteger(progress.provenVectorPrefix.length) ||
     progress.provenVectorPrefix.length !== expectedVectorLength ||
     (progress.primaryLowerBound !== null &&

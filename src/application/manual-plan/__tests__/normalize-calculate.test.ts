@@ -32,7 +32,7 @@ import {
 
 const DEFAULT_OPENING: OpeningStateInput = Object.freeze({
   openingQualificationPvp: 300,
-  fortnightPvpOpeningCredit: 0,
+  fortnightPvpOpeningCredit: 300,
   dailyCarryPvp: 0,
   dailyCarryLeft: 0,
   dailyCarryRight: 0,
@@ -362,7 +362,12 @@ describe('WP2 whole-period calculation orchestration', () => {
   it('P4-QUAL-002 allows a same-day crossing to qualification 300', () => {
     const bundle = setupBundle(
       [member('A', null, null)],
-      { A: { openingQualificationPvp: 33 } },
+      {
+        A: {
+          openingQualificationPvp: 33,
+          fortnightPvpOpeningCredit: 33,
+        },
+      },
     );
     const schema = deriveManualPlanSchema(bundle);
     const date = schema.dates.find((item) => item.settlementMode === 'SETTLE')!.date;
@@ -395,7 +400,12 @@ describe('WP2 whole-period calculation orchestration', () => {
   it('P4-QUAL-005 preserves a below-qualification reset trace but blocks CURRENT use', () => {
     const bundle = setupBundle(
       [member('A', null, null)],
-      { A: { openingQualificationPvp: 33 } },
+      {
+        A: {
+          openingQualificationPvp: 33,
+          fortnightPvpOpeningCredit: 33,
+        },
+      },
     );
     const schema = deriveManualPlanSchema(bundle);
     const date = schema.dates.find((item) => item.settlementMode === 'SETTLE')!.date;
@@ -532,7 +542,7 @@ describe('WP2 whole-period calculation orchestration', () => {
     });
     expect(state.result.rawPerformanceByDateAndMember[date]?.A?.organizationLeft).toBe(700);
     expect(state.result.finalAssessmentByMember.A?.newPvpTotal).toBe(0);
-    expect(state.result.finalAssessmentByMember.A?.remainingPvp).toBe(700);
+    expect(state.result.finalAssessmentByMember.A?.remainingPvp).toBe(400);
     expect(state.result.finalAssessmentByMember.B?.newPvpTotal).toBe(700);
   });
 
@@ -561,13 +571,12 @@ describe('WP2 whole-period calculation orchestration', () => {
     expect(current.result.rawPerformanceByDateAndMember[date]?.B?.directPvp).toBe(1);
   });
 
-  it('P3-CALC-004 returns aggregate overflow as blocked with no partial result', () => {
+  it('P3-CALC-004 returns a cumulative PVP cap violation as blocked with no partial result', () => {
     const bundle = setupBundle([member('A', null, null)]);
     const schema = deriveManualPlanSchema(bundle);
     const date = schema.dates.find((item) => item.settlementMode === 'SETTLE')!.date;
     let draft = createManualPlanDraft(bundle);
     draft = edit(schema, draft, date, 'A', 'pvp', String(Number.MAX_SAFE_INTEGER));
-    draft = edit(schema, draft, date, 'A', 'selfLeft', '1');
     const state = calculateManualPlan(bundle, draft, schema);
 
     expect(state.status).toBe('BLOCKED');
@@ -575,8 +584,8 @@ describe('WP2 whole-period calculation orchestration', () => {
     if (state.status !== 'BLOCKED') throw new Error('expected blocked');
     expect(state.issues).toContainEqual(
       expect.objectContaining({
-        code: 'PV_AGGREGATE_OUT_OF_RANGE',
-        location: expect.objectContaining({ date, memberKey: 'A' }),
+        code: 'CUMULATIVE_PVP_ALLOCATION_EXCEEDS_CAP',
+        location: expect.objectContaining({ memberKey: 'A', field: 'pvp' }),
       }),
     );
   });

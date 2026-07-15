@@ -12,8 +12,9 @@ const OPENING_FIELDS: readonly {
   readonly help?: string;
 }[] = [
   {
-    field: 'dailyCarryPvp',
+    field: 'cumulativePvp',
     label: 'PVP 시작값',
+    help: '현재까지 달성한 누적 PVP입니다. 첫날 일일 PVP 잔액으로 더하지 않습니다.',
   },
   {
     field: 'dailyCarryLeft',
@@ -107,18 +108,7 @@ export function OpeningStateForm({
                 }}
                 aria-invalid={fieldIssue !== undefined}
                 aria-describedby={fieldIssue === undefined ? undefined : errorId}
-                onChange={(event) => {
-                  const value = event.currentTarget.value;
-                  onChange(
-                    field === 'dailyCarryPvp'
-                      ? {
-                          openingQualificationPvp: value,
-                          fortnightPvpOpeningCredit: value,
-                          dailyCarryPvp: value,
-                        }
-                      : { [field]: value },
-                  );
-                }}
+                onChange={(event) => onChange({ [field]: event.currentTarget.value })}
               />
               {help === undefined ? null : <p className="field-help">{help}</p>}
               {fieldIssue !== undefined ? (

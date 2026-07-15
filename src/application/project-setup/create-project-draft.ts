@@ -15,9 +15,7 @@ export interface CreateProjectDraftInput {
 
 export function createOpeningStateDraft(): OpeningStateDraft {
   return {
-    openingQualificationPvp: '0',
-    fortnightPvpOpeningCredit: '0',
-    dailyCarryPvp: '0',
+    cumulativePvp: '0',
     dailyCarryLeft: '0',
     dailyCarryRight: '0',
     openingStateConfirmed: false,

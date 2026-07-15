@@ -22,6 +22,7 @@ import {
   type AutomaticPlanProofProgress,
   type ModelCertificate,
 } from '..';
+import { AUTOMATIC_PLAN_PROVEN_SCALAR_OBJECTIVE_COUNT } from '../proof-stages';
 import {
   createOptimizerRequest,
   optimizerMember,
@@ -64,7 +65,7 @@ function completeProgress(
 ): AutomaticPlanProofProgress {
   return {
     stage: 'COMPLETE',
-    provenScalarObjectiveCount: 5,
+    provenScalarObjectiveCount: AUTOMATIC_PLAN_PROVEN_SCALAR_OBJECTIVE_COUNT,
     provenVectorPrefix: {
       objective: 'DETERMINISTIC_ALLOCATION_VECTOR',
       length: vectorLength,
@@ -103,9 +104,11 @@ describe('Phase 4 model certificate and truthful statuses', () => {
     if (outcome.status !== 'SUCCESS') return;
     expect(outcome.model.objectiveStages).toEqual([
       'TOTAL_NEW_PV',
+      'CONFIRMED_PAYOUT_WON',
       'DISCARDED_EXCESS',
-      'TARGET_700_AT_LEAST_EIGHT',
+      'HIGH_TARGET_ASCENDING_VECTOR',
       'TARGET_700_ASCENDING_VECTOR',
+      'FUTURE_CUMULATIVE_PVP_INVESTMENT',
       'NON_HUNDRED_CELLS',
       'MAX_DIRECT_PVP',
       'DETERMINISTIC_ALLOCATION_VECTOR',
@@ -233,6 +236,9 @@ describe('bounded tiny exhaustive oracle', () => {
     const firstDate = request.calendar.dates.find(
       (date) => !request.calendar.skipDateSet.includes(date),
     )!;
+    const finalDate = request.calendar.dates
+      .filter((date) => !request.calendar.skipDateSet.includes(date))
+      .at(-1)!;
     const domainByCoordinate = {
       [automaticPlanCoordinateKey({ date: firstDate, memberKey: 'root', field: 'PVP' })]: [
         700,
@@ -242,12 +248,22 @@ describe('bounded tiny exhaustive oracle', () => {
         date: firstDate,
         memberKey: 'root',
         field: 'SELF_LEFT',
-      })]: [2_500],
+      })]: [1_500],
       [automaticPlanCoordinateKey({
         date: firstDate,
         memberKey: 'root',
         field: 'SELF_RIGHT',
-      })]: [2_500],
+      })]: [2_200],
+      [automaticPlanCoordinateKey({
+        date: finalDate,
+        memberKey: 'root',
+        field: 'SELF_LEFT',
+      })]: [300],
+      [automaticPlanCoordinateKey({
+        date: finalDate,
+        memberKey: 'root',
+        field: 'SELF_RIGHT',
+      })]: [300],
     };
     const searched = searchTinyAutomaticPlan(request, {
       defaultDomain: [0],
@@ -258,8 +274,85 @@ describe('bounded tiny exhaustive oracle', () => {
     if (searched.status !== 'SUCCESS') return;
     expect(searched.completeWithinBounds).toBe(true);
     expect(searched.evaluatedCandidateCount).toBe(2);
-    expect(searched.bestCandidate?.objective.totalNewPv).toBe(5_700);
+    expect(searched.bestCandidate?.objective.totalNewPv).toBe(5_000);
+    expect(searched.bestCandidate?.candidateId).toBe('tiny-oracle-0');
     expect(searched).not.toHaveProperty('proof');
+  });
+
+  it('returns a complete bounded search with no candidate when every assignment is invalid', () => {
+    const searched = searchTinyAutomaticPlan(createOptimizerRequest(), {
+      defaultDomain: [0],
+      maxCombinations: 1,
+    });
+
+    expect(searched).toMatchObject({
+      status: 'SUCCESS',
+      bestCandidate: null,
+      evaluatedCandidateCount: 1,
+      completeWithinBounds: true,
+    });
+  });
+
+  it('replaces an incumbent when a later equal-total assignment wins the final vector tie-break', () => {
+    const request = createOptimizerRequest(
+      [optimizerMember('root', null, null, 1500)],
+      Object.freeze({ root: optimizerOpening() }),
+    );
+    const businessDates = request.calendar.dates.filter(
+      (date) => !request.calendar.skipDateSet.includes(date),
+    );
+    const firstDate = businessDates[0]!;
+    const secondDate = businessDates[1]!;
+    const finalDate = businessDates.at(-1)!;
+    const domainByCoordinate = {
+      [automaticPlanCoordinateKey({
+        date: firstDate,
+        memberKey: 'root',
+        field: 'PVP',
+      })]: [1_000],
+      [automaticPlanCoordinateKey({
+        date: secondDate,
+        memberKey: 'root',
+        field: 'PVP',
+      })]: [400, 500],
+      [automaticPlanCoordinateKey({
+        date: finalDate,
+        memberKey: 'root',
+        field: 'PVP',
+      })]: [0, 100],
+      [automaticPlanCoordinateKey({
+        date: firstDate,
+        memberKey: 'root',
+        field: 'SELF_LEFT',
+      })]: [1_500],
+      [automaticPlanCoordinateKey({
+        date: firstDate,
+        memberKey: 'root',
+        field: 'SELF_RIGHT',
+      })]: [2_200],
+      [automaticPlanCoordinateKey({
+        date: finalDate,
+        memberKey: 'root',
+        field: 'SELF_LEFT',
+      })]: [300],
+      [automaticPlanCoordinateKey({
+        date: finalDate,
+        memberKey: 'root',
+        field: 'SELF_RIGHT',
+      })]: [300],
+    };
+    const searched = searchTinyAutomaticPlan(request, {
+      defaultDomain: [0],
+      domainByCoordinate,
+      maxCombinations: 4,
+      candidateIdPrefix: 'ranked',
+    });
+
+    expect(searched.status).toBe('SUCCESS');
+    if (searched.status !== 'SUCCESS') return;
+    expect(searched.evaluatedCandidateCount).toBe(4);
+    expect(searched.bestCandidate?.objective.totalNewPv).toBe(5_800);
+    expect(searched.bestCandidate?.candidateId).toBe('ranked-2');
   });
 
   it('ORACLE-003 stops before enumeration when the bounded product exceeds the guard', () => {

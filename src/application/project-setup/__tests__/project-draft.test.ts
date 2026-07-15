@@ -146,15 +146,13 @@ describe('P2-PROJ 프로젝트 Draft', () => {
 });
 
 describe('P2-OPEN / P2-MEMBER 회원 편집과 파싱', () => {
-  it('P2-OPEN-001: 새 회원의 다섯 시작값은 독립된 0 문자열이며 미확인이다', () => {
+  it('P2-OPEN-001: 새 회원의 누적 PVP와 좌·우 시작값은 독립된 0 문자열이며 미확인이다', () => {
     const firstOpening = createOpeningStateDraft();
     const secondOpening = createOpeningStateDraft();
     const member = createMemberDraft('A');
 
     expect(firstOpening).toEqual({
-      openingQualificationPvp: '0',
-      fortnightPvpOpeningCredit: '0',
-      dailyCarryPvp: '0',
+      cumulativePvp: '0',
       dailyCarryLeft: '0',
       dailyCarryRight: '0',
       openingStateConfirmed: false,
@@ -173,9 +171,7 @@ describe('P2-OPEN / P2-MEMBER 회원 편집과 파싱', () => {
     const opening = edited.members[0]!.openingState;
 
     expect(opening).toEqual({
-      openingQualificationPvp: '0',
-      fortnightPvpOpeningCredit: '0',
-      dailyCarryPvp: '0',
+      cumulativePvp: '0',
       dailyCarryLeft: '39',
       dailyCarryRight: '0',
       openingStateConfirmed: true,
@@ -238,7 +234,7 @@ describe('P2-OPEN / P2-MEMBER 회원 편집과 파싱', () => {
       ...createMemberDraft('A'),
       openingState: {
         ...createOpeningStateDraft(),
-        dailyCarryPvp: 'not-a-number',
+        cumulativePvp: 'not-a-number',
       },
     };
 
@@ -374,7 +370,7 @@ describe('Draft 검증, 준비 상태와 공개 위치 매핑', () => {
     expect(editProjectPeriod(active, { month: '8' }).activeBundle).toBeNull();
     expect(editProjectTitle(active, '새 제목').activeBundle).toBeNull();
     expect(editMemberIdentity(active, 'A', { pvpTarget: '1500' }).activeBundle).toBeNull();
-    expect(editOpeningState(active, 'A', { dailyCarryPvp: '1' }).activeBundle).toBeNull();
+    expect(editOpeningState(active, 'A', { cumulativePvp: '1' }).activeBundle).toBeNull();
     expect(clearActiveProjectSetupBundle(active).activeBundle).toBeNull();
     expect(clearActiveProjectSetupBundle(ready)).toBe(ready);
   });
@@ -389,7 +385,7 @@ describe('Draft 검증, 준비 상태와 공개 위치 매핑', () => {
     const withSuggestion = fromCanonicalIssue({
       code: 'PV_NEGATIVE',
       severity: 'WARNING',
-      location: { memberKey: 'A', field: 'dailyCarryPvp' },
+      location: { memberKey: 'A', field: 'cumulativePvp' },
       message: '경고',
       suggestion: '수정',
     });
@@ -416,8 +412,8 @@ describe('Draft 검증, 준비 상태와 공개 위치 매핑', () => {
       [{ area: 'PROJECT', field: 'period.year' }, 'project-year'],
       [{ area: 'MEMBER', memberKey: 'A/B' }, 'member-A_B-card'],
       [
-        { area: 'MEMBER', memberKey: 'A/B', field: 'dailyCarryPvp' },
-        'member-A_B-dailyCarryPvp',
+        { area: 'MEMBER', memberKey: 'A/B', field: 'cumulativePvp' },
+        'member-A_B-cumulativePvp',
       ],
       [{ area: 'SLOT', memberKey: 'A', side: 'LEFT' }, 'member-A-left-slot'],
       [{ area: 'QUEUE', memberKey: 'B' }, 'queue-B'],

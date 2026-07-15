@@ -116,8 +116,7 @@ describe('P2-CARD 명시적 좌·우 슬롯', () => {
     });
     expect(getChildSlotState(topology, 'B', 'RIGHT').kind).toBe('SELF');
     expect(member(rightOutcome.draft, 'B').openingState).toMatchObject({
-      openingQualificationPvp: '0',
-      fortnightPvpOpeningCredit: '0',
+      cumulativePvp: '0',
       openingStateConfirmed: false,
     });
     expect(topologySlotKey('A', 'LEFT')).toBe('A\u0000LEFT');

@@ -70,6 +70,7 @@ import type { AutomaticPlanUiStatus } from './components/automatic-plan/Automati
 import {
   clearWorkspaceSession,
   readWorkspaceSession,
+  WORKSPACE_SESSION_VERSION,
   writeWorkspaceSession,
   type WorkspaceSessionSnapshot,
 } from './workspace-session-storage';
@@ -147,11 +148,22 @@ function automaticPlanPreviewMetrics(
     candidateId: candidate.candidateId,
     foundAtElapsedMs: candidate.foundAtElapsedMs,
     totalNewPv: candidate.objective.totalNewPv,
+    confirmedPayoutWon: candidate.objective.confirmedPayoutWon,
     optimalityProven,
     runStatusLabel,
     discardedExcessPv: candidate.objective.discardedExcessPv,
+    highTargetMemberDayCounts: Object.freeze(
+      candidate.display.highTargetMemberDayCounts.map((item) =>
+        Object.freeze({
+          memberKey: item.memberKey,
+          memberLabel: memberByKey.get(item.memberKey)?.name ?? item.memberKey,
+          pvpTarget: item.pvpTarget,
+          days: item.commissionDays,
+        }),
+      ),
+    ),
     target700MembersAtLeastEight:
-      candidate.objective.target700MembersAtLeastEight,
+      candidate.display.target700MembersAtLeastEight,
     target700TotalCommissionDays:
       candidate.display.target700TotalCommissionDays,
     target700MemberDayCounts: Object.freeze(
@@ -163,6 +175,8 @@ function automaticPlanPreviewMetrics(
         }),
       ),
     ),
+    futureCumulativePvpInvestmentPv:
+      candidate.objective.futureCumulativePvpInvestmentPv,
     nonHundredCellCount: candidate.objective.nonHundredCellCount,
     maxDirectPvp: candidate.objective.maxDirectPvp,
     terminalCarryTotal: candidate.display.terminalCarrySummary.totalCarryPv,
@@ -343,7 +357,7 @@ export function App({
 
   useEffect(() => {
     writeWorkspaceSession({
-      version: 2,
+      version: WORKSPACE_SESSION_VERSION,
       draft,
       manualPlanDraft,
       screen: screenState,

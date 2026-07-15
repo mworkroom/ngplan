@@ -41,9 +41,7 @@ function member(
     sheetMarker: 'NONE',
     placement: { parentMemberKey: null, sideAtParent: null },
     openingState: {
-      openingQualificationPvp: '0',
-      fortnightPvpOpeningCredit: '0',
-      dailyCarryPvp: '0',
+      cumulativePvp: '0',
       dailyCarryLeft: '0',
       dailyCarryRight: '0',
       openingStateConfirmed: true,
@@ -126,12 +124,10 @@ describe('project and opening forms', () => {
     expect(onRestore).toHaveBeenCalledOnce();
   });
 
-  it('edits five independent opening values and confirmation', () => {
+  it('edits cumulative PVP, left/right openings, and confirmation', () => {
     const current = member('member-a', {
       openingState: {
-        openingQualificationPvp: '0',
-        fortnightPvpOpeningCredit: '0',
-        dailyCarryPvp: '0',
+        cumulativePvp: '0',
         dailyCarryLeft: '0',
         dailyCarryRight: '0',
         openingStateConfirmed: false,
@@ -172,11 +168,7 @@ describe('project and opening forms', () => {
       screen.getByRole('checkbox', { name: /시작값이 맞게 입력되었으면 확인 버튼을 클릭해주세요/ }),
     );
     expect(onChange).toHaveBeenCalledWith({ dailyCarryLeft: '39' });
-    expect(onChange).toHaveBeenCalledWith({
-      openingQualificationPvp: '33',
-      fortnightPvpOpeningCredit: '33',
-      dailyCarryPvp: '33',
-    });
+    expect(onChange).toHaveBeenCalledWith({ cumulativePvp: '33' });
     expect(onPvpTargetChange).toHaveBeenCalledWith('1500');
     expect(onChange).toHaveBeenCalledWith({ openingStateConfirmed: true });
     expect(screen.getByText('dailyCarryLeft 문제')).toBeTruthy();

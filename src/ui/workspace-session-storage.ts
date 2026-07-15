@@ -1,15 +1,14 @@
 import type { ManualPlanDraft } from '../application/manual-plan';
-import type { OpeningStateInput } from '../engine';
 import type {
   MemberDraft,
-  OpeningStateDraft,
   ProjectSetupBundle,
   ProjectSetupDraft,
 } from '../application/project-setup';
 
 export const LEGACY_WORKSPACE_SESSION_STORAGE_KEY = 'ngplan.workspace-session.v1';
-export const WORKSPACE_SESSION_STORAGE_KEY = 'ngplan.workspace-session.v2';
-export const WORKSPACE_SESSION_VERSION = 2 as const;
+export const LEGACY_WORKSPACE_SESSION_STORAGE_V2_KEY = 'ngplan.workspace-session.v2';
+export const WORKSPACE_SESSION_STORAGE_KEY = 'ngplan.workspace-session.v3';
+export const WORKSPACE_SESSION_VERSION = 3 as const;
 
 export type WorkspaceAutomaticPlanCheckpoint = Readonly<Record<string, unknown>>;
 
@@ -31,12 +30,19 @@ export interface WorkspaceSessionWriteSnapshot {
   readonly automaticPlanCheckpoint?: WorkspaceAutomaticPlanCheckpoint | null;
 }
 
-const LEGACY_OPENING_FIELDS = [
+const V1_OPENING_FIELDS = [
   'fortnightPvpOpeningCredit',
   'dailyCarryPvp',
   'dailyCarryLeft',
   'dailyCarryRight',
 ] as const;
+
+const V2_OPENING_FIELDS = [
+  'openingQualificationPvp',
+  ...V1_OPENING_FIELDS,
+] as const;
+
+type StoredOpeningVersion = 'V1' | 'V2' | 'V3';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -59,21 +65,27 @@ function isSideOrNull(value: unknown): boolean {
 
 function looksLikeOpeningState(
   value: unknown,
-  requireQualification: boolean,
-): value is OpeningStateDraft {
+  version: StoredOpeningVersion,
+): boolean {
   if (!isRecord(value)) {
     return false;
   }
-  if (
-    !LEGACY_OPENING_FIELDS.every((field) => typeof value[field] === 'string') ||
-    typeof value.openingStateConfirmed !== 'boolean'
-  ) {
-    return false;
+  if (version === 'V3') {
+    return (
+      typeof value.cumulativePvp === 'string' &&
+      typeof value.dailyCarryLeft === 'string' &&
+      typeof value.dailyCarryRight === 'string' &&
+      typeof value.openingStateConfirmed === 'boolean'
+    );
   }
-  return !requireQualification || typeof value.openingQualificationPvp === 'string';
+  const fields = version === 'V2' ? V2_OPENING_FIELDS : V1_OPENING_FIELDS;
+  return (
+    fields.every((field) => typeof value[field] === 'string') &&
+    typeof value.openingStateConfirmed === 'boolean'
+  );
 }
 
-function looksLikeMemberDraft(value: unknown, requireQualification: boolean): boolean {
+function looksLikeMemberDraft(value: unknown, version: StoredOpeningVersion): boolean {
   if (!isRecord(value) || !isRecord(value.placement)) {
     return false;
   }
@@ -87,14 +99,14 @@ function looksLikeMemberDraft(value: unknown, requireQualification: boolean): bo
     (value.placement.parentMemberKey === null ||
       typeof value.placement.parentMemberKey === 'string') &&
     isSideOrNull(value.placement.sideAtParent) &&
-    looksLikeOpeningState(value.openingState, requireQualification)
+    looksLikeOpeningState(value.openingState, version)
   );
 }
 
 function looksLikeProjectDraft(
   value: unknown,
-  requireQualification: boolean,
-): value is ProjectSetupDraft {
+  version: StoredOpeningVersion,
+): boolean {
   if (!isRecord(value) || !Array.isArray(value.members)) {
     return false;
   }
@@ -110,7 +122,7 @@ function looksLikeProjectDraft(
     value.projectStatus === 'IN_PROGRESS' &&
     (value.rootMemberKey === null || typeof value.rootMemberKey === 'string') &&
     (value.selectedMemberKey === null || typeof value.selectedMemberKey === 'string') &&
-    value.members.every((member) => looksLikeMemberDraft(member, requireQualification))
+    value.members.every((member) => looksLikeMemberDraft(member, version))
   );
 }
 
@@ -171,7 +183,9 @@ function looksLikeProjectSetupBundle(value: unknown): value is ProjectSetupBundl
       !isSafePv(opening.fortnightPvpOpeningCredit) ||
       !isSafePv(opening.dailyCarryPvp) ||
       !isSafePv(opening.dailyCarryLeft) ||
-      !isSafePv(opening.dailyCarryRight)
+      !isSafePv(opening.dailyCarryRight) ||
+      opening.openingQualificationPvp !== opening.fortnightPvpOpeningCredit ||
+      opening.dailyCarryPvp !== 0
     ) {
       return false;
     }
@@ -210,62 +224,15 @@ function withSafeActiveBundle(draft: ProjectSetupDraft): ProjectSetupDraft {
     : { ...draft, activeBundle: null };
 }
 
-function withUnifiedVisiblePvpOpenings(draft: ProjectSetupDraft): ProjectSetupDraft {
-  const members = draft.members.map((member) => {
-    const pvp = member.openingState.dailyCarryPvp;
-    return member.openingState.openingQualificationPvp === pvp &&
-      member.openingState.fortnightPvpOpeningCredit === pvp
-      ? member
-      : {
-          ...member,
-          openingState: {
-            ...member.openingState,
-            openingQualificationPvp: pvp,
-            fortnightPvpOpeningCredit: pvp,
-          },
-        };
-  });
-  if (draft.activeBundle === null) {
-    return members.every((member, index) => member === draft.members[index])
-      ? draft
-      : { ...draft, members };
-  }
-  const openings = Object.create(null) as Record<string, OpeningStateInput>;
-  for (const member of draft.activeBundle.organization.members) {
-    const opening = draft.activeBundle.organization.openingStateByMember[member.memberKey]!;
-    Object.defineProperty(openings, member.memberKey, {
-      value: {
-        ...opening,
-        openingQualificationPvp: opening.dailyCarryPvp,
-        fortnightPvpOpeningCredit: opening.dailyCarryPvp,
-      },
-      enumerable: true,
-      configurable: false,
-      writable: false,
-    });
-  }
-  return {
-    ...draft,
-    members,
-    activeBundle: {
-      ...draft.activeBundle,
-      organization: {
-        ...draft.activeBundle.organization,
-        openingStateByMember: openings,
-      },
-    },
-  };
-}
-
-function normalizeV2Snapshot(value: unknown): WorkspaceSessionSnapshot | null {
+function normalizeV3Snapshot(value: unknown): WorkspaceSessionSnapshot | null {
   if (
     !isRecord(value) ||
     value.version !== WORKSPACE_SESSION_VERSION ||
-    !looksLikeProjectDraft(value.draft, true)
+    !looksLikeProjectDraft(value.draft, 'V3')
   ) {
     return null;
   }
-  const draft = withUnifiedVisiblePvpOpenings(withSafeActiveBundle(value.draft));
+  const draft = withSafeActiveBundle(value.draft as ProjectSetupDraft);
   const manualPlanDraft = looksLikeManualPlanDraft(value.manualPlanDraft)
     ? value.manualPlanDraft
     : null;
@@ -288,16 +255,32 @@ function normalizeV2Snapshot(value: unknown): WorkspaceSessionSnapshot | null {
   });
 }
 
+type LegacyOpeningStateDraft = Readonly<{
+  dailyCarryPvp: string;
+  dailyCarryLeft: string;
+  dailyCarryRight: string;
+}>;
+
+type LegacyMemberDraft = Omit<MemberDraft, 'openingState'> & Readonly<{
+  openingState: LegacyOpeningStateDraft;
+}>;
+
+type LegacyProjectSetupDraft = Omit<
+  ProjectSetupDraft,
+  'members' | 'activeBundle'
+> & Readonly<{
+  members: readonly LegacyMemberDraft[];
+  activeBundle: unknown;
+}>;
+
 function migrateLegacyMember(value: unknown): MemberDraft {
-  const member = value as MemberDraft;
-  const opening = member.openingState as OpeningStateDraft;
+  const member = value as LegacyMemberDraft;
+  const opening = member.openingState;
   return {
     ...member,
     placement: { ...member.placement },
     openingState: {
-      openingQualificationPvp: '0',
-      fortnightPvpOpeningCredit: opening.fortnightPvpOpeningCredit,
-      dailyCarryPvp: opening.dailyCarryPvp,
+      cumulativePvp: opening.dailyCarryPvp,
       dailyCarryLeft: opening.dailyCarryLeft,
       dailyCarryRight: opening.dailyCarryRight,
       openingStateConfirmed: false,
@@ -305,20 +288,24 @@ function migrateLegacyMember(value: unknown): MemberDraft {
   };
 }
 
-function migrateV1Snapshot(value: unknown): WorkspaceSessionSnapshot | null {
+function migrateLegacySnapshot(
+  value: unknown,
+  version: 1 | 2,
+  openingVersion: 'V1' | 'V2',
+): WorkspaceSessionSnapshot | null {
   if (
     !isRecord(value) ||
-    value.version !== 1 ||
-    !looksLikeProjectDraft(value.draft, false)
+    value.version !== version ||
+    !looksLikeProjectDraft(value.draft, openingVersion)
   ) {
     return null;
   }
-  const legacyDraft = value.draft;
-  const draft = withUnifiedVisiblePvpOpenings({
+  const legacyDraft = value.draft as LegacyProjectSetupDraft;
+  const draft: ProjectSetupDraft = {
     ...legacyDraft,
     members: legacyDraft.members.map(migrateLegacyMember),
     activeBundle: null,
-  });
+  };
   return deepFreeze({
     version: WORKSPACE_SESSION_VERSION,
     draft,
@@ -339,7 +326,7 @@ function removeStorageKey(storage: Storage, key: string): void {
   }
 }
 
-function persistV2Snapshot(snapshot: WorkspaceSessionSnapshot): boolean {
+function persistV3Snapshot(snapshot: WorkspaceSessionSnapshot): boolean {
   try {
     window.localStorage.setItem(
       WORKSPACE_SESSION_STORAGE_KEY,
@@ -351,63 +338,109 @@ function persistV2Snapshot(snapshot: WorkspaceSessionSnapshot): boolean {
   }
 }
 
-function readAndNormalizeV2(storage: Storage): WorkspaceSessionSnapshot | null {
+function readAndNormalizeV3(storage: Storage): WorkspaceSessionSnapshot | null {
   const raw = storage.getItem(WORKSPACE_SESSION_STORAGE_KEY);
   if (raw === null) return null;
   try {
-    const normalized = normalizeV2Snapshot(JSON.parse(raw));
+    const normalized = normalizeV3Snapshot(JSON.parse(raw));
     if (normalized !== null) return normalized;
   } catch {
-    // 손상된 현재 세대 저장값은 제거하고 다른 저장 위치 또는 v1을 시도합니다.
+    // 손상된 현재 세대 저장값은 제거하고 이전 세대 저장 위치를 시도합니다.
   }
   removeStorageKey(storage, WORKSPACE_SESSION_STORAGE_KEY);
   return null;
 }
 
-function readAndMigrateV1(storage: Storage): WorkspaceSessionSnapshot | null {
-  const raw = storage.getItem(LEGACY_WORKSPACE_SESSION_STORAGE_KEY);
+function readAndMigrateLegacy(
+  storage: Storage,
+  key: string,
+  version: 1 | 2,
+  openingVersion: 'V1' | 'V2',
+): WorkspaceSessionSnapshot | null {
+  const raw = storage.getItem(key);
   if (raw === null) return null;
   try {
-    const migrated = migrateV1Snapshot(JSON.parse(raw));
+    const migrated = migrateLegacySnapshot(
+      JSON.parse(raw),
+      version,
+      openingVersion,
+    );
     if (migrated !== null) return migrated;
   } catch {
     // 손상된 구형 저장값은 아래에서 제거합니다.
   }
-  removeStorageKey(storage, LEGACY_WORKSPACE_SESSION_STORAGE_KEY);
+  removeStorageKey(storage, key);
   return null;
+}
+
+function removeLegacyStorageKeys(storage: Storage): void {
+  removeStorageKey(storage, LEGACY_WORKSPACE_SESSION_STORAGE_V2_KEY);
+  removeStorageKey(storage, LEGACY_WORKSPACE_SESSION_STORAGE_KEY);
 }
 
 function promoteToLocalStorage(
   snapshot: WorkspaceSessionSnapshot,
   source: Storage,
 ): WorkspaceSessionSnapshot {
-  if (persistV2Snapshot(snapshot)) {
-    removeStorageKey(source, WORKSPACE_SESSION_STORAGE_KEY);
-    removeStorageKey(source, LEGACY_WORKSPACE_SESSION_STORAGE_KEY);
+  if (persistV3Snapshot(snapshot)) {
+    removeLegacyStorageKeys(source);
+    if (source === window.sessionStorage) {
+      removeStorageKey(source, WORKSPACE_SESSION_STORAGE_KEY);
+    }
   }
   return snapshot;
 }
 
 export function readWorkspaceSession(): WorkspaceSessionSnapshot | null {
   try {
-    const localCurrent = readAndNormalizeV2(window.localStorage);
+    const localCurrent = readAndNormalizeV3(window.localStorage);
     if (localCurrent !== null) {
       return localCurrent;
     }
 
-    const localLegacy = readAndMigrateV1(window.localStorage);
-    if (localLegacy !== null) {
-      return promoteToLocalStorage(localLegacy, window.localStorage);
+    const localV2 = readAndMigrateLegacy(
+      window.localStorage,
+      LEGACY_WORKSPACE_SESSION_STORAGE_V2_KEY,
+      2,
+      'V2',
+    );
+    if (localV2 !== null) {
+      return promoteToLocalStorage(localV2, window.localStorage);
     }
 
-    const sessionCurrent = readAndNormalizeV2(window.sessionStorage);
+    const localV1 = readAndMigrateLegacy(
+      window.localStorage,
+      LEGACY_WORKSPACE_SESSION_STORAGE_KEY,
+      1,
+      'V1',
+    );
+    if (localV1 !== null) {
+      return promoteToLocalStorage(localV1, window.localStorage);
+    }
+
+    const sessionCurrent = readAndNormalizeV3(window.sessionStorage);
     if (sessionCurrent !== null) {
       return promoteToLocalStorage(sessionCurrent, window.sessionStorage);
     }
 
-    const sessionLegacy = readAndMigrateV1(window.sessionStorage);
-    if (sessionLegacy !== null) {
-      return promoteToLocalStorage(sessionLegacy, window.sessionStorage);
+    const sessionV2 = readAndMigrateLegacy(
+      window.sessionStorage,
+      LEGACY_WORKSPACE_SESSION_STORAGE_V2_KEY,
+      2,
+      'V2',
+    );
+    if (sessionV2 !== null) {
+      return promoteToLocalStorage(sessionV2, window.sessionStorage);
+    }
+
+    const sessionV1 = readAndMigrateLegacy(
+      window.sessionStorage,
+      LEGACY_WORKSPACE_SESSION_STORAGE_KEY,
+      1,
+      'V1',
+    );
+    if (sessionV1 !== null) {
+      return promoteToLocalStorage(sessionV1, window.sessionStorage);
     }
     return null;
   } catch {
@@ -424,10 +457,10 @@ export function writeWorkspaceSession(snapshot: WorkspaceSessionWriteSnapshot): 
     organizationScale: snapshot.organizationScale,
     automaticPlanCheckpoint: snapshot.automaticPlanCheckpoint ?? null,
   };
-  if (persistV2Snapshot(current)) {
-    removeStorageKey(window.localStorage, LEGACY_WORKSPACE_SESSION_STORAGE_KEY);
+  if (persistV3Snapshot(current)) {
+    removeLegacyStorageKeys(window.localStorage);
     removeStorageKey(window.sessionStorage, WORKSPACE_SESSION_STORAGE_KEY);
-    removeStorageKey(window.sessionStorage, LEGACY_WORKSPACE_SESSION_STORAGE_KEY);
+    removeLegacyStorageKeys(window.sessionStorage);
   }
 }
 
@@ -438,12 +471,12 @@ export function replaceWorkspaceAutomaticPlanCheckpoint(
   if (current === null) {
     return false;
   }
-  return persistV2Snapshot({ ...current, automaticPlanCheckpoint: checkpoint });
+  return persistV3Snapshot({ ...current, automaticPlanCheckpoint: checkpoint });
 }
 
 export function clearWorkspaceSession(): void {
   removeStorageKey(window.localStorage, WORKSPACE_SESSION_STORAGE_KEY);
-  removeStorageKey(window.localStorage, LEGACY_WORKSPACE_SESSION_STORAGE_KEY);
+  removeLegacyStorageKeys(window.localStorage);
   removeStorageKey(window.sessionStorage, WORKSPACE_SESSION_STORAGE_KEY);
-  removeStorageKey(window.sessionStorage, LEGACY_WORKSPACE_SESSION_STORAGE_KEY);
+  removeLegacyStorageKeys(window.sessionStorage);
 }

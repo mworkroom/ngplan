@@ -78,9 +78,10 @@ export interface CalculatePlanInput {
 }
 
 export interface RuleSet {
-  readonly rulesetVersion: '3.0.0';
+  readonly rulesetVersion: '4.0.0';
   readonly commissionTiers: readonly CommissionTier[];
   readonly allowedPvpTargets: readonly PvpTarget[];
+  readonly cumulativePvpCap: Pv;
   readonly fortnightSideTarget: Pv;
   readonly businessCalendarPolicy: 'SUNDAY_SKIP_NO_INPUT';
   readonly pvpTiePolicy: 'LEFT';
@@ -228,6 +229,10 @@ export type ValidationCode =
   | 'ORGANIZATION_DISCONNECTED'
   | 'OPENING_STATE_MISSING'
   | 'OPENING_STATE_MEMBER_NOT_FOUND'
+  | 'CUMULATIVE_PVP_OPENING_EXCEEDS_CAP'
+  | 'CUMULATIVE_PVP_OPENING_MISMATCH'
+  | 'DAILY_PVP_OPENING_NONZERO'
+  | 'CUMULATIVE_PVP_ALLOCATION_EXCEEDS_CAP'
   | 'ALLOCATION_MEMBER_NOT_FOUND'
   | 'ALLOCATION_CELL_DUPLICATE'
   | 'ALLOCATION_CELL_MISSING'

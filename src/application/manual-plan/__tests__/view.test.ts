@@ -20,7 +20,7 @@ import {
 
 const DEFAULT_OPENING: OpeningStateInput = {
   openingQualificationPvp: 300,
-  fortnightPvpOpeningCredit: 0,
+  fortnightPvpOpeningCredit: 300,
   dailyCarryPvp: 0,
   dailyCarryLeft: 0,
   dailyCarryRight: 0,
@@ -139,7 +139,7 @@ describe('WP5 pure result view models', () => {
         newPvpTotal: 100,
         rawLeftTotal: 200,
         rawRightTotal: 300,
-        remainingPvp: 600,
+        remainingPvp: 300,
       },
       runningPvpStatusLabel: '개인 PVP 목표 미달',
     });
@@ -176,7 +176,12 @@ describe('WP5 pure result view models', () => {
   it('P4-QUAL-005 presents the preserved below-qualification audit trace plainly', () => {
     const setup = bundle(
       [member('A')],
-      { A: { openingQualificationPvp: 33 } },
+      {
+        A: {
+          openingQualificationPvp: 33,
+          fortnightPvpOpeningCredit: 33,
+        },
+      },
     );
     const schema = deriveManualPlanSchema(setup);
     let draft = createManualPlanDraft(setup);
@@ -238,23 +243,23 @@ describe('WP5 pure result view models', () => {
       pvpTarget: 700,
       sheetMarker: 'NONE',
       newPvpTotal: 400,
-      personalPvpTotal: 400,
+      personalPvpTotal: 700,
       personalPvpTarget: 700,
-      remainingPvp: 300,
-      personalPvpStatusLabel: '개인 PVP 목표 미달',
+      remainingPvp: 0,
+      personalPvpStatusLabel: '개인 PVP 목표 달성',
       rawLeftTotal: 2500,
       rawRightTotal: 2100,
-      periodPvpForSide: 400,
+      periodPvpForSide: 700,
       pvpAppliedSide: 'RIGHT',
       pvpApplicationReason: 'SMALLER_RIGHT',
       pvpApplicationLabel: '작은 쪽 우에 적용',
       assessedLeft: 2500,
-      assessedRight: 2500,
+      assessedRight: 2800,
       leftTargetLabel: '좌 목표 달성',
       rightTargetLabel: '우 목표 달성',
       sideTargetsMet: true,
-      allTargetsMet: false,
-      allTargetsLabel: '추가 계획 필요',
+      allTargetsMet: true,
+      allTargetsLabel: '전체 목표 달성',
       recommendationLabel: '8회 권장 미달',
     });
   });
@@ -268,10 +273,10 @@ describe('WP5 pure result view models', () => {
     expect(deriveManualPlanMemberSummaryView(result, schema, 'A')).toMatchObject({
       rawLeftTotal: 2300,
       rawRightTotal: 2300,
-      periodPvpForSide: 400,
+      periodPvpForSide: 700,
       pvpAppliedSide: 'LEFT',
       pvpApplicationLabel: '동률 → 좌 적용',
-      assessedLeft: 2700,
+      assessedLeft: 3000,
       assessedRight: 2300,
       leftTargetMet: true,
       rightTargetMet: false,
@@ -302,20 +307,49 @@ describe('WP5 pure result view models', () => {
     });
   });
 
-  it('HALF-P03 excludes opening daily PVP carry from fortnight totals', () => {
+  it('[OPEN-002] maps one cumulative PVP opening to qualification and fortnight while daily PVP starts at zero', () => {
     const { schema, result } = currentResult(
-      bundle([member('A')], { A: { dailyCarryPvp: 300 } }),
-      (schema, initial) => edit(schema, initial, '2026-07-01', 'A', 'pvp', 400),
+      bundle([member('A')], {
+        A: {
+          openingQualificationPvp: 33,
+          fortnightPvpOpeningCredit: 33,
+          dailyCarryPvp: 0,
+          dailyCarryLeft: 200,
+          dailyCarryRight: 100,
+        },
+      }),
+      (schema, initial) => {
+        let draft = edit(schema, initial, '2026-07-01', 'A', 'pvp', 267);
+        return edit(schema, draft, '2026-07-01', 'A', 'selfRight', 200);
+      },
     );
+    expect(
+      deriveManualPlanDailyAuditView(result, schema, '2026-07-01', 'A'),
+    ).toMatchObject({
+      carryIn: { pvp: 0, left: 200, right: 100 },
+      rawPerformance: {
+        directPvp: 267,
+        organizationLeft: 0,
+        organizationRight: 200,
+      },
+      preSettlement: { pvp: 267, left: 200, right: 300 },
+      qualificationPvp: 300,
+      assessedLeft: 467,
+      assessedRight: 300,
+      settlementKind: 'FULL_COMMISSION',
+      commissionTier: 300,
+      carryOut: { pvp: 0, left: 0, right: 0 },
+    });
     expect(deriveManualPlanMemberSummaryView(result, schema, 'A')).toMatchObject({
-      fortnightPvpOpeningCredit: 0,
-      newPvpTotal: 400,
-      personalPvpTotal: 400,
-      remainingPvp: 300,
-      periodPvpForSide: 400,
+      openingQualificationPvp: 33,
+      fortnightPvpOpeningCredit: 33,
+      newPvpTotal: 267,
+      personalPvpTotal: 300,
+      remainingPvp: 400,
+      periodPvpForSide: 300,
       pvpAppliedSide: 'LEFT',
-      assessedLeft: 400,
-      assessedRight: 0,
+      assessedLeft: 300,
+      assessedRight: 200,
       sideTargetsMet: false,
     });
   });
@@ -324,7 +358,7 @@ describe('WP5 pure result view models', () => {
     const { schema, result } = currentResult(bundle());
     const summary = deriveManualPlanMemberSummaryView(result, schema, 'A');
     expect(summary).toMatchObject({
-      remainingPvp: 700,
+      remainingPvp: 400,
       leftTargetMet: false,
       rightTargetMet: false,
       leftTargetLabel: '좌 목표 미달',
@@ -334,26 +368,28 @@ describe('WP5 pure result view models', () => {
     });
   });
 
-  it('P3-RESULT-004 distinguishes zero pre-settlement PVP from carried PVP application', () => {
+  it('P3-RESULT-004 distinguishes zero PVP from same-day direct PVP application', () => {
     const zero = currentResult(bundle());
     expect(
       deriveManualPlanDailyAuditView(zero.result, zero.schema, '2026-07-01', 'A')
         ?.pvpApplicationLabel,
     ).toBe('적용할 PVP 없음');
 
-    const carried = currentResult(
+    const withDirectPvp = currentResult(
       bundle([member('A')], {
-        A: { dailyCarryPvp: 100, dailyCarryLeft: 200, dailyCarryRight: 300 },
+        A: { dailyCarryLeft: 200, dailyCarryRight: 300 },
       }),
+      (schema, initial) => edit(schema, initial, '2026-07-01', 'A', 'pvp', 100),
     );
-    const carriedView = deriveManualPlanDailyAuditView(
-      carried.result,
-      carried.schema,
+    const directPvpView = deriveManualPlanDailyAuditView(
+      withDirectPvp.result,
+      withDirectPvp.schema,
       '2026-07-01',
       'A',
     );
-    expect(carriedView).toMatchObject({
-      rawPerformance: { directPvp: 0 },
+    expect(directPvpView).toMatchObject({
+      carryIn: { pvp: 0, left: 200, right: 300 },
+      rawPerformance: { directPvp: 100 },
       preSettlement: { pvp: 100 },
       pvpApplicationLabel: '작은 쪽 좌에 PVP 적용',
     });

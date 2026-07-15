@@ -161,21 +161,28 @@ describe('calculatePlan', () => {
     });
   });
 
-  test('[HALF-P03] excludes daily PVP opening carry from fortnight totals', () => {
+  test('[HALF-P03] uses cumulative PVP for fortnight totals but not as daily carry', () => {
     const result = calculate(
       makePlanInput({
-        opening: { A: { dailyCarryPvp: 300 } },
+        opening: {
+          A: {
+            openingQualificationPvp: 300,
+            fortnightPvpOpeningCredit: 300,
+          },
+        },
         allocations: [
           { date: '2026-07-01', memberKey: 'A', pvp: 400, selfLeft: 0, selfRight: 0 },
         ],
       }),
     );
 
+    expect(result.dailySettlementByDateAndMember['2026-07-01']!.A!.preSettlement.pvp)
+      .toBe(400);
     expect(result.finalAssessmentByMember.A).toMatchObject({
       newPvpTotal: 400,
-      personalPvpTotal: 400,
-      periodPvpForSide: 400,
-      remainingPvp: 300,
+      personalPvpTotal: 700,
+      periodPvpForSide: 700,
+      remainingPvp: 0,
     });
   });
 
@@ -183,7 +190,12 @@ describe('calculatePlan', () => {
     const result = calculate(
       makePlanInput({
         members: [member('A'), member('B', 'A', 'LEFT')],
-        opening: { B: { fortnightPvpOpeningCredit: 300 } },
+        opening: {
+          B: {
+            openingQualificationPvp: 300,
+            fortnightPvpOpeningCredit: 300,
+          },
+        },
       }),
     );
 
@@ -196,12 +208,12 @@ describe('calculatePlan', () => {
     expect(result.finalAssessmentByMember.A!.rawLeftTotal).toBe(0);
   });
 
-  test('[OPEN-001] separates the five opening-state roles', () => {
+  test('[OPEN-001] maps one cumulative PVP opening to qualification and fortnight only', () => {
     const input = makePlanInput({
       opening: {
         A: {
+          openingQualificationPvp: 300,
           fortnightPvpOpeningCredit: 300,
-          dailyCarryPvp: 100,
           dailyCarryLeft: 200,
           dailyCarryRight: 100,
         },
@@ -213,8 +225,8 @@ describe('calculatePlan', () => {
     const result = calculate(input);
 
     expect(result.dailySettlementByDateAndMember['2026-07-01']!.A).toMatchObject({
-      preSettlement: { pvp: 500, left: 200, right: 300 },
-      assessedLeft: 700,
+      preSettlement: { pvp: 400, left: 200, right: 300 },
+      assessedLeft: 600,
       assessedRight: 300,
       commissionTier: 300,
       carryOut: { pvp: 0, left: 0, right: 0 },
@@ -232,7 +244,10 @@ describe('calculatePlan', () => {
     const result = calculate(
       makePlanInput({
         opening: {
-          A: { fortnightPvpOpeningCredit: 300, dailyCarryPvp: 100 },
+          A: {
+            openingQualificationPvp: 300,
+            fortnightPvpOpeningCredit: 300,
+          },
         },
         allocations: [
           { date: '2026-07-01', memberKey: 'A', pvp: 400, selfLeft: 0, selfRight: 200 },
@@ -252,7 +267,9 @@ describe('calculatePlan', () => {
   test('[QUAL-001] opening 33과 당일 direct PVP 267을 먼저 합산해 같은 날 full commission을 허용', () => {
     const result = calculate(
       makePlanInput({
-        opening: { A: { openingQualificationPvp: 33 } },
+        opening: {
+          A: { openingQualificationPvp: 33, fortnightPvpOpeningCredit: 33 },
+        },
         allocations: [
           { date: '2026-07-01', memberKey: 'A', pvp: 267, selfLeft: 33, selfRight: 300 },
         ],
@@ -283,7 +300,9 @@ describe('calculatePlan', () => {
   test('[QUAL-002] opening 33과 당일 direct PVP 266은 실제 reset하되 full commission으로 세지 않고 경고', () => {
     const result = calculate(
       makePlanInput({
-        opening: { A: { openingQualificationPvp: 33 } },
+        opening: {
+          A: { openingQualificationPvp: 33, fortnightPvpOpeningCredit: 33 },
+        },
         allocations: [
           { date: '2026-07-01', memberKey: 'A', pvp: 266, selfLeft: 34, selfRight: 300 },
         ],
@@ -322,7 +341,9 @@ describe('calculatePlan', () => {
   test('[QUAL-003] qualification PVP는 일일 reset과 무관하게 날짜별로 inclusive 누적', () => {
     const result = calculate(
       makePlanInput({
-        opening: { A: { openingQualificationPvp: 33 } },
+        opening: {
+          A: { openingQualificationPvp: 33, fortnightPvpOpeningCredit: 33 },
+        },
         allocations: [
           { date: '2026-07-01', memberKey: 'A', pvp: 100, selfLeft: 0, selfRight: 0 },
           { date: '2026-07-02', memberKey: 'A', pvp: 200, selfLeft: 0, selfRight: 300 },
@@ -347,7 +368,9 @@ describe('calculatePlan', () => {
   test('[QUAL-004] qualification 300 미만의 한쪽 실적은 정산 단계가 없으면 carry', () => {
     const result = calculate(
       makePlanInput({
-        opening: { A: { openingQualificationPvp: 33 } },
+        opening: {
+          A: { openingQualificationPvp: 33, fortnightPvpOpeningCredit: 33 },
+        },
         allocations: [
           { date: '2026-07-01', memberKey: 'A', pvp: 0, selfLeft: 300, selfRight: 0 },
         ],
@@ -366,7 +389,9 @@ describe('calculatePlan', () => {
   test('[QUAL-006] opening qualification PVP가 300이면 첫 영업일부터 full commission 가능', () => {
     const result = calculate(
       makePlanInput({
-        opening: { A: { openingQualificationPvp: 300 } },
+        opening: {
+          A: { openingQualificationPvp: 300, fortnightPvpOpeningCredit: 300 },
+        },
         allocations: [
           { date: '2026-07-01', memberKey: 'A', pvp: 0, selfLeft: 300, selfRight: 300 },
         ],
@@ -380,25 +405,25 @@ describe('calculatePlan', () => {
     });
   });
 
-  test('[QUAL-007] daily opening PVP와 qualification opening을 서로 대신 사용하지 않음', () => {
-    const result = calculate(
+  test('[QUAL-007] non-zero daily opening PVP is rejected at the product boundary', () => {
+    const outcome = calculatePlan(
       makePlanInput({
         opening: {
-          A: { openingQualificationPvp: 33, dailyCarryPvp: 267 },
+          A: {
+            openingQualificationPvp: 33,
+            fortnightPvpOpeningCredit: 33,
+            dailyCarryPvp: 267,
+          },
         },
-        allocations: [
-          { date: '2026-07-01', memberKey: 'A', pvp: 0, selfLeft: 33, selfRight: 300 },
-        ],
       }),
     );
 
-    expect(result.dailySettlementByDateAndMember['2026-07-01']!.A).toMatchObject({
-      preSettlement: { pvp: 267, left: 33, right: 300 },
-      qualificationPvp: 33,
-      settlementKind: 'BELOW_QUALIFICATION_SETTLEMENT',
-      commissionTier: 300,
-      carryOut: { pvp: 0, left: 0, right: 0 },
-    });
+    expect(outcome.status).toBe('FAILURE');
+    if (outcome.status === 'FAILURE') {
+      expect(outcome.validation.errors).toEqual([
+        expect.objectContaining({ code: 'DAILY_PVP_OPENING_NONZERO' }),
+      ]);
+    }
   });
 
   test('[CAL-004] carries Saturday balance through skipped Sunday into Monday', () => {
@@ -520,7 +545,9 @@ describe('calculatePlan', () => {
     const tiers: CommissionTier[] = [300, 300, 700, 1500, 2400, 6000, 20000, 60000];
     const result = calculate(
       makePlanInput({
-        opening: { A: { openingQualificationPvp: 300 } },
+        opening: {
+          A: { openingQualificationPvp: 300, fortnightPvpOpeningCredit: 300 },
+        },
         allocations: businessDates.map((date, index) => ({
           date,
           memberKey: 'A',
@@ -564,7 +591,7 @@ describe('calculatePlan', () => {
     });
   });
 
-  test('[VAL-004] returns aggregate overflow as a failure without partial results', () => {
+  test('[VAL-004] rejects direct PVP above the lifetime cap without partial results', () => {
     const maximum = Number.MAX_SAFE_INTEGER;
     const outcome = calculatePlan(
       makePlanInput({
@@ -583,21 +610,21 @@ describe('calculatePlan', () => {
     expect(outcome.status).toBe('FAILURE');
     if (outcome.status === 'FAILURE') {
       expect(outcome.validation.errors).toEqual([
-        expect.objectContaining({ code: 'PV_AGGREGATE_OUT_OF_RANGE' }),
+        expect.objectContaining({ code: 'CUMULATIVE_PVP_ALLOCATION_EXCEEDS_CAP' }),
       ]);
       expect('result' in outcome).toBe(false);
     }
   });
 
-  test('reports the date where fortnight PVP progress first overflows', () => {
+  test('reports a cumulative PVP opening above 2,400', () => {
     const outcome = calculatePlan(
       makePlanInput({
         opening: {
-          A: { fortnightPvpOpeningCredit: Number.MAX_SAFE_INTEGER },
+          A: {
+            openingQualificationPvp: 2401,
+            fortnightPvpOpeningCredit: 2401,
+          },
         },
-        allocations: [
-          { date: '2026-07-01', memberKey: 'A', pvp: 1, selfLeft: 0, selfRight: 0 },
-        ],
       }),
     );
 
@@ -605,22 +632,24 @@ describe('calculatePlan', () => {
     if (outcome.status === 'FAILURE') {
       expect(outcome.validation.errors).toEqual([
         expect.objectContaining({
-          code: 'PV_AGGREGATE_OUT_OF_RANGE',
+          code: 'CUMULATIVE_PVP_OPENING_EXCEEDS_CAP',
           location: expect.objectContaining({
-            date: '2026-07-01',
             memberKey: 'A',
-            field: 'runningFortnight.personalPvpTotal',
+            field: 'openingQualificationPvp',
           }),
         }),
       ]);
     }
   });
 
-  test('reports the date where cumulative qualification PVP first overflows', () => {
+  test('reports the member whose direct PVP exceeds remaining cumulative headroom', () => {
     const outcome = calculatePlan(
       makePlanInput({
         opening: {
-          A: { openingQualificationPvp: Number.MAX_SAFE_INTEGER },
+          A: {
+            openingQualificationPvp: 2400,
+            fortnightPvpOpeningCredit: 2400,
+          },
         },
         allocations: [
           { date: '2026-07-01', memberKey: 'A', pvp: 1, selfLeft: 0, selfRight: 0 },
@@ -632,18 +661,18 @@ describe('calculatePlan', () => {
     if (outcome.status === 'FAILURE') {
       expect(outcome.validation.errors).toEqual([
         expect.objectContaining({
-          code: 'PV_AGGREGATE_OUT_OF_RANGE',
+          code: 'CUMULATIVE_PVP_ALLOCATION_EXCEEDS_CAP',
           location: {
-            date: '2026-07-01',
             memberKey: 'A',
-            field: 'qualificationPvp',
+            snapshotId: 'snapshot-test',
+            field: 'pvp',
           },
         }),
       ]);
     }
   });
 
-  test('uses ruleset and engine 3.0.0 and canonical root-first LEFT-before-RIGHT output order', () => {
+  test('uses ruleset and engine 4.0.0 and canonical root-first LEFT-before-RIGHT output order', () => {
     const result = calculate(
       makePlanInput({
         members: [
@@ -655,8 +684,8 @@ describe('calculatePlan', () => {
       }),
     );
 
-    expect(result.rulesetVersion).toBe('3.0.0');
-    expect(result.engineVersion).toBe('3.0.0');
+    expect(result.rulesetVersion).toBe('4.0.0');
+    expect(result.engineVersion).toBe('4.0.0');
     expect(result.inputSnapshot.organization.members.map(({ memberKey }) => memberKey))
       .toEqual(['Z', 'M', 'A', 'B']);
     expect(Object.keys(result.finalAssessmentByMember)).toEqual(['Z', 'M', 'A', 'B']);
@@ -742,7 +771,7 @@ describe('calculatePlan', () => {
     }
   });
 
-  test('rejects a modified RuleSet body that reuses version 3.0.0', () => {
+  test('rejects a modified RuleSet body that reuses version 4.0.0', () => {
     const alteredRules = {
       ...DEFAULT_RULE_SET,
       commissionTiers: [700, 700, 1500, 2400, 6000, 20000, 60000] as const,

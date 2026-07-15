@@ -40,7 +40,7 @@ function member(draft: ProjectSetupDraft, memberKey: string) {
 }
 
 describe('P2-NORM 정본 Setup Bundle', () => {
-  it('P2-NORM-001: 화면의 PVP 시작값 하나를 세 내부 PVP 장부에 정규화한다', () => {
+  it('P2-NORM-001: 누적 PVP는 자격·보름 시작값이 되고 일일 PVP는 0으로 정규화된다', () => {
     let draft = createSingleMemberDraft('A');
     draft = addCompletedChild(draft, 'A', 'LEFT', 'B');
     draft = editMemberIdentity(draft, 'A', {
@@ -50,9 +50,7 @@ describe('P2-NORM 정본 Setup Bundle', () => {
       sheetMarker: 'PINK_1',
     });
     draft = editOpeningState(draft, 'A', {
-      openingQualificationPvp: '33',
-      fortnightPvpOpeningCredit: '100',
-      dailyCarryPvp: '200',
+      cumulativePvp: '200',
       dailyCarryLeft: '300',
       dailyCarryRight: '400',
       openingStateConfirmed: true,
@@ -95,7 +93,7 @@ describe('P2-NORM 정본 Setup Bundle', () => {
           A: {
             openingQualificationPvp: 200,
             fortnightPvpOpeningCredit: 200,
-            dailyCarryPvp: 200,
+            dailyCarryPvp: 0,
             dailyCarryLeft: 300,
             dailyCarryRight: 400,
           },
@@ -276,10 +274,9 @@ describe('P2-NORM-002 오류에는 부분 번들이 없다', () => {
   it('확인 안 된 시작값과 잘못된 숫자는 필드 오류와 함께 발행을 막는다', () => {
     let draft = createSingleMemberDraft('A');
     draft = editOpeningState(draft, 'A', {
-      dailyCarryPvp: '-1',
+      cumulativePvp: '-1',
       dailyCarryLeft: '1.5',
       dailyCarryRight: 'text',
-      fortnightPvpOpeningCredit: String(Number.MAX_SAFE_INTEGER + 1),
       openingStateConfirmed: false,
     });
     const outcome = expectNormalizeFailure(normalizeProjectSetup(draft));
@@ -289,9 +286,26 @@ describe('P2-NORM-002 오류에는 부분 번들이 없다', () => {
         'PV_NEGATIVE',
         'PV_NOT_INTEGER',
         'PV_INVALID',
-        'PV_OUT_OF_RANGE',
         'MEMBER_OPENING_STATE_UNCONFIRMED',
       ]),
+    );
+  });
+
+  it('누적 PVP 시작값은 영구 상한 2,400을 넘을 수 없다', () => {
+    const draft = editOpeningState(createSingleMemberDraft('A'), 'A', {
+      cumulativePvp: '2401',
+    });
+    const outcome = expectNormalizeFailure(normalizeProjectSetup(draft));
+
+    expect(outcome.errors).toContainEqual(
+      expect.objectContaining({
+        code: 'PV_OUT_OF_RANGE',
+        location: expect.objectContaining({
+          memberKey: 'A',
+          field: 'cumulativePvp',
+        }),
+        message: expect.stringContaining('2,400'),
+      }),
     );
   });
 

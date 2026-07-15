@@ -23,7 +23,7 @@ import { MemberFortnightSummary } from '../MemberFortnightSummary';
 
 const ZERO_OPENING: OpeningStateInput = {
   openingQualificationPvp: 300,
-  fortnightPvpOpeningCredit: 0,
+  fortnightPvpOpeningCredit: 300,
   dailyCarryPvp: 0,
   dailyCarryLeft: 0,
   dailyCarryRight: 0,
@@ -152,8 +152,9 @@ describe('WP5 daily and fortnight result presentation', () => {
 
     const carried = currentResult(
       bundle([member('A')], {
-        A: { dailyCarryPvp: 100, dailyCarryLeft: 200, dailyCarryRight: 300 },
+        A: { dailyCarryLeft: 200, dailyCarryRight: 300 },
       }),
+      (schema, initial) => edit(schema, initial, '2026-07-01', 'A', 'pvp', 100),
     );
     rerender(
       <DailyResultDetails
@@ -182,9 +183,9 @@ describe('WP5 daily and fortnight result presentation', () => {
 
   it('P3-RESULT-002/003 / HALF-005 renders shortages and assessed target states', () => {
     const { schema, result } = currentResult(bundle(), (schema, initial) => {
-      let draft = edit(schema, initial, '2026-07-01', 'A', 'pvp', 400);
+      let draft = edit(schema, initial, '2026-07-01', 'A', 'pvp', 100);
       draft = edit(schema, draft, '2026-07-01', 'A', 'selfLeft', 2500);
-      return edit(schema, draft, '2026-07-01', 'A', 'selfRight', 2100);
+      return edit(schema, draft, '2026-07-01', 'A', 'selfRight', 2400);
     });
     render(
       <MemberFortnightSummary
@@ -195,9 +196,21 @@ describe('WP5 daily and fortnight result presentation', () => {
     );
 
     expect(screen.getAllByText('추가 계획 필요').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('300 PV')).toHaveLength(3);
+    expect(screen.getByText('누적 PVP 시작').closest('div')?.textContent).toBe(
+      '누적 PVP 시작300 PV',
+    );
+    expect(screen.getByText('신규 PVP').closest('div')?.textContent).toBe(
+      '신규 PVP100 PV',
+    );
+    expect(screen.getByText('누적 PVP 마감').closest('div')?.textContent).toBe(
+      '누적 PVP 마감400 PV',
+    );
+    expect(screen.queryByText('자격 PVP 시작')).toBeNull();
+    expect(screen.queryByText('자격 PVP 마감')).toBeNull();
+    expect(screen.queryByText('보름 PVP 시작')).toBeNull();
+    expect(screen.queryByText('개인 PVP 합계')).toBeNull();
     expect(screen.getByText('2,500 PV · 좌 목표 달성')).toBeDefined();
-    expect(screen.getByText('2,500 PV · 우 목표 달성')).toBeDefined();
+    expect(screen.getByText('2,800 PV · 우 목표 달성')).toBeDefined();
     expect(screen.getByText('7월 1일')).toBeDefined();
     expect(screen.getByText('2,400 PV 단계')).toBeDefined();
   });

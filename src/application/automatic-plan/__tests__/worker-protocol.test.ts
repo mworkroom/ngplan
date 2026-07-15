@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { AUTOMATIC_PLAN_PROVEN_SCALAR_OBJECTIVE_COUNT } from '../../../optimizer';
 import {
   AUTOMATIC_PLAN_WORKER_PROTOCOL_VERSION,
   isAutomaticPlanWorkerResponse,
@@ -25,7 +26,7 @@ describe('automatic plan worker protocol variants', () => {
   it.each([
     null,
     [],
-    progress({ protocolVersion: '0.0.0' }),
+    progress({ protocolVersion: '1.0.0' }),
     progress({ type: 'UNKNOWN' }),
     progress({ runId: 1 }),
     progress({ elapsedMs: '0' }),
@@ -58,18 +59,52 @@ describe('automatic plan worker protocol variants', () => {
 
   it('validates proof progress scalar, bound, and vector-prefix variants', () => {
     expect(isAutomaticPlanWorkerResponse(progress())).toBe(true);
-    expect(
-      isAutomaticPlanWorkerResponse(progress({
-        proof: { ...PROOF, provenVectorPrefix: { objective: 'VECTOR', length: 1 } },
-      })),
-    ).toBe(true);
+    for (const objective of [
+      'HIGH_TARGET_ASCENDING_VECTOR',
+      'TARGET_700_ASCENDING_VECTOR',
+      'DETERMINISTIC_ALLOCATION_VECTOR',
+    ]) {
+      expect(
+        isAutomaticPlanWorkerResponse(progress({
+          proof: {
+            ...PROOF,
+            provenVectorPrefix: { objective, length: 1 },
+          },
+        })),
+      ).toBe(true);
+    }
     for (const proof of [
       null,
       { ...PROOF, stage: 1 },
+      { ...PROOF, stage: 'TARGET_700_AT_LEAST_EIGHT' },
       { ...PROOF, provenScalarObjectiveCount: 1.5 },
       { ...PROOF, provenScalarObjectiveCount: -1 },
+      {
+        ...PROOF,
+        provenScalarObjectiveCount:
+          AUTOMATIC_PLAN_PROVEN_SCALAR_OBJECTIVE_COUNT + 1,
+      },
       { ...PROOF, primaryLowerBound: 1.5 },
+      { ...PROOF, primaryLowerBound: -1 },
       { ...PROOF, provenVectorPrefix: 'prefix' },
+      {
+        ...PROOF,
+        provenVectorPrefix: { objective: 'VECTOR', length: 1 },
+      },
+      {
+        ...PROOF,
+        provenVectorPrefix: {
+          objective: 'TARGET_700_ASCENDING_VECTOR',
+          length: -1,
+        },
+      },
+      {
+        ...PROOF,
+        provenVectorPrefix: {
+          objective: 'TARGET_700_ASCENDING_VECTOR',
+          length: 1.5,
+        },
+      },
     ]) {
       expect(isAutomaticPlanWorkerResponse(progress({ proof }))).toBe(false);
     }

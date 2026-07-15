@@ -279,11 +279,11 @@ export function ManualPlanTable({
               {schema.members.flatMap((member, memberIndex) =>
                 FIELD_DEFINITIONS.map(({ field, label }) => {
                   const openingValue =
-                    field === 'pvp'
-                      ? member.openingState.dailyCarryPvp
-                      : field === 'selfLeft'
-                        ? member.openingState.dailyCarryLeft
-                        : member.openingState.dailyCarryRight;
+                    field === 'selfLeft'
+                      ? member.openingState.dailyCarryLeft
+                      : field === 'selfRight'
+                        ? member.openingState.dailyCarryRight
+                        : null;
                   return (
                   <th
                     id={manualPlanColumnHeaderDomId(member.memberKey, field)}
@@ -292,7 +292,9 @@ export function ManualPlanTable({
                     scope="col"
                   >
                     <span>{label}</span>
-                    <small>{openingValue.toLocaleString('ko-KR')}</small>
+                    {openingValue === null ? null : (
+                      <small>{openingValue.toLocaleString('ko-KR')}</small>
+                    )}
                   </th>
                   );
                 }),

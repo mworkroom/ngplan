@@ -79,12 +79,22 @@ export function createAutomaticPlanRequest(
       if (opening === undefined) {
         throw new Error(`회원 ${memberKey}의 시작값이 없습니다.`);
       }
+      if (
+        !Number.isSafeInteger(opening.openingQualificationPvp) ||
+        Object.is(opening.openingQualificationPvp, -0) ||
+        opening.openingQualificationPvp < 0 ||
+        opening.openingQualificationPvp > 2_400 ||
+        opening.fortnightPvpOpeningCredit !== opening.openingQualificationPvp ||
+        opening.dailyCarryPvp !== 0
+      ) {
+        throw new Error(
+          `회원 ${memberKey}의 누적 PVP는 0~2,400에서 자격·보름 장부에 같게 적용되고 첫날 일일 PVP는 0이어야 합니다.`,
+        );
+      }
       return [
         memberKey,
         Object.freeze({
-          openingQualificationPvp: opening.openingQualificationPvp,
-          openingDailyPvpBalance: opening.dailyCarryPvp,
-          openingFortnightPvp: opening.fortnightPvpOpeningCredit,
+          cumulativePvpOpening: opening.openingQualificationPvp,
         }),
       ] as const;
     });

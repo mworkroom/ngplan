@@ -6,6 +6,7 @@ import {
 } from '../../../optimizer';
 import { describe, expect, it } from 'vitest';
 import {
+  AUTOMATIC_PLAN_CHECKPOINT_VERSION,
   createAutomaticPlanCheckpointSnapshot,
   restoreAutomaticPlanCheckpointSnapshot,
 } from '../checkpoint';
@@ -45,6 +46,22 @@ describe('verified automatic-plan workspace checkpoint', () => {
     const serialized = JSON.stringify(snapshot);
     expect(serialized).not.toContain('dailySettlementByDateAndMember');
     expect(serialized).not.toContain('proof');
+    expect(snapshot.checkpointVersion).toBe('2.0.0');
+    expect(snapshot.checkpointVersion).toBe(AUTOMATIC_PLAN_CHECKPOINT_VERSION);
+    expect(snapshot.objective).toMatchObject({
+      confirmedPayoutWon: expect.any(Number),
+      futureCumulativePvpInvestmentPv: expect.any(Number),
+    });
+    expect(snapshot.objective.highTargetAscendingDayVector).toEqual(
+      fixture.candidate.objective.highTargetAscendingDayVector,
+    );
+    expect(snapshot.objective).not.toHaveProperty(
+      'target700MembersAtLeastEight',
+    );
+    expect(snapshot.display).toMatchObject({
+      target700MembersAtLeastEight: expect.any(Number),
+      highTargetMemberDayCounts: expect.any(Array),
+    });
     expect(snapshot.savedAtIso).toBe('1970-01-01T00:00:00.000Z');
 
     const restored = restoreAutomaticPlanCheckpointSnapshot(
@@ -54,7 +71,7 @@ describe('verified automatic-plan workspace checkpoint', () => {
     expect(restored.status).toBe('RESTORED');
     if (restored.status === 'RESTORED') {
       expect(restored.candidate.candidateId).toBe(fixture.candidate.candidateId);
-      expect(restored.candidate.calculation.engineVersion).toBe('3.0.0');
+      expect(restored.candidate.calculation.engineVersion).toBe('4.0.0');
     }
   });
 
@@ -68,6 +85,14 @@ describe('verified automatic-plan workspace checkpoint', () => {
     });
 
     const snapshot = createAutomaticPlanCheckpointSnapshot(fixture.candidate);
+    expect(
+      restoreAutomaticPlanCheckpointSnapshot(fixture.request, {
+        ...snapshot,
+        checkpointVersion: '1.1.0',
+      }),
+    ).toMatchObject({
+      status: 'IGNORED', reason: 'CHECKPOINT_MALFORMED',
+    });
     const incompatible = { ...fixture.request, problemFingerprint: 'another-problem' };
     expect(restoreAutomaticPlanCheckpointSnapshot(incompatible, snapshot)).toMatchObject({
       status: 'IGNORED', reason: 'CHECKPOINT_FINGERPRINT_MISMATCH',
@@ -95,6 +120,32 @@ describe('verified automatic-plan workspace checkpoint', () => {
     expect(
       restoreAutomaticPlanCheckpointSnapshot(fixture.request, tampered),
     ).toMatchObject({ status: 'IGNORED', reason: 'CHECKPOINT_SUMMARY_MISMATCH' });
+  });
+
+  it('rejects a version-2 checkpoint carrying the legacy objective shape', () => {
+    const fixture = verifiedFixture();
+    const snapshot = createAutomaticPlanCheckpointSnapshot(fixture.candidate);
+    const legacyObjective = {
+      totalNewPv: snapshot.objective.totalNewPv,
+      discardedExcessPv: snapshot.objective.discardedExcessPv,
+      target700MembersAtLeastEight:
+        snapshot.display.target700MembersAtLeastEight,
+      target700AscendingDayVector:
+        snapshot.objective.target700AscendingDayVector,
+      nonHundredCellCount: snapshot.objective.nonHundredCellCount,
+      maxDirectPvp: snapshot.objective.maxDirectPvp,
+      deterministicAllocationVector:
+        snapshot.objective.deterministicAllocationVector,
+    };
+    expect(
+      restoreAutomaticPlanCheckpointSnapshot(fixture.request, {
+        ...snapshot,
+        objective: legacyObjective,
+      }),
+    ).toMatchObject({
+      status: 'IGNORED',
+      reason: 'AUTOMATIC_PLAN_OBJECTIVE_MISMATCH',
+    });
   });
 
   it('ignores a re-identified checkpoint whose allocations fail independent verification', () => {

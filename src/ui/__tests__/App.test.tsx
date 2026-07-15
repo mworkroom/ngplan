@@ -8,6 +8,7 @@ import {
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { App, createSessionIdGenerator, type AppProps } from '../App';
+import { WORKSPACE_SESSION_STORAGE_KEY } from '../workspace-session-storage';
 
 type User = ReturnType<typeof userEvent.setup>;
 
@@ -575,7 +576,7 @@ describe('App project setup flow', () => {
       }) as HTMLInputElement).value,
     ).toBe('123');
     await waitFor(() => {
-      expect(window.localStorage.getItem('ngplan.workspace-session.v2')).toContain('123');
+      expect(window.localStorage.getItem(WORKSPACE_SESSION_STORAGE_KEY)).toContain('123');
     });
 
     cleanup();

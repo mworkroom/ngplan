@@ -1,5 +1,6 @@
 import {
   calculatePlan,
+  DEFAULT_RULE_SET,
   type CalculationResult,
   type DailySettlement,
 } from '../engine';
@@ -139,7 +140,8 @@ export function verifyAutomaticPlanCandidate(
           ),
         };
       }
-      let expectedQualification = opening.openingQualificationPvp;
+      let expectedQualification = opening.cumulativePvpOpening;
+      let periodDirectPvp = 0;
       for (const date of request.calendar.dates) {
         const cellIndex =
           request.calendar.dates.indexOf(date) * request.canonicalMemberKeys.length +
@@ -156,6 +158,7 @@ export function verifyAutomaticPlanCandidate(
             ),
           };
         }
+        periodDirectPvp = checkedAddScore(periodDirectPvp, cell.pvp);
         expectedQualification = checkedAddScore(expectedQualification, cell.pvp);
         if (
           settlement.qualificationPvp !== expectedQualification ||
@@ -181,6 +184,57 @@ export function verifyAutomaticPlanCandidate(
           };
         }
       }
+      if (
+        periodDirectPvp >
+        DEFAULT_RULE_SET.cumulativePvpCap - opening.cumulativePvpOpening
+      ) {
+        return {
+          status: 'FAILURE',
+          error: automaticPlanError(
+            'AUTOMATIC_PLAN_CANDIDATE_VALUE_INVALID',
+            '회원의 신규 PVP 합계가 누적 PVP 2,400 상한의 남은 범위를 넘습니다.',
+            { location: { memberKey, field: 'PVP' } },
+          ),
+        };
+      }
+    }
+
+    const skipDates = new Set(request.calendar.skipDateSet);
+    const finalBusinessDate = [...request.calendar.dates]
+      .reverse()
+      .find((date) => !skipDates.has(date));
+    const rootKey = request.canonicalMemberKeys[0];
+    const rootMember = request.organization.members.find(
+      (member) => member.memberKey === rootKey,
+    );
+    const finalRootSettlement = finalBusinessDate === undefined || rootKey === undefined
+      ? undefined
+      : settlementAt(calculation, finalBusinessDate, rootKey);
+    const requiredFinalRootTier = rootMember?.pvpTarget === 2_400 ? 700 : 300;
+    if (
+      finalBusinessDate === undefined ||
+      rootKey === undefined ||
+      rootMember === undefined ||
+      finalRootSettlement?.settlementKind !== 'FULL_COMMISSION' ||
+      finalRootSettlement.commissionTier === null ||
+      finalRootSettlement.commissionTier === undefined ||
+      finalRootSettlement.commissionTier < requiredFinalRootTier
+    ) {
+      return {
+        status: 'FAILURE',
+        error: automaticPlanError(
+          'AUTOMATIC_PLAN_TARGET_UNMET',
+          rootMember?.pvpTarget === 2_400
+            ? '마지막 영업일에 맨 위 회원의 700단계 이상 수당이 필요합니다.'
+            : '마지막 영업일에 맨 위 회원의 300단계 이상 수당이 필요합니다.',
+          {
+            location: {
+              ...(finalBusinessDate === undefined ? {} : { date: finalBusinessDate }),
+              ...(rootKey === undefined ? {} : { memberKey: rootKey }),
+            },
+          },
+        ),
+      };
     }
 
     const evaluated = evaluateAutomaticPlanObjective(

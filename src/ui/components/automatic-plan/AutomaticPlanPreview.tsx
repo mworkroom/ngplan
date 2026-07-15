@@ -2,9 +2,16 @@ export interface AutomaticPlanPreviewMetrics {
   readonly candidateId: string;
   readonly foundAtElapsedMs: number;
   readonly totalNewPv: number;
+  readonly confirmedPayoutWon: number;
   readonly optimalityProven: boolean;
   readonly runStatusLabel: string;
   readonly discardedExcessPv: number;
+  readonly highTargetMemberDayCounts: readonly {
+    readonly memberKey: string;
+    readonly memberLabel: string;
+    readonly pvpTarget: 1500 | 2400;
+    readonly days: number;
+  }[];
   readonly target700MembersAtLeastEight: number;
   readonly target700TotalCommissionDays: number;
   readonly target700MemberDayCounts: readonly {
@@ -12,6 +19,7 @@ export interface AutomaticPlanPreviewMetrics {
     readonly memberLabel: string;
     readonly days: number;
   }[];
+  readonly futureCumulativePvpInvestmentPv: number;
   readonly nonHundredCellCount: number;
   readonly maxDirectPvp: number;
   readonly terminalCarryTotal: number;
@@ -63,13 +71,25 @@ export function AutomaticPlanPreview({
 
       <dl className="automatic-plan-preview__metrics">
         <div><dt>총 신규 PV</dt><dd>{metrics.totalNewPv.toLocaleString('ko-KR')}</dd></div>
+        <div><dt>확인된 수당 합계</dt><dd>{metrics.confirmedPayoutWon.toLocaleString('ko-KR')}원</dd></div>
         <div><dt>정산 시 소멸 초과분</dt><dd>{metrics.discardedExcessPv.toLocaleString('ko-KR')}</dd></div>
         <div><dt>700 목표 중 8일 이상</dt><dd>{metrics.target700MembersAtLeastEight}명</dd></div>
         <div><dt>700 목표 총 발생일</dt><dd>{metrics.target700TotalCommissionDays}일 (표시용)</dd></div>
+        <div><dt>미래 누적 PVP 투자</dt><dd>{metrics.futureCumulativePvpInvestmentPv.toLocaleString('ko-KR')}</dd></div>
         <div><dt>100 단위가 아닌 입력칸</dt><dd>{metrics.nonHundredCellCount}칸</dd></div>
         <div><dt>가장 큰 직접 PVP</dt><dd>{metrics.maxDirectPvp.toLocaleString('ko-KR')}</dd></div>
         <div><dt>기간 말 잔액</dt><dd>{metrics.terminalCarryTotal.toLocaleString('ko-KR')} (폐기 아님)</dd></div>
       </dl>
+
+      {metrics.highTargetMemberDayCounts.length === 0 ? null : (
+        <ul className="automatic-plan-preview__days" aria-label="고목표 회원별 발생일">
+          {metrics.highTargetMemberDayCounts.map((member) => (
+            <li key={member.memberKey}>
+              {member.memberLabel} (목표 {member.pvpTarget.toLocaleString('ko-KR')}): {member.days}일
+            </li>
+          ))}
+        </ul>
+      )}
 
       {metrics.target700MemberDayCounts.length === 0 ? null : (
         <ul className="automatic-plan-preview__days" aria-label="700 목표 회원별 발생일">
