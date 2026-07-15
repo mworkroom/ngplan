@@ -15,9 +15,11 @@ import {
   type ManualPlanMemberDescriptor,
   type ManualPlanSchema,
 } from '../../../application/manual-plan';
+import { DEFAULT_RULE_SET } from '../../../engine';
 import {
   ManualPlanCell,
   type ManualPlanCellMode,
+  type ManualPlanCommissionLevel,
   type ManualPlanMemberRegion,
 } from './ManualPlanCell';
 import {
@@ -49,6 +51,12 @@ const FIELD_DEFINITIONS = [
   { field: 'selfLeft', label: '좌', openingLabel: '좌 시작값' },
   { field: 'selfRight', label: '우', openingLabel: '우 시작값' },
 ] as const;
+
+interface AchievementBalances {
+  readonly pvp: number;
+  readonly selfLeft: number;
+  readonly selfRight: number;
+}
 
 function draftCell(
   schema: ManualPlanSchema,
@@ -118,6 +126,55 @@ function periodTotalFor(
     : field === 'selfLeft'
       ? assessment.rawLeftTotal
       : assessment.rawRightTotal;
+}
+
+function achievementBalancesFor(
+  calculation: ManualPlanCalculationState,
+  memberKey: string,
+): AchievementBalances | null {
+  if (calculation.status === 'BLOCKED') {
+    return null;
+  }
+  const assessment = calculation.result.finalAssessmentByMember[memberKey];
+  if (assessment === undefined) {
+    return null;
+  }
+  return {
+    pvp: assessment.personalPvpTarget - assessment.personalPvpTotal,
+    selfLeft: DEFAULT_RULE_SET.fortnightSideTarget - assessment.assessedLeft,
+    selfRight: DEFAULT_RULE_SET.fortnightSideTarget - assessment.assessedRight,
+  };
+}
+
+function formatAchievementBalance(value: number | null): string {
+  if (value === null) {
+    return '—';
+  }
+  const formatted = Math.abs(value).toLocaleString('ko-KR');
+  return value > 0 ? `+${formatted}` : value < 0 ? `−${formatted}` : '0';
+}
+
+function commissionLevelFor(
+  calculation: ManualPlanCalculationState,
+  date: string,
+  memberKey: string,
+): ManualPlanCommissionLevel | null {
+  if (calculation.status === 'BLOCKED') {
+    return null;
+  }
+  const settlement = calculation.result.dailySettlementByDateAndMember[date]?.[memberKey];
+  if (settlement?.commissionOccurred !== true) {
+    return null;
+  }
+  switch (settlement.commissionTier) {
+    case 300:
+    case 700:
+    case 1500:
+    case 2400:
+      return settlement.commissionTier;
+    default:
+      return null;
+  }
 }
 
 export function ManualPlanTable({
@@ -266,7 +323,7 @@ export function ManualPlanTable({
         <table className="manual-plan-table">
           <thead>
             <tr>
-              <th className="manual-plan-table__date-heading" scope="col" rowSpan={2}>
+              <th className="manual-plan-table__date-heading" scope="col" rowSpan={3}>
                 날짜
               </th>
               {schema.members.map((member, memberIndex) => (
@@ -288,10 +345,50 @@ export function ManualPlanTable({
               <th
                 className="manual-plan-table__date-heading manual-plan-table__date-heading--end"
                 scope="col"
-                rowSpan={2}
+                rowSpan={3}
               >
                 날짜
               </th>
+            </tr>
+            <tr>
+              {schema.members.map((member, memberIndex) => {
+                const balances = achievementBalancesFor(calculation, member.memberKey);
+                const values = FIELD_DEFINITIONS.map(({ field, label }) => ({
+                  field,
+                  label,
+                  value: balances?.[field] ?? null,
+                }));
+                return (
+                  <th
+                    className={`manual-plan-table__achievement-heading manual-plan-table__achievement-heading--${memberRegion(memberIndex).toLowerCase()}`}
+                    key={`${member.memberKey}-achievement`}
+                    scope="colgroup"
+                    colSpan={3}
+                  >
+                    <span className="manual-plan-table__achievement-content">
+                      <span className="manual-plan-table__achievement-caption">
+                        달성 현황
+                      </span>
+                      <span className="manual-plan-table__achievement-values">
+                        {values.map(({ field, label, value }) => (
+                          <strong
+                            className={
+                              value !== null && value <= 0
+                                ? 'manual-plan-table__achievement-value manual-plan-table__achievement-value--met'
+                                : 'manual-plan-table__achievement-value'
+                            }
+                            key={field}
+                            title={`${label} 목표값 - 현재 합계`}
+                            aria-label={`${member.displayLabel} ${label} 잔액 ${formatAchievementBalance(value)} PV`}
+                          >
+                            {formatAchievementBalance(value)}
+                          </strong>
+                        ))}
+                      </span>
+                    </span>
+                  </th>
+                );
+              })}
             </tr>
             <tr>
               {schema.members.flatMap((member, memberIndex) =>
@@ -305,7 +402,7 @@ export function ManualPlanTable({
                   return (
                   <th
                     id={manualPlanColumnHeaderDomId(member.memberKey, field)}
-                    className={`manual-plan-table__column-heading--${memberRegion(memberIndex).toLowerCase()}`}
+                    className={`manual-plan-table__column-heading manual-plan-table__column-heading--field-${field.toLowerCase()} manual-plan-table__column-heading--${memberRegion(memberIndex).toLowerCase()}`}
                     key={`${member.memberKey}-${field}`}
                     scope="col"
                   >
@@ -376,6 +473,11 @@ export function ManualPlanTable({
                         issue={issueFor(issues, date.date, member.memberKey, field)}
                         anchorCell={fieldIndex === 0}
                         memberRegion={memberRegion(memberIndex)}
+                        commissionLevel={
+                          field === 'pvp'
+                            ? commissionLevelFor(calculation, date.date, member.memberKey)
+                            : null
+                        }
                         onChange={(value) => onEdit(date.date, member.memberKey, field, value)}
                         onSelect={() => onSelect({ date: date.date, memberKey: member.memberKey })}
                         onNavigateVertical={(direction) =>
@@ -409,7 +511,7 @@ export function ManualPlanTable({
                       : `${value.toLocaleString('ko-KR')} PV`;
                   return (
                     <td
-                      className={`manual-plan-table__total-cell manual-plan-table__total-cell--${memberRegion(memberIndex).toLowerCase()}`}
+                      className={`manual-plan-table__total-cell manual-plan-table__total-cell--field-${field.toLowerCase()} manual-plan-table__total-cell--${memberRegion(memberIndex).toLowerCase()}`}
                       key={`${member.memberKey}-${field}-total`}
                       headers={`${manualPlanMemberGroupDomId(member.memberKey)} ${manualPlanColumnHeaderDomId(member.memberKey, field)}`}
                       aria-label={`${member.displayLabel} 이번 기간 ${label} 총합 ${valueLabel}`}

@@ -1453,15 +1453,21 @@ body {
 .manual-plan-table thead tr:nth-child(2) th {
   top: 58px;
   z-index: 2;
+  height: 30px;
+}
+
+.manual-plan-table thead tr:nth-child(3) th {
+  top: 88px;
+  z-index: 2;
   height: 38px;
 }
 
-.manual-plan-table thead tr:nth-child(2) th > span,
-.manual-plan-table thead tr:nth-child(2) th > small {
+.manual-plan-table thead tr:nth-child(3) th > span,
+.manual-plan-table thead tr:nth-child(3) th > small {
   display: block;
 }
 
-.manual-plan-table thead tr:nth-child(2) th > small {
+.manual-plan-table thead tr:nth-child(3) th > small {
   margin-top: 3px;
   color: var(--color-muted);
   font-size: 0.68rem;
@@ -1510,6 +1516,46 @@ body {
   border-right: 2px solid #c9d2dc;
 }
 
+.manual-plan-table__achievement-heading {
+  padding: 2px 4px !important;
+  border-left: 2px solid #c9d2dc;
+  border-right: 2px solid #c9d2dc;
+}
+
+.manual-plan-table__achievement-content,
+.manual-plan-table__achievement-values {
+  display: grid;
+  align-items: center;
+}
+
+.manual-plan-table__achievement-content {
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 5px;
+}
+
+.manual-plan-table__achievement-caption {
+  color: var(--color-muted);
+  font-size: 0.62rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.manual-plan-table__achievement-values {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2px;
+}
+
+.manual-plan-table__achievement-value {
+  color: var(--color-muted);
+  font-size: 0.66rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.manual-plan-table__achievement-value--met {
+  color: var(--color-success);
+}
+
 .manual-plan-table__date-heading--end,
 .manual-plan-table__date-cell--end {
   position: static;
@@ -1518,13 +1564,13 @@ body {
   border-right: 0;
 }
 
-.manual-plan-table thead tr:nth-child(2) th:nth-child(3n + 1),
+.manual-plan-table thead tr:nth-child(3) th:nth-child(3n + 1),
 .manual-plan-table tbody td:nth-child(3n + 2),
 .manual-plan-table tfoot td:nth-child(3n + 2) {
   border-left: 2px solid #c9d2dc;
 }
 
-.manual-plan-table thead tr:nth-child(2) th:nth-child(3n),
+.manual-plan-table thead tr:nth-child(3) th:nth-child(3n),
 .manual-plan-table tbody td:nth-child(3n + 1),
 .manual-plan-table tfoot td:nth-child(3n + 1) {
   border-right: 2px solid #c9d2dc;
@@ -1572,6 +1618,43 @@ body {
   position: relative;
   padding: 0px !important;
   text-align: right !important;
+}
+
+.app-shell[data-density="compact"] .manual-plan-table__column-heading--field-pvp,
+.app-shell[data-density="compact"] .manual-plan-cell--field-pvp,
+.app-shell[data-density="compact"] .manual-plan-table__total-cell--field-pvp {
+  width: 60px;
+  min-width: 60px !important;
+  max-width: 60px;
+}
+
+.manual-plan-cell[data-commission-level]::before {
+  position: absolute;
+  z-index: 2;
+  top: 3px;
+  bottom: 3px;
+  left: 2px;
+  width: 4px;
+  border-radius: 1px;
+  background: var(--manual-plan-commission-color);
+  content: '';
+  pointer-events: none;
+}
+
+.manual-plan-cell[data-commission-level="300"] {
+  --manual-plan-commission-color: var(--color-commission-300);
+}
+
+.manual-plan-cell[data-commission-level="700"] {
+  --manual-plan-commission-color: var(--color-commission-700);
+}
+
+.manual-plan-cell[data-commission-level="1500"] {
+  --manual-plan-commission-color: var(--color-commission-1500);
+}
+
+.manual-plan-cell[data-commission-level="2400"] {
+  --manual-plan-commission-color: var(--color-commission-2400);
 }
 
 .manual-plan-cell--selected {
@@ -1872,6 +1955,11 @@ body {
 
 .app-shell[data-density="comfortable"] .manual-plan-table thead tr:nth-child(2) th {
   top: 64px;
+  height: 36px;
+}
+
+.app-shell[data-density="comfortable"] .manual-plan-table thead tr:nth-child(3) th {
+  top: 100px;
   height: 42px;
 }
 
@@ -1968,16 +2056,19 @@ body {
 }
 
 .manual-plan-table__column-heading--left,
+.manual-plan-table__achievement-heading--left,
 .manual-plan-cell--member-left {
   background: #f5fbfd;
 }
 
 .manual-plan-table__column-heading--right,
+.manual-plan-table__achievement-heading--right,
 .manual-plan-cell--member-right {
   background: #f8f7fd;
 }
 
 .manual-plan-table__column-heading--root,
+.manual-plan-table__achievement-heading--root,
 .manual-plan-cell--member-root {
   background: #f6f7f8;
 }

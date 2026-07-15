@@ -117,6 +117,8 @@ describe('WP4 manual planning worksheet', () => {
       '하위회원번호 미입력',
       '1. 루트회원번호 1000',
       '날짜',
+      '달성 현황+700+2,500+2,500',
+      '달성 현황+700+2,500+2,500',
       'PVP0',
       '좌0',
       '우0',
@@ -125,7 +127,7 @@ describe('WP4 manual planning worksheet', () => {
       '우0',
     ]);
     expect(within(table).getAllByLabelText('PVP 시작값 0 PV')).toHaveLength(2);
-    expect(within(table).getAllByText('이번 기간 총합')).toHaveLength(2);
+    expect(within(table).getAllByText('합계')).toHaveLength(2);
     expect(document.querySelectorAll('.manual-plan-table tfoot tr')).toHaveLength(1);
     expect(within(table).getAllByText('1 (수)')).toHaveLength(2);
 
@@ -148,7 +150,7 @@ describe('WP4 manual planning worksheet', () => {
     ).toBeNull();
     expect(screen.getAllByLabelText(/5 \(일\).*정산 제외 0/)).toHaveLength(6);
     expect(document.querySelectorAll('.manual-plan-scroll')).toHaveLength(1);
-    expect(document.querySelectorAll('.manual-plan-table thead tr')).toHaveLength(2);
+    expect(document.querySelectorAll('.manual-plan-table thead tr')).toHaveLength(3);
     expect(within(table).getByText('하위').closest('th')?.className).toContain(
       'manual-plan-table__member-heading--left',
     );
@@ -165,6 +167,37 @@ describe('WP4 manual planning worksheet', () => {
     expect(parent?.getAttribute('headers')).toContain('manual-plan-date-');
     expect(parent?.getAttribute('headers')).toContain('manual-plan-member-');
     expect(parent?.getAttribute('headers')).toContain('manual-plan-column-');
+  });
+
+  it.each([300, 700, 1500, 2400] as const)(
+    'marks only the PVP cell with the %i commission level',
+    async (tier) => {
+      const { user } = renderWorkspace();
+      const pvp = pvInput('1 (수) 하위 PVP 계획 PV');
+      const left = pvInput('1 (수) 하위 좌 계획 PV');
+      const right = pvInput('1 (수) 하위 우 계획 PV');
+
+      await user.type(pvp, '300');
+      await user.type(left, String(tier));
+      await user.type(right, String(tier));
+
+      expect(pvp.closest('td')?.dataset.commissionLevel).toBe(String(tier));
+      expect(left.closest('td')?.dataset.commissionLevel).toBeUndefined();
+      expect(right.closest('td')?.dataset.commissionLevel).toBeUndefined();
+    },
+  );
+
+  it('shows signed achievement balances and marks zero or negative values as met', async () => {
+    const { user } = renderWorkspace();
+    const pvp = pvInput('1 (수) 하위 PVP 계획 PV');
+
+    await user.type(pvp, '800');
+
+    const pvpBalance = screen.getByLabelText('하위 PVP 잔액 −100 PV');
+    expect(pvpBalance.textContent).toBe('−100');
+    expect(pvpBalance.className).toContain(
+      'manual-plan-table__achievement-value--met',
+    );
   });
 
   it('P3-UI-001 updates ancestors, removes stale results, and focuses the exact first error', async () => {

@@ -8,6 +8,7 @@ import {
 
 export type ManualPlanCellMode = 'EDITABLE' | 'CONNECTED' | 'SKIPPED';
 export type ManualPlanMemberRegion = 'LEFT' | 'ROOT' | 'RIGHT';
+export type ManualPlanCommissionLevel = 300 | 700 | 1500 | 2400;
 
 export interface ManualPlanCellProps {
   readonly date: string;
@@ -25,6 +26,7 @@ export interface ManualPlanCellProps {
   readonly issue: ManualPlanIssue | undefined;
   readonly anchorCell: boolean;
   readonly memberRegion: ManualPlanMemberRegion;
+  readonly commissionLevel: ManualPlanCommissionLevel | null;
   readonly onChange: (value: string) => void;
   readonly onSelect: () => void;
   readonly onNavigateVertical: (direction: -1 | 1) => void;
@@ -48,6 +50,7 @@ export function ManualPlanCell({
   issue,
   anchorCell,
   memberRegion,
+  commissionLevel,
   onChange,
   onSelect,
   onNavigateVertical,
@@ -57,6 +60,7 @@ export function ManualPlanCell({
   const className = [
     'manual-plan-cell',
     `manual-plan-cell--${mode.toLowerCase()}`,
+    `manual-plan-cell--field-${field.toLowerCase()}`,
     `manual-plan-cell--member-${memberRegion.toLowerCase()}`,
     selected ? 'manual-plan-cell--selected' : '',
     issue === undefined ? '' : 'manual-plan-cell--error',
@@ -78,6 +82,7 @@ export function ManualPlanCell({
       id={anchorCell ? manualPlanCellDomId(date, memberKey) : undefined}
       className={className}
       headers={headers}
+      data-commission-level={commissionLevel ?? undefined}
       tabIndex={anchorCell ? -1 : undefined}
       onClick={onSelect}
     >
