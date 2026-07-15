@@ -9,6 +9,7 @@ export {
   manualPlanFieldDomId,
   manualPlanMemberGroupDomId,
 } from './derive-manual-plan-schema';
+export { deriveManualPlanAchievementTargets } from './derive-manual-plan-achievement-targets';
 export { editManualPlanField } from './edit-manual-plan';
 export { isManualPlanDraftModified } from './is-manual-plan-draft-modified';
 export { reconcileManualPlanDraft } from './reconcile-manual-plan-draft';

@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import {
+  deriveManualPlanAchievementTargets,
   deriveManualPlanMemberJumpOptions,
   deriveManualPlanWorksheetCellView,
   manualPlanCellKey,
@@ -8,6 +9,7 @@ import {
   manualPlanFieldDomId,
   manualPlanMemberGroupDomId,
   type ManualPlanCalculationState,
+  type ManualPlanAchievementTargets,
   type ManualPlanDateDescriptor,
   type ManualPlanDraft,
   type ManualPlanField,
@@ -15,7 +17,6 @@ import {
   type ManualPlanMemberDescriptor,
   type ManualPlanSchema,
 } from '../../../application/manual-plan';
-import { DEFAULT_RULE_SET } from '../../../engine';
 import {
   ManualPlanCell,
   type ManualPlanCellMode,
@@ -130,6 +131,7 @@ function periodTotalFor(
 
 function achievementBalancesFor(
   calculation: ManualPlanCalculationState,
+  targetsByMember: ReadonlyMap<string, ManualPlanAchievementTargets>,
   memberKey: string,
 ): AchievementBalances | null {
   if (calculation.status === 'BLOCKED') {
@@ -139,10 +141,14 @@ function achievementBalancesFor(
   if (assessment === undefined) {
     return null;
   }
+  const targets = targetsByMember.get(memberKey);
+  if (targets === undefined) {
+    return null;
+  }
   return {
-    pvp: assessment.personalPvpTarget - assessment.personalPvpTotal,
-    selfLeft: DEFAULT_RULE_SET.fortnightSideTarget - assessment.assessedLeft,
-    selfRight: DEFAULT_RULE_SET.fortnightSideTarget - assessment.assessedRight,
+    pvp: targets.pvp - assessment.personalPvpTotal,
+    selfLeft: targets.selfLeft - assessment.rawLeftTotal,
+    selfRight: targets.selfRight - assessment.rawRightTotal,
   };
 }
 
@@ -186,6 +192,10 @@ export function ManualPlanTable({
   onEdit,
 }: ManualPlanTableProps) {
   const issues = calculation.status === 'CURRENT' ? [] : calculation.issues;
+  const achievementTargetsByMember = useMemo(
+    () => deriveManualPlanAchievementTargets(schema),
+    [schema],
+  );
   const firstEditableDate = schema.dates.find(
     (date) => date.settlementMode === 'SETTLE',
   );
@@ -354,7 +364,11 @@ export function ManualPlanTable({
                 현황
               </th>
               {schema.members.flatMap((member, memberIndex) => {
-                const balances = achievementBalancesFor(calculation, member.memberKey);
+                const balances = achievementBalancesFor(
+                  calculation,
+                  achievementTargetsByMember,
+                  member.memberKey,
+                );
                 return FIELD_DEFINITIONS.map(({ field, label }) => {
                   const value = balances?.[field] ?? null;
                   return (

@@ -120,10 +120,10 @@ describe('WP4 manual planning worksheet', () => {
       '현황',
       '+700',
       '+2,500',
-      '+2,500',
+      '+1,800',
       '+700',
-      '+2,500',
-      '+2,500',
+      '+5,000',
+      '+1,800',
       '현황',
       '날짜',
       'PVP0',
@@ -219,6 +219,9 @@ describe('WP4 manual planning worksheet', () => {
 
     expect(
       screen.getByLabelText('1 (수) 1. 루트 · 회원 ID 1000 좌 조직 합계 600 PV'),
+    ).toBeDefined();
+    expect(
+      screen.getByLabelText('1. 루트 · 회원 ID 1000 좌 잔액 +4,400 PV'),
     ).toBeDefined();
     expect(screen.getByLabelText('하위 이번 기간 PVP 총합 100 PV')).toBeDefined();
     expect(screen.getByLabelText('하위 이번 기간 좌 총합 200 PV')).toBeDefined();

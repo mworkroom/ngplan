@@ -62,6 +62,12 @@ export interface ManualPlanSchema {
   readonly cellIndexByKey: ReadonlyMap<string, number>;
 }
 
+export interface ManualPlanAchievementTargets {
+  readonly pvp: number;
+  readonly selfLeft: number;
+  readonly selfRight: number;
+}
+
 export interface ManualPlanEditRequest {
   readonly date: string;
   readonly memberKey: string;
