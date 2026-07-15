@@ -1183,6 +1183,160 @@ fieldset {
   }
 }
 
+/* Corporate workspace visual language: restrained radius, lines, and data-first hierarchy. */
+body {
+  letter-spacing: -0.012em;
+}
+
+:focus-visible {
+  outline-width: 2px;
+  outline-offset: 2px;
+}
+
+#app {
+  border-top: 4px solid var(--color-accent);
+}
+
+.app-shell {
+  padding: 30px 40px 48px;
+}
+
+.app-header,
+.app-shell__header {
+  align-items: center;
+  margin-bottom: 22px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #252525;
+}
+
+.app-header__eyebrow,
+.app-shell__eyebrow {
+  margin-bottom: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.app-header h1,
+.app-shell__title {
+  font-size: clamp(1.85rem, 3vw, 2.5rem);
+  line-height: 1.15;
+  letter-spacing: -0.045em;
+}
+
+.storage-notice {
+  border: 0;
+  border-left: 3px solid var(--color-accent);
+  background: #f5fafc;
+}
+
+.storage-notice strong {
+  color: #177fa3;
+}
+
+.workspace-grid,
+.setup-layout {
+  gap: 20px;
+}
+
+.panel,
+.setup-panel {
+  padding: 20px;
+}
+
+.panel__header,
+.setup-panel__header {
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e1e3e5;
+}
+
+.panel__title,
+.setup-panel__title,
+.panel h2,
+.panel h3 {
+  letter-spacing: -0.025em;
+}
+
+.field input,
+.field select,
+.field textarea,
+.control {
+  border-color: #c9cdd1;
+}
+
+.button,
+.primary-button,
+.secondary-button,
+.danger-button,
+.text-button,
+.icon-button {
+  font-weight: 650;
+}
+
+.button--primary,
+.primary-button {
+  border-color: var(--color-action);
+  background: var(--color-action);
+}
+
+.button--primary:hover,
+.primary-button:hover {
+  border-color: var(--color-action-hover);
+  background: var(--color-action-hover);
+}
+
+.button--secondary,
+.secondary-button {
+  border-color: #c7c7c7;
+}
+
+.status-badge {
+  border-radius: var(--radius-control);
+  background: var(--color-panel);
+}
+
+.organization-zoom button {
+  border-radius: var(--radius-control);
+}
+
+.organization-tree__viewport {
+  background: #fafbfc;
+}
+
+.member-card.member-card--selected,
+.member-card[aria-current="true"] {
+  border: 2px solid var(--color-accent-action);
+  box-shadow: inset 3px 0 0 var(--color-accent-action);
+}
+
+.member-card[class*="sheet-marker--"] .member-card__select {
+  border-radius: 0;
+}
+
+@media (max-width: 820px) {
+  .app-shell {
+    padding: 20px 18px 36px;
+  }
+
+  .app-header,
+  .app-shell__header {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 520px) {
+  .app-shell {
+    padding: 16px 12px 28px;
+  }
+
+  .panel,
+  .setup-panel {
+    padding: 16px 14px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -1774,4 +1928,76 @@ fieldset {
   .manual-summary-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Manual planning keeps its compact/comfortable widths; only its visual treatment changes. */
+.manual-plan-sheet {
+  padding: 20px 0 0;
+  border: 0;
+  border-top: 1px solid #252525;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.manual-plan-toolbar {
+  margin-bottom: 16px;
+  padding: 0 2px 14px;
+  border-bottom: 1px solid #e0e2e4;
+}
+
+.manual-plan-scroll,
+.manual-summary-grid,
+.manual-summary-overview-scroll {
+  border-radius: 0;
+}
+
+.manual-plan-table tfoot > tr > * {
+  background: #f0f2f4;
+}
+
+.manual-plan-table thead th {
+  background: #f2f4f6;
+}
+
+.manual-plan-table__date-heading {
+  background: #e9edf0 !important;
+}
+
+.manual-plan-table__date-cell {
+  background: #f6f7f8 !important;
+}
+
+.manual-plan-table__column-heading--left,
+.manual-plan-cell--member-left {
+  background: #f5fbfd;
+}
+
+.manual-plan-table__column-heading--right,
+.manual-plan-cell--member-right {
+  background: #f8f7fd;
+}
+
+.manual-plan-table__column-heading--root,
+.manual-plan-cell--member-root {
+  background: #f6f7f8;
+}
+
+.manual-plan-table__total-cell--left {
+  background: #edf8fb !important;
+}
+
+.manual-plan-table__total-cell--right {
+  background: #f1f0fb !important;
+}
+
+.manual-plan-table__total-cell--root {
+  background: #eceff1 !important;
+}
+
+.manual-plan-input {
+  border-radius: 1px;
+}
+
+.manual-summary-overview thead th {
+  background: #f2f4f6;
 }
