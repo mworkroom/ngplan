@@ -113,18 +113,26 @@ describe('WP4 manual planning worksheet', () => {
     ).getByRole('table');
     const headers = within(table).getAllByRole('columnheader');
     expect(headers.map((header) => header.textContent)).toEqual([
-      '날짜',
+      'ID',
       '하위회원번호 미입력',
       '1. 루트회원번호 1000',
+      'ID',
+      '현황',
+      '+700',
+      '+2,500',
+      '+2,500',
+      '+700',
+      '+2,500',
+      '+2,500',
+      '현황',
       '날짜',
-      '달성 현황+700+2,500+2,500',
-      '달성 현황+700+2,500+2,500',
       'PVP0',
       '좌0',
       '우0',
       'PVP0',
       '좌0',
       '우0',
+      '날짜',
     ]);
     expect(within(table).getAllByLabelText('PVP 시작값 0 PV')).toHaveLength(2);
     expect(within(table).getAllByText('합계')).toHaveLength(2);
@@ -195,7 +203,7 @@ describe('WP4 manual planning worksheet', () => {
 
     const pvpBalance = screen.getByLabelText('하위 PVP 잔액 −100 PV');
     expect(pvpBalance.textContent).toBe('−100');
-    expect(pvpBalance.className).toContain(
+    expect(pvpBalance.querySelector('strong')?.className).toContain(
       'manual-plan-table__achievement-value--met',
     );
   });

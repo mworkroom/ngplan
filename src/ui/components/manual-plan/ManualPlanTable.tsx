@@ -323,8 +323,8 @@ export function ManualPlanTable({
         <table className="manual-plan-table">
           <thead>
             <tr>
-              <th className="manual-plan-table__date-heading" scope="col" rowSpan={3}>
-                날짜
+              <th className="manual-plan-table__date-heading" scope="col">
+                ID
               </th>
               {schema.members.map((member, memberIndex) => (
                 <th
@@ -345,52 +345,50 @@ export function ManualPlanTable({
               <th
                 className="manual-plan-table__date-heading manual-plan-table__date-heading--end"
                 scope="col"
-                rowSpan={3}
               >
-                날짜
+                ID
               </th>
             </tr>
             <tr>
-              {schema.members.map((member, memberIndex) => {
+              <th className="manual-plan-table__date-heading" scope="col">
+                현황
+              </th>
+              {schema.members.flatMap((member, memberIndex) => {
                 const balances = achievementBalancesFor(calculation, member.memberKey);
-                const values = FIELD_DEFINITIONS.map(({ field, label }) => ({
-                  field,
-                  label,
-                  value: balances?.[field] ?? null,
-                }));
-                return (
-                  <th
-                    className={`manual-plan-table__achievement-heading manual-plan-table__achievement-heading--${memberRegion(memberIndex).toLowerCase()}`}
-                    key={`${member.memberKey}-achievement`}
-                    scope="colgroup"
-                    colSpan={3}
-                  >
-                    <span className="manual-plan-table__achievement-content">
-                      <span className="manual-plan-table__achievement-caption">
-                        달성 현황
-                      </span>
-                      <span className="manual-plan-table__achievement-values">
-                        {values.map(({ field, label, value }) => (
-                          <strong
-                            className={
-                              value !== null && value <= 0
-                                ? 'manual-plan-table__achievement-value manual-plan-table__achievement-value--met'
-                                : 'manual-plan-table__achievement-value'
-                            }
-                            key={field}
-                            title={`${label} 목표값 - 현재 합계`}
-                            aria-label={`${member.displayLabel} ${label} 잔액 ${formatAchievementBalance(value)} PV`}
-                          >
-                            {formatAchievementBalance(value)}
-                          </strong>
-                        ))}
-                      </span>
-                    </span>
-                  </th>
-                );
+                return FIELD_DEFINITIONS.map(({ field, label }) => {
+                  const value = balances?.[field] ?? null;
+                  return (
+                    <th
+                      className={`manual-plan-table__achievement-heading manual-plan-table__achievement-heading--field-${field.toLowerCase()} manual-plan-table__achievement-heading--${memberRegion(memberIndex).toLowerCase()}`}
+                      key={`${member.memberKey}-${field}-achievement`}
+                      scope="col"
+                      title={`${label} 목표값 - 현재 합계`}
+                      aria-label={`${member.displayLabel} ${label} 잔액 ${formatAchievementBalance(value)} PV`}
+                    >
+                      <strong
+                        className={
+                          value !== null && value <= 0
+                            ? 'manual-plan-table__achievement-value manual-plan-table__achievement-value--met'
+                            : 'manual-plan-table__achievement-value'
+                        }
+                      >
+                        {formatAchievementBalance(value)}
+                      </strong>
+                    </th>
+                  );
+                });
               })}
+              <th
+                className="manual-plan-table__date-heading manual-plan-table__date-heading--end"
+                scope="col"
+              >
+                현황
+              </th>
             </tr>
             <tr>
+              <th className="manual-plan-table__date-heading" scope="col">
+                날짜
+              </th>
               {schema.members.flatMap((member, memberIndex) =>
                 FIELD_DEFINITIONS.map(({ field, label, openingLabel }) => {
                   const openingValue =
@@ -414,6 +412,12 @@ export function ManualPlanTable({
                   );
                 }),
               )}
+              <th
+                className="manual-plan-table__date-heading manual-plan-table__date-heading--end"
+                scope="col"
+              >
+                날짜
+              </th>
             </tr>
           </thead>
           <tbody>

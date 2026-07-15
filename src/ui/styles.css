@@ -1489,6 +1489,7 @@ body {
 .manual-plan-table__date-heading {
   z-index: 5 !important;
   background: #eef2f6 !important;
+  text-align: center !important;
 }
 
 .manual-plan-table__date-cell {
@@ -1517,35 +1518,12 @@ body {
 }
 
 .manual-plan-table__achievement-heading {
-  padding: 2px 4px !important;
-  border-left: 2px solid #c9d2dc;
-  border-right: 2px solid #c9d2dc;
-}
-
-.manual-plan-table__achievement-content,
-.manual-plan-table__achievement-values {
-  display: grid;
-  align-items: center;
-}
-
-.manual-plan-table__achievement-content {
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 5px;
-}
-
-.manual-plan-table__achievement-caption {
-  color: var(--color-muted);
-  font-size: 0.62rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.manual-plan-table__achievement-values {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 2px;
+  padding: 2px 5px !important;
+  text-align: right !important;
 }
 
 .manual-plan-table__achievement-value {
+  display: block;
   color: var(--color-muted);
   font-size: 0.66rem;
   font-weight: 700;
@@ -1564,13 +1542,15 @@ body {
   border-right: 0;
 }
 
-.manual-plan-table thead tr:nth-child(3) th:nth-child(3n + 1),
+.manual-plan-table thead tr:nth-child(2) th:nth-child(3n + 2),
+.manual-plan-table thead tr:nth-child(3) th:nth-child(3n + 2),
 .manual-plan-table tbody td:nth-child(3n + 2),
 .manual-plan-table tfoot td:nth-child(3n + 2) {
   border-left: 2px solid #c9d2dc;
 }
 
-.manual-plan-table thead tr:nth-child(3) th:nth-child(3n),
+.manual-plan-table thead tr:nth-child(2) th:nth-child(3n + 1),
+.manual-plan-table thead tr:nth-child(3) th:nth-child(3n + 1),
 .manual-plan-table tbody td:nth-child(3n + 1),
 .manual-plan-table tfoot td:nth-child(3n + 1) {
   border-right: 2px solid #c9d2dc;
@@ -1621,6 +1601,7 @@ body {
 }
 
 .app-shell[data-density="compact"] .manual-plan-table__column-heading--field-pvp,
+.app-shell[data-density="compact"] .manual-plan-table__achievement-heading--field-pvp,
 .app-shell[data-density="compact"] .manual-plan-cell--field-pvp,
 .app-shell[data-density="compact"] .manual-plan-table__total-cell--field-pvp {
   width: 60px;
