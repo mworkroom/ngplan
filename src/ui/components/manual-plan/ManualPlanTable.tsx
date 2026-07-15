@@ -398,7 +398,7 @@ export function ManualPlanTable({
           <tfoot>
             <tr className="manual-plan-table__total-row">
               <th className="manual-plan-table__date-cell" scope="row">
-                <span>이번 기간 총합</span>
+                <span>합계</span>
               </th>
               {schema.members.flatMap((member, memberIndex) =>
                 FIELD_DEFINITIONS.map(({ field, label }) => {
@@ -423,7 +423,7 @@ export function ManualPlanTable({
                 className="manual-plan-table__date-cell manual-plan-table__date-cell--end"
                 scope="row"
               >
-                <span>이번 기간 총합</span>
+                <span>합계</span>
               </th>
             </tr>
           </tfoot>

@@ -412,7 +412,7 @@ fieldset {
 .button--ghost,
 .text-button,
 .icon-button {
-  border-color: transparent;
+  border-color: #cfd3d7;
   background: transparent;
   color: var(--color-accent-action);
 }

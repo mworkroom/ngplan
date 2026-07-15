@@ -143,7 +143,7 @@ export function OrganizationTree({
         </div>
         <div className="organization-tree__header-actions">
           <span className="status-badge">
-            등록된 회원 {topology.activeMembers.length}명
+            {topology.activeMembers.length}명 참여중
           </span>
           <div className="organization-zoom" aria-label="조직 그림 크기">
             <button type="button" onClick={() => changeScale(-0.1)} disabled={scale <= 0.25}>

@@ -14,7 +14,6 @@ const OPENING_FIELDS: readonly {
   {
     field: 'cumulativePvp',
     label: 'PVP 시작값',
-    help: '현재까지 달성한 누적 PVP입니다. 첫날 일일 PVP 잔액으로 더하지 않습니다.',
   },
   {
     field: 'dailyCarryLeft',
