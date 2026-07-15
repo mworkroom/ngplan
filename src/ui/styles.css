@@ -1271,6 +1271,20 @@ fieldset {
   border-bottom: 0;
 }
 
+.manual-plan-table tfoot > tr > * {
+  height: 38px;
+  border-top: 2px solid #9daab8;
+  border-bottom: 0;
+  background: #eef2f6;
+  font-weight: 700;
+}
+
+.manual-plan-table__total-row .manual-plan-table__date-cell {
+  text-align: center !important;
+  line-height: 1.2;
+  word-break: keep-all;
+}
+
 .manual-plan-table thead th {
   position: sticky;
   z-index: 3;
@@ -1351,12 +1365,14 @@ fieldset {
 }
 
 .manual-plan-table thead tr:nth-child(2) th:nth-child(3n + 1),
-.manual-plan-table tbody td:nth-child(3n + 2) {
+.manual-plan-table tbody td:nth-child(3n + 2),
+.manual-plan-table tfoot td:nth-child(3n + 2) {
   border-left: 2px solid #c9d2dc;
 }
 
 .manual-plan-table thead tr:nth-child(2) th:nth-child(3n),
-.manual-plan-table tbody td:nth-child(3n + 1) {
+.manual-plan-table tbody td:nth-child(3n + 1),
+.manual-plan-table tfoot td:nth-child(3n + 1) {
   border-right: 2px solid #c9d2dc;
 }
 
@@ -1373,6 +1389,24 @@ fieldset {
 .manual-plan-table__column-heading--root,
 .manual-plan-cell--member-root {
   background: #f8fafc;
+}
+
+.manual-plan-table__total-cell {
+  padding: 4px 7px !important;
+  text-align: right !important;
+  white-space: nowrap;
+}
+
+.manual-plan-table__total-cell--left {
+  background: #edf5ff !important;
+}
+
+.manual-plan-table__total-cell--right {
+  background: #fff4e9 !important;
+}
+
+.manual-plan-table__total-cell--root {
+  background: #eef2f6 !important;
 }
 
 .manual-plan-table__skipped-row > * {

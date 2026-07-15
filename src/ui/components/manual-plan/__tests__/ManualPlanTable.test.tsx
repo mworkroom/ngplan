@@ -114,16 +114,19 @@ describe('WP4 manual planning worksheet', () => {
     const headers = within(table).getAllByRole('columnheader');
     expect(headers.map((header) => header.textContent)).toEqual([
       '날짜',
-      '하위목표 700 PV',
-      '1. 루트회원 번호 1000 · 목표 700 PV',
+      '하위회원번호 미입력',
+      '1. 루트회원번호 1000',
       '날짜',
-      'PVP',
+      'PVP0',
       '좌0',
       '우0',
-      'PVP',
+      'PVP0',
       '좌0',
       '우0',
     ]);
+    expect(within(table).getAllByLabelText('PVP 시작값 0 PV')).toHaveLength(2);
+    expect(within(table).getAllByText('이번 기간 총합')).toHaveLength(2);
+    expect(document.querySelectorAll('.manual-plan-table tfoot tr')).toHaveLength(1);
     expect(within(table).getAllByText('1 (수)')).toHaveLength(2);
 
     expect(pvInput('1 (수) 1. 루트 · 회원 ID 1000 PVP 계획 PV').disabled).toBe(false);
@@ -175,6 +178,14 @@ describe('WP4 manual planning worksheet', () => {
 
     expect(
       screen.getByLabelText('1 (수) 1. 루트 · 회원 ID 1000 좌 조직 합계 600 PV'),
+    ).toBeDefined();
+    expect(screen.getByLabelText('하위 이번 기간 PVP 총합 100 PV')).toBeDefined();
+    expect(screen.getByLabelText('하위 이번 기간 좌 총합 200 PV')).toBeDefined();
+    expect(screen.getByLabelText('하위 이번 기간 우 총합 300 PV')).toBeDefined();
+    expect(
+      screen.getByLabelText(
+        '1. 루트 · 회원 ID 1000 이번 기간 좌 총합 600 PV',
+      ),
     ).toBeDefined();
 
     await user.clear(pvp);

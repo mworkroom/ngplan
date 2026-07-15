@@ -45,9 +45,9 @@ export interface ManualPlanTableProps {
 }
 
 const FIELD_DEFINITIONS = [
-  { field: 'pvp', label: 'PVP' },
-  { field: 'selfLeft', label: '좌' },
-  { field: 'selfRight', label: '우' },
+  { field: 'pvp', label: 'PVP', openingLabel: 'PVP 시작값' },
+  { field: 'selfLeft', label: '좌', openingLabel: '좌 시작값' },
+  { field: 'selfRight', label: '우', openingLabel: '우 시작값' },
 ] as const;
 
 function draftCell(
@@ -99,6 +99,25 @@ function issueFor(
       issue.location.memberKey === memberKey &&
       issue.location.field === field,
   );
+}
+
+function periodTotalFor(
+  calculation: ManualPlanCalculationState,
+  memberKey: string,
+  field: ManualPlanField,
+): number | null {
+  if (calculation.status === 'BLOCKED') {
+    return null;
+  }
+  const assessment = calculation.result.finalAssessmentByMember[memberKey];
+  if (assessment === undefined) {
+    return null;
+  }
+  return field === 'pvp'
+    ? assessment.newPvpTotal
+    : field === 'selfLeft'
+      ? assessment.rawLeftTotal
+      : assessment.rawRightTotal;
 }
 
 export function ManualPlanTable({
@@ -261,8 +280,7 @@ export function ManualPlanTable({
                 >
                   <strong>{markedMemberName(member.name, member.sheetMarker)}</strong>
                   <span>
-                    {member.memberId === null ? '' : `회원 번호 ${member.memberId} · `}
-                    목표 {member.pvpTarget.toLocaleString('ko-KR')} PV
+                    회원번호 {member.memberId ?? '미입력'}
                     {member.duplicateLabel === null ? '' : ` · ${member.duplicateLabel}`}
                   </span>
                 </th>
@@ -277,13 +295,13 @@ export function ManualPlanTable({
             </tr>
             <tr>
               {schema.members.flatMap((member, memberIndex) =>
-                FIELD_DEFINITIONS.map(({ field, label }) => {
+                FIELD_DEFINITIONS.map(({ field, label, openingLabel }) => {
                   const openingValue =
-                    field === 'selfLeft'
+                    field === 'pvp'
+                      ? member.openingState.fortnightPvpOpeningCredit
+                      : field === 'selfLeft'
                       ? member.openingState.dailyCarryLeft
-                      : field === 'selfRight'
-                        ? member.openingState.dailyCarryRight
-                        : null;
+                      : member.openingState.dailyCarryRight;
                   return (
                   <th
                     id={manualPlanColumnHeaderDomId(member.memberKey, field)}
@@ -292,9 +310,9 @@ export function ManualPlanTable({
                     scope="col"
                   >
                     <span>{label}</span>
-                    {openingValue === null ? null : (
-                      <small>{openingValue.toLocaleString('ko-KR')}</small>
-                    )}
+                    <small aria-label={`${openingLabel} ${openingValue.toLocaleString('ko-KR')} PV`}>
+                      {openingValue.toLocaleString('ko-KR')}
+                    </small>
                   </th>
                   );
                 }),
@@ -377,6 +395,38 @@ export function ManualPlanTable({
               </tr>
             ))}
           </tbody>
+          <tfoot>
+            <tr className="manual-plan-table__total-row">
+              <th className="manual-plan-table__date-cell" scope="row">
+                <span>이번 기간 총합</span>
+              </th>
+              {schema.members.flatMap((member, memberIndex) =>
+                FIELD_DEFINITIONS.map(({ field, label }) => {
+                  const value = periodTotalFor(calculation, member.memberKey, field);
+                  const valueLabel =
+                    value === null
+                      ? '현재 계산 결과 없음'
+                      : `${value.toLocaleString('ko-KR')} PV`;
+                  return (
+                    <td
+                      className={`manual-plan-table__total-cell manual-plan-table__total-cell--${memberRegion(memberIndex).toLowerCase()}`}
+                      key={`${member.memberKey}-${field}-total`}
+                      headers={`${manualPlanMemberGroupDomId(member.memberKey)} ${manualPlanColumnHeaderDomId(member.memberKey, field)}`}
+                      aria-label={`${member.displayLabel} 이번 기간 ${label} 총합 ${valueLabel}`}
+                    >
+                      <strong>{value === null ? '—' : value.toLocaleString('ko-KR')}</strong>
+                    </td>
+                  );
+                }),
+              )}
+              <th
+                className="manual-plan-table__date-cell manual-plan-table__date-cell--end"
+                scope="row"
+              >
+                <span>이번 기간 총합</span>
+              </th>
+            </tr>
+          </tfoot>
         </table>
       </div>
     </section>
