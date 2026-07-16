@@ -589,6 +589,75 @@ describe('App project setup flow', () => {
     ).toBe('123');
   });
 
+  it('reorders a persisted mirrored draft before the restored plan is edited', async () => {
+    const user = renderApp();
+    await createNamedRoot(user);
+    await addNamedChild(user, 'Root', '오른쪽', 'Kelly', '1001');
+    await addNamedChild(user, 'Kelly', '왼쪽', 'Yuri', '1002');
+    await user.click(screen.getByRole('button', { name: '플래너 생성' }));
+    await user.click(screen.getByRole('button', { name: '플랜 열기' }));
+    expect(
+      Array.from(
+        document.querySelectorAll('.manual-plan-table__member-heading strong'),
+        (heading) => heading.textContent,
+      ),
+    ).toEqual(['Root', 'Yuri', 'Kelly']);
+
+    const yuriInput = screen.getByRole('textbox', {
+      name: /1 \(수\).*Yuri.*PVP 계획 PV/,
+    }) as HTMLInputElement;
+    await user.type(yuriInput, '123');
+    await waitFor(() => {
+      expect(window.localStorage.getItem(WORKSPACE_SESSION_STORAGE_KEY)).toContain('123');
+    });
+
+    cleanup();
+    const stored = JSON.parse(window.localStorage.getItem(WORKSPACE_SESSION_STORAGE_KEY)!) as {
+      draft: {
+        activeBundle: {
+          organization: {
+            members: Array<{ memberKey: string; name: string }>;
+          };
+        };
+      };
+      manualPlanDraft: {
+        cells: Array<{ date: string; memberKey: string }>;
+      };
+    };
+    const memberKeyByName = new Map(
+      stored.draft.activeBundle.organization.members.map((member) => [
+        member.name,
+        member.memberKey,
+      ]),
+    );
+    const legacyRank = new Map([
+      [memberKeyByName.get('Root'), 0],
+      [memberKeyByName.get('Kelly'), 1],
+      [memberKeyByName.get('Yuri'), 2],
+    ]);
+    stored.manualPlanDraft.cells.sort((left, right) => {
+      if (left.date !== right.date) return left.date < right.date ? -1 : 1;
+      return legacyRank.get(left.memberKey)! - legacyRank.get(right.memberKey)!;
+    });
+    window.localStorage.setItem(WORKSPACE_SESSION_STORAGE_KEY, JSON.stringify(stored));
+
+    const restoredUser = userEvent.setup();
+    render(<App initialDate={INITIAL_DATE} />);
+    expect(
+      Array.from(
+        document.querySelectorAll('.manual-plan-table__member-heading strong'),
+        (heading) => heading.textContent,
+      ),
+    ).toEqual(['Root', 'Yuri', 'Kelly']);
+    const restoredYuriInput = screen.getByRole('textbox', {
+      name: /1 \(수\).*Yuri.*PVP 계획 PV/,
+    }) as HTMLInputElement;
+    expect(restoredYuriInput.value).toBe('123');
+
+    await restoredUser.type(restoredYuriInput, '4');
+    expect(restoredYuriInput.value).toBe('1234');
+  });
+
   it('moves an existing subtree through explicit parent and side controls', async () => {
     const user = renderApp();
     await createNamedRoot(user);

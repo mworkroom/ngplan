@@ -269,9 +269,13 @@ export function App({
   const [draft, setDraft] = useState<ProjectSetupDraft>(() =>
     restoredSession?.draft ?? createInitialDraft(generateId, initialDateRef.current),
   );
-  const [manualPlanDraft, setManualPlanDraft] = useState<ManualPlanDraft | null>(
-    restoredSession?.manualPlanDraft ?? null,
-  );
+  const [manualPlanDraft, setManualPlanDraft] = useState<ManualPlanDraft | null>(() => {
+    const restoredManualPlanDraft = restoredSession?.manualPlanDraft ?? null;
+    const restoredBundle = restoredSession?.draft.activeBundle ?? null;
+    return restoredManualPlanDraft !== null && restoredBundle !== null
+      ? reconcileManualPlanDraft(restoredBundle, restoredManualPlanDraft)
+      : restoredManualPlanDraft;
+  });
   const [submittedValidation, setSubmittedValidation] =
     useState<ProjectSetupValidation | null>(null);
   const [commandError, setCommandError] = useState<string | null>(null);

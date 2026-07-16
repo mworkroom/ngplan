@@ -92,26 +92,55 @@ function treeBundle(half: 'FIRST_HALF' | 'SECOND_HALF' = 'FIRST_HALF') {
 }
 
 describe('WP1 manual-plan draft and worksheet schema', () => {
-  it('keeps matching manual entries when a setup bundle is reopened', () => {
+  it('reorders a persisted mirrored draft while preserving member entries', () => {
     const originalBundle = bundle([
       member('root', null, null),
-      member('left', 'root', 'LEFT'),
+      member('right', 'root', 'RIGHT'),
+      member('right-left', 'right', 'LEFT'),
     ]);
     const draft = createManualPlanDraft(originalBundle);
     const schema = deriveManualPlanSchema(originalBundle);
-    const edited = editManualPlanField(schema, draft, {
+    const rightLeftEdit = editManualPlanField(schema, draft, {
       date: schema.dates[0]!.date,
-      memberKey: 'left',
+      memberKey: 'right-left',
       field: 'pvp',
       value: '321',
     });
-    if (edited.status !== 'SUCCESS') throw new Error('manual edit failed');
+    if (rightLeftEdit.status !== 'SUCCESS') throw new Error('manual edit failed');
+    const rightEdit = editManualPlanField(schema, rightLeftEdit.draft, {
+      date: schema.dates[0]!.date,
+      memberKey: 'right',
+      field: 'pvp',
+      value: '654',
+    });
+    if (rightEdit.status !== 'SUCCESS') throw new Error('manual edit failed');
 
-    const reopened = reconcileManualPlanDraft(originalBundle, edited.draft);
-    const firstLeftCell = reopened.cells.find(
-      (cell) => cell.date === schema.dates[0]!.date && cell.memberKey === 'left',
+    const legacyRank = new Map([
+      ['root', 0],
+      ['right', 1],
+      ['right-left', 2],
+    ]);
+    const legacyDraft = Object.freeze({
+      cells: Object.freeze(
+        [...rightEdit.draft.cells].sort((left, right) => {
+          if (left.date !== right.date) return left.date < right.date ? -1 : 1;
+          return legacyRank.get(left.memberKey)! - legacyRank.get(right.memberKey)!;
+        }),
+      ),
+    });
+
+    const reopened = reconcileManualPlanDraft(originalBundle, legacyDraft);
+    const firstDateCells = reopened.cells.filter(
+      (cell) => cell.date === schema.dates[0]!.date,
     );
-    expect(firstLeftCell?.pvp).toBe('321');
+    expect(firstDateCells.map((cell) => cell.memberKey)).toEqual([
+      'root',
+      'right-left',
+      'right',
+    ]);
+    const pvpByMember = new Map(firstDateCells.map((cell) => [cell.memberKey, cell.pvp]));
+    expect(pvpByMember.get('right-left')).toBe('321');
+    expect(pvpByMember.get('right')).toBe('654');
   });
 
   it('P3-DRAFT-001: first half centers the root between its left and right organizations', () => {
@@ -163,13 +192,14 @@ describe('WP1 manual-plan draft and worksheet schema', () => {
     ]);
   });
 
-  it('mirrors recursive inorder on the right side of the root', () => {
+  it('uses the same recursive inorder on both sides of the root', () => {
     const setup = bundle([
       member('root', null, null, { sheetMarker: 'PINK_1' }),
       member('left-near', 'root', 'LEFT', { sheetMarker: 'GREEN_2' }),
       member('left-far', 'left-near', 'LEFT', { sheetMarker: 'BLUE_3' }),
       member('right-near', 'root', 'RIGHT', { sheetMarker: 'GREEN_2' }),
-      member('right-far', 'right-near', 'LEFT', { sheetMarker: 'BLUE_3' }),
+      member('right-left', 'right-near', 'LEFT', { sheetMarker: 'BLUE_3' }),
+      member('right-right', 'right-near', 'RIGHT', { sheetMarker: 'BLUE_3' }),
     ]);
 
     const members = deriveManualPlanSchema(setup).members;
@@ -178,13 +208,15 @@ describe('WP1 manual-plan draft and worksheet schema', () => {
       'left-far',
       'left-near',
       'root',
+      'right-left',
       'right-near',
-      'right-far',
+      'right-right',
     ]);
     expect(members.map((item) => item.sheetMarker)).toEqual([
       'BLUE_3',
       'GREEN_2',
       'PINK_1',
+      'BLUE_3',
       'GREEN_2',
       'BLUE_3',
     ]);

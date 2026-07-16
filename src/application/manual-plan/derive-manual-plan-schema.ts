@@ -74,23 +74,18 @@ function findRoot(members: readonly MemberSnapshot[]): MemberSnapshot {
   return roots[0]!;
 }
 
-function centeredMembers(members: readonly MemberSnapshot[]): readonly MemberSnapshot[] {
+function inorderMembers(members: readonly MemberSnapshot[]): readonly MemberSnapshot[] {
   const root = findRoot(members);
   const organization = buildOrganizationIndex(members);
   const ordered: MemberSnapshot[] = [];
-  const appendInorder = (memberKey: string, mirrored: boolean): void => {
+  const appendInorder = (memberKey: string): void => {
     const children = organization.childrenByMemberKey.get(memberKey)!;
-    const first = mirrored ? children.right : children.left;
-    const second = mirrored ? children.left : children.right;
-    if (first !== null) appendInorder(first, mirrored);
+    if (children.left !== null) appendInorder(children.left);
     ordered.push(organization.membersByKey.get(memberKey)!);
-    if (second !== null) appendInorder(second, mirrored);
+    if (children.right !== null) appendInorder(children.right);
   };
 
-  const rootChildren = organization.childrenByMemberKey.get(root.memberKey)!;
-  if (rootChildren.left !== null) appendInorder(rootChildren.left, false);
-  ordered.push(root);
-  if (rootChildren.right !== null) appendInorder(rootChildren.right, true);
+  appendInorder(root.memberKey);
 
   if (ordered.length !== members.length) {
     throw new Error('모든 회원을 맨 위 회원부터 이어지는 조직 그림에 연결해 주세요.');
@@ -181,7 +176,7 @@ export function deriveManualPlanSchema(bundle: ProjectSetupBundle): ManualPlanSc
     ...derivedPeriod,
     dates: Object.freeze([...derivedPeriod.dates]),
   });
-  const orderedMembers = centeredMembers(bundle.organization.members);
+  const orderedMembers = inorderMembers(bundle.organization.members);
   const rootMemberKey = findRoot(bundle.organization.members).memberKey;
   const members = Object.freeze(createMemberDescriptors(bundle, orderedMembers));
   const dates = Object.freeze(period.dates.map(createDateDescriptor));

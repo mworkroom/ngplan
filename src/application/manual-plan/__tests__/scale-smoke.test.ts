@@ -98,7 +98,7 @@ describe('WP7 manual-plan engineering scale smoke', () => {
       expect(schema.members).toHaveLength(MEMBER_COUNT);
       expect(schema.members[0]?.memberKey).toBe('member-16');
       expect(schema.members[15]?.memberKey).toBe('member-1');
-      expect(schema.members[16]?.memberKey).toBe('member-31');
+      expect(schema.members[16]?.memberKey).toBe('member-24');
       expect(draft.cells).toHaveLength(DRAFT_CELL_COUNT);
 
       const directFieldSlotCount = draft.cells.reduce(
