@@ -1,7 +1,8 @@
 /// <reference lib="webworker" />
 
 import {
-  buildConstructiveCandidate,
+  buildConstructiveCandidateVariants,
+  verifyAutomaticPlanCandidate,
   type AutomaticPlanProofProgress,
   type SafeAutomaticPlanError,
 } from '../optimizer';
@@ -70,10 +71,30 @@ function handleStart(message: Extract<AutomaticPlanWorkerRequest, { readonly typ
       }));
     }
 
-    const construction = buildConstructiveCandidate(message.request);
-    if (cancelled || activeRunId !== message.runId) return;
-    if (construction.status === 'SUCCESS') {
+    const constructions = buildConstructiveCandidateVariants(message.request);
+    let constructionPosted = false;
+    let constructionFailure: SafeAutomaticPlanError | null = null;
+    for (let index = 0; index < constructions.length; index += 1) {
+      const construction = constructions[index]!;
+      if (cancelled || activeRunId !== message.runId) return;
+      if (construction.status === 'FAILURE') {
+        constructionFailure ??= construction.error;
+        continue;
+      }
+      if (index > 0) {
+        const checked = verifyAutomaticPlanCandidate(
+          message.request,
+          construction.candidate,
+          {
+            candidateId: `worker-constructive-${index + 1}`,
+            sequence: index + 1,
+            foundAtElapsedMs: 0,
+          },
+        );
+        if (checked.status === 'FAILURE') continue;
+      }
       sequence += 1;
+      constructionPosted = true;
       post(Object.freeze({
         protocolVersion: AUTOMATIC_PLAN_WORKER_PROTOCOL_VERSION,
         type: 'INCUMBENT',
@@ -82,13 +103,14 @@ function handleStart(message: Extract<AutomaticPlanWorkerRequest, { readonly typ
         candidateSequence: sequence,
         candidate: construction.candidate,
       }));
-    } else if (sequence === 0) {
+    }
+    if (!constructionPosted && sequence === 0) {
       post(Object.freeze({
         protocolVersion: AUTOMATIC_PLAN_WORKER_PROTOCOL_VERSION,
         type: 'ERROR',
         runId: message.runId,
         elapsedMs: elapsed(startedAt),
-        error: construction.error,
+        error: constructionFailure ?? proofUnavailableError(),
         proof: INITIAL_PROOF,
         messageCode: 'CONSTRUCTIVE_PLAN_FAILED',
       }));

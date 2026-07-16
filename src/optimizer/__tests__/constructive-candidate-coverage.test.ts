@@ -9,7 +9,10 @@ vi.mock('../candidate-shape', async (importOriginal) => {
   };
 });
 
-import { buildConstructiveCandidate } from '../constructive-candidate';
+import {
+  buildConstructiveCandidate,
+  buildConstructiveCandidateVariants,
+} from '../constructive-candidate';
 import {
   createOptimizerRequest,
   optimizerMember,
@@ -75,6 +78,9 @@ describe('constructive candidate branch coverage', () => {
         .filter((value): value is number => value !== undefined && value !== 0)
         .every((value) => value >= 30),
     ).toBe(true);
+    const variants = buildConstructiveCandidateVariants(request);
+    expect(variants).toHaveLength(2);
+    expect(variants[1]).toEqual(variants[0]);
   });
 
   it('returns stable failures for no business date and a missing normalized opening', () => {
@@ -88,6 +94,15 @@ describe('constructive candidate branch coverage', () => {
       status: 'FAILURE',
       error: { code: 'AUTOMATIC_PLAN_CONSTRUCTION_FAILED' },
     });
+    expect(buildConstructiveCandidateVariants({
+      ...base,
+      calendar: { ...base.calendar, dates: [], skipDateSet: [] },
+    })).toEqual([
+      expect.objectContaining({
+        status: 'FAILURE',
+        error: expect.objectContaining({ code: 'AUTOMATIC_PLAN_CONSTRUCTION_FAILED' }),
+      }),
+    ]);
 
     const members = [
       optimizerMember('root'),

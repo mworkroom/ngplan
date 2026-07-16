@@ -56,6 +56,16 @@ interface SideFieldRef {
   readonly field: 'SELF_LEFT' | 'SELF_RIGHT';
 }
 
+type RootSide = 'LEFT' | 'RIGHT';
+type DirectField = 'PVP' | 'SELF_LEFT' | 'SELF_RIGHT';
+
+interface PayoutFieldPlan {
+  readonly memberKey: string;
+  readonly field: DirectField;
+  readonly rootSide: RootSide;
+  readonly chunks: readonly number[];
+}
+
 function sideFieldKey(ref: SideFieldRef): string {
   return JSON.stringify([ref.memberKey, ref.field]);
 }
@@ -135,6 +145,234 @@ function rootSideAnchor(
   return childKey === undefined
     ? { memberKey: rootKey, field: side === 'LEFT' ? 'SELF_LEFT' : 'SELF_RIGHT' }
     : findBoundarySide(childKey, slots);
+}
+
+function directValue(cell: MutableCell, field: DirectField): number {
+  if (field === 'PVP') return cell.pvp;
+  if (field === 'SELF_LEFT') return cell.selfLeft ?? 0;
+  return cell.selfRight ?? 0;
+}
+
+function addDirectValue(cell: MutableCell, field: DirectField, value: number): void {
+  if (field === 'PVP') cell.pvp += value;
+  else if (field === 'SELF_LEFT') cell.selfLeft = (cell.selfLeft ?? 0) + value;
+  else cell.selfRight = (cell.selfRight ?? 0) + value;
+}
+
+function deriveRootSideByMember(
+  request: AutomaticPlanRequest,
+  rootKey: string,
+): ReadonlyMap<string, RootSide> {
+  const memberByKey = new Map(
+    request.organization.members.map((member) => [member.memberKey, member] as const),
+  );
+  const result = new Map<string, RootSide>();
+  for (const member of request.organization.members) {
+    if (member.memberKey === rootKey) continue;
+    let branchMember = member;
+    while (branchMember.parentMemberKey !== rootKey) {
+      const parent = branchMember.parentMemberKey === null
+        ? undefined
+        : memberByKey.get(branchMember.parentMemberKey);
+      if (parent === undefined) break;
+      branchMember = parent;
+    }
+    if (branchMember.parentMemberKey === rootKey && branchMember.sideAtParent !== null) {
+      result.set(member.memberKey, branchMember.sideAtParent);
+    }
+  }
+  return result;
+}
+
+function rootSideForField(
+  memberKey: string,
+  field: DirectField,
+  rootKey: string,
+  rootSideByMember: ReadonlyMap<string, RootSide>,
+): RootSide | null {
+  if (memberKey !== rootKey) return rootSideByMember.get(memberKey) ?? null;
+  if (field === 'SELF_LEFT') return 'LEFT';
+  if (field === 'SELF_RIGHT') return 'RIGHT';
+  return null;
+}
+
+function payoutProfile(
+  total: number,
+  earlierDateCount: number,
+  finalFixed: number,
+): readonly number[] {
+  const profile = Array.from({ length: earlierDateCount + 1 }, () => 0);
+  profile[earlierDateCount] = finalFixed;
+  if (earlierDateCount === 0) return Object.freeze(profile);
+
+  let remaining = total - finalFixed;
+  const base = remaining >= earlierDateCount * PREFERRED_DIRECT_PV_BLOCK
+    ? PREFERRED_DIRECT_PV_BLOCK
+    : Math.floor(remaining / earlierDateCount);
+  for (let index = 0; index < earlierDateCount; index += 1) {
+    profile[index] = base;
+  }
+  remaining -= base * earlierDateCount;
+
+  for (let index = 0; index < earlierDateCount && remaining > 0; index += 1) {
+    const added = Math.min(2_400 - profile[index]!, remaining);
+    profile[index] = profile[index]! + added;
+    remaining -= added;
+  }
+  if (remaining > 0) {
+    const quotient = Math.floor(remaining / earlierDateCount);
+    const remainder = remaining % earlierDateCount;
+    for (let index = 0; index < earlierDateCount; index += 1) {
+      profile[index] = profile[index]! + quotient + (index < remainder ? 1 : 0);
+    }
+  }
+  return Object.freeze(profile);
+}
+
+/**
+ * Reuses the feasibility candidate's exact per-field totals, but coordinates
+ * descendant contributions so the root's two organization sides reach the
+ * same known commission tiers on the same dates. This is still only a
+ * heuristic candidate; the canonical verifier and objective comparator decide
+ * whether it is usable and better than the staggered feasibility candidate.
+ */
+function buildRootPayoutAlignedCandidate(
+  request: AutomaticPlanRequest,
+  baseline: RawAutomaticPlanCandidate,
+): RawAutomaticPlanCandidate {
+  const skipDates = new Set(request.calendar.skipDateSet);
+  const businessDates = request.calendar.dates.filter((date) => !skipDates.has(date));
+  if (businessDates.length <= 1) return baseline;
+
+  const rootKey = request.canonicalMemberKeys[0]!;
+  const childSlots = deriveChildSlots(request);
+  const rootSideByMember = deriveRootSideByMember(request, rootKey);
+  const finalBusinessDate = businessDates.at(-1)!;
+  const earlierBusinessDates = businessDates.slice(0, -1);
+  const finalAnchors = new Set([
+    sideFieldKey(rootSideAnchor(rootKey, 'LEFT', childSlots)),
+    sideFieldKey(rootSideAnchor(rootKey, 'RIGHT', childSlots)),
+  ]);
+  const baselineCells = new Map(
+    baseline.allocations.map((cell) => [cellKey(cell.date, cell.memberKey), cell] as const),
+  );
+  const alignedCells = new Map<string, MutableCell>();
+  for (const cell of baseline.allocations) {
+    alignedCells.set(cellKey(cell.date, cell.memberKey), {
+      date: cell.date,
+      memberKey: cell.memberKey,
+      pvp: 0,
+      ...(Object.hasOwn(cell, 'selfLeft') ? { selfLeft: 0 } : {}),
+      ...(Object.hasOwn(cell, 'selfRight') ? { selfRight: 0 } : {}),
+    });
+  }
+
+  const groupTotal: Record<RootSide, number> = { LEFT: 0, RIGHT: 0 };
+  const groupFixed = {
+    LEFT: Array.from({ length: businessDates.length }, () => 0),
+    RIGHT: Array.from({ length: businessDates.length }, () => 0),
+  } satisfies Record<RootSide, number[]>;
+  const plans: PayoutFieldPlan[] = [];
+  const fields = ['PVP', 'SELF_LEFT', 'SELF_RIGHT'] as const;
+
+  for (const memberKey of request.canonicalMemberKeys) {
+    for (const field of fields) {
+      const firstBaselineCell = baselineCells.get(cellKey(request.calendar.dates[0]!, memberKey))!;
+      if (field !== 'PVP' && !Object.hasOwn(
+        firstBaselineCell,
+        field === 'SELF_LEFT' ? 'selfLeft' : 'selfRight',
+      )) continue;
+
+      const total = baseline.allocations.reduce(
+        (sum, cell) => cell.memberKey === memberKey
+          ? sum + directValue(cell, field)
+          : sum,
+        0,
+      );
+      const rootSide = rootSideForField(memberKey, field, rootKey, rootSideByMember);
+      if (rootSide === null) {
+        for (const date of request.calendar.dates) {
+          const source = baselineCells.get(cellKey(date, memberKey))!;
+          const target = alignedCells.get(cellKey(date, memberKey))!;
+          addDirectValue(target, field, directValue(source, field));
+        }
+        continue;
+      }
+
+      groupTotal[rootSide] += total;
+      let remaining = total;
+      if (field === 'PVP') {
+        const opening = request.openingPvpByMember[memberKey]!.cumulativePvpOpening;
+        if (opening < 300 && remaining > 0) {
+          const qualification = Math.max(300 - opening, MINIMUM_AUTOMATIC_DIRECT_PV);
+          if (remaining < qualification) return baseline;
+          const target = alignedCells.get(cellKey(businessDates[0]!, memberKey))!;
+          addDirectValue(target, field, qualification);
+          groupFixed[rootSide][0] = groupFixed[rootSide][0]! + qualification;
+          remaining -= qualification;
+        }
+      } else {
+        const fieldKey = sideFieldKey({ memberKey, field });
+        if (finalAnchors.has(fieldKey)) {
+          const source = baselineCells.get(cellKey(finalBusinessDate, memberKey))!;
+          const finalAllocation = directValue(source, field);
+          const target = alignedCells.get(cellKey(finalBusinessDate, memberKey))!;
+          addDirectValue(target, field, finalAllocation);
+          groupFixed[rootSide][businessDates.length - 1] =
+            groupFixed[rootSide][businessDates.length - 1]! + finalAllocation;
+          remaining -= finalAllocation;
+        }
+      }
+      plans.push({
+        memberKey,
+        field,
+        rootSide,
+        chunks: preferredPvpChunks(remaining),
+      });
+    }
+  }
+
+  for (const rootSide of ['LEFT', 'RIGHT'] as const) {
+    const profile = payoutProfile(
+      groupTotal[rootSide],
+      earlierBusinessDates.length,
+      groupFixed[rootSide].at(-1)!,
+    );
+    const remainingCapacity = profile.map(
+      (value, index) => value - groupFixed[rootSide][index]!,
+    );
+    for (const plan of plans) {
+      if (plan.rootSide !== rootSide) continue;
+      for (const chunk of plan.chunks) {
+        let bestIndex = 0;
+        for (let index = 1; index < earlierBusinessDates.length; index += 1) {
+          if (remainingCapacity[index]! > remainingCapacity[bestIndex]!) {
+            bestIndex = index;
+          }
+        }
+        const target = alignedCells.get(
+          cellKey(earlierBusinessDates[bestIndex]!, plan.memberKey),
+        )!;
+        addDirectValue(target, plan.field, chunk);
+        remainingCapacity[bestIndex] = remainingCapacity[bestIndex]! - chunk;
+      }
+    }
+  }
+
+  const allocations = baseline.allocations.map((cell) => {
+    const aligned = alignedCells.get(cellKey(cell.date, cell.memberKey))!;
+    return Object.freeze({
+      date: aligned.date,
+      memberKey: aligned.memberKey,
+      pvp: aligned.pvp,
+      ...(Object.hasOwn(aligned, 'selfLeft') ? { selfLeft: aligned.selfLeft! } : {}),
+      ...(Object.hasOwn(aligned, 'selfRight') ? { selfRight: aligned.selfRight! } : {}),
+    });
+  });
+  return Object.freeze({
+    problemFingerprint: request.problemFingerprint,
+    allocations: Object.freeze(allocations),
+  });
 }
 
 /**
@@ -412,6 +650,18 @@ export function buildVerifiedConstructiveCandidate(
     return built;
   }
   return verifyAutomaticPlanCandidate(request, built.candidate, identity);
+}
+
+export function buildConstructiveCandidateVariants(
+  request: AutomaticPlanRequest,
+): readonly AutomaticPlanConstructionOutcome[] {
+  const baseline = buildConstructiveCandidate(request);
+  if (baseline.status === 'FAILURE') return Object.freeze([baseline]);
+  const payoutAligned = buildRootPayoutAlignedCandidate(request, baseline.candidate);
+  return Object.freeze([
+    baseline,
+    Object.freeze({ status: 'SUCCESS', candidate: payoutAligned }),
+  ]);
 }
 
 export { automaticPlanCoordinateKey };
