@@ -1441,7 +1441,7 @@ body {
 
 .manual-plan-table thead th {
   position: sticky;
-  z-index: 3;
+  z-index: 10;
   background: #f8fafc;
 }
 
@@ -1452,13 +1452,11 @@ body {
 
 .manual-plan-table thead tr:nth-child(2) th {
   top: 58px;
-  z-index: 2;
   height: 30px;
 }
 
 .manual-plan-table thead tr:nth-child(3) th {
   top: 88px;
-  z-index: 2;
   height: 38px;
 }
 
@@ -1487,7 +1485,7 @@ body {
 }
 
 .manual-plan-table__date-heading {
-  z-index: 5 !important;
+  z-index: 12 !important;
   background: #eef2f6 !important;
   text-align: center !important;
 }
@@ -1611,7 +1609,7 @@ body {
 
 .manual-plan-cell[data-commission-level]::before {
   position: absolute;
-  z-index: 2;
+  z-index: 1;
   top: 3px;
   bottom: 3px;
   left: 2px;
