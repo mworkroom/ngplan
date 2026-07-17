@@ -123,17 +123,14 @@ afterEach(() => {
 });
 
 describe('WP3 manual-plan workspace boundary', () => {
-  it('initializes a current blank session and shares density and return controls', async () => {
+  it('initializes a current blank session with the compact view and return control', async () => {
     const user = userEvent.setup();
-    const onDensityChange = vi.fn();
     const onReturnToSetup = vi.fn();
-    const { rerender } = render(
+    render(
       <ManualPlanWorkspace
         bundle={createBundle()}
         draft={createManualPlanDraft(createBundle())}
         setupWarnings={[]}
-        displayDensity="COMPACT"
-        onDisplayDensityChange={onDensityChange}
         onDraftChange={vi.fn()}
         onReturnToSetup={onReturnToSetup}
       />,
@@ -147,23 +144,7 @@ describe('WP3 manual-plan workspace boundary', () => {
     expect(document.getElementById('manual-plan-workspace')?.dataset.density).toBe(
       'compact',
     );
-
-    await user.selectOptions(screen.getByLabelText('화면 크기'), 'COMFORTABLE');
-    expect(onDensityChange).toHaveBeenCalledWith('COMFORTABLE');
-    rerender(
-      <ManualPlanWorkspace
-        bundle={createBundle()}
-        draft={createManualPlanDraft(createBundle())}
-        setupWarnings={[]}
-        displayDensity="COMFORTABLE"
-        onDisplayDensityChange={onDensityChange}
-        onDraftChange={vi.fn()}
-        onReturnToSetup={onReturnToSetup}
-      />,
-    );
-    expect(document.getElementById('manual-plan-workspace')?.dataset.density).toBe(
-      'comfortable',
-    );
+    expect(screen.queryByLabelText('화면 크기')).toBeNull();
 
     await user.click(screen.getByRole('button', { name: '설정으로 돌아가기' }));
     expect(onReturnToSetup).toHaveBeenCalledOnce();
@@ -176,8 +157,6 @@ describe('WP3 manual-plan workspace boundary', () => {
         bundle={createIdentityBundle()}
         draft={createManualPlanDraft(createIdentityBundle())}
         setupWarnings={[]}
-        displayDensity="COMPACT"
-        onDisplayDensityChange={vi.fn()}
         onDraftChange={vi.fn()}
         onReturnToSetup={vi.fn()}
       />,

@@ -76,11 +76,7 @@ import {
 } from './workspace-session-storage';
 
 type Side = ChildSlotState['side'];
-type DisplayDensity = 'COMPACT' | 'COMFORTABLE';
-
 type AppScreen = 'SETUP' | 'MANUAL_PLAN';
-
-const DISPLAY_DENSITY_STORAGE_KEY = 'ngplan.display-density';
 
 const EMPTY_AUTOMATIC_PLAN_PROOF: AutomaticPlanProofProgress = Object.freeze({
   stage: 'TOTAL_NEW_PV',
@@ -190,16 +186,6 @@ function automaticPlanPreviewMetrics(
   });
 }
 
-function readDisplayDensity(): DisplayDensity {
-  try {
-    return window.localStorage.getItem(DISPLAY_DENSITY_STORAGE_KEY) === 'COMFORTABLE'
-      ? 'COMFORTABLE'
-      : 'COMPACT';
-  } catch {
-    return 'COMPACT';
-  }
-}
-
 let sessionSequence = 0;
 
 export function createSessionIdGenerator(
@@ -285,7 +271,6 @@ export function App({
   );
   const [excludedMemberKey, setExcludedMemberKey] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState('');
-  const [displayDensity, setDisplayDensity] = useState<DisplayDensity>(readDisplayDensity);
   const [screenState, setScreenState] = useState<AppScreen>(() =>
     restoredSession?.screen === 'MANUAL_PLAN' &&
     restoredSession.draft.activeBundle !== null &&
@@ -350,14 +335,6 @@ export function App({
   useEffect(() => {
     slotFirstActionRef.current?.focus();
   }, [slotAction]);
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(DISPLAY_DENSITY_STORAGE_KEY, displayDensity);
-    } catch {
-      // 화면 밀도 저장이 차단돼도 현재 세션의 선택은 유지합니다.
-    }
-  }, [displayDensity]);
 
   useEffect(() => {
     writeWorkspaceSession({
@@ -789,8 +766,6 @@ export function App({
           setupWarnings={Object.freeze(
             liveValidation.warnings.map(mapProjectSetupIssueToManualPlanIssue),
           )}
-          displayDensity={displayDensity}
-          onDisplayDensityChange={setDisplayDensity}
           onDraftChange={setManualPlanDraft}
           onReturnToSetup={() => setScreenState('SETUP')}
           announcement={announcement}
@@ -831,7 +806,7 @@ export function App({
     <main
       id="project-setup"
       className="app-shell"
-      data-density={displayDensity === 'COMPACT' ? 'compact' : 'comfortable'}
+      data-density="compact"
       tabIndex={-1}
     >
       <header className="app-header">
@@ -850,17 +825,6 @@ export function App({
           >
             {draft.activeBundle === null ? '입력 중' : '계획표 준비 완료'}
           </span>
-          <label className="density-control">
-            <select
-              aria-label="화면 크기"
-              value={displayDensity}
-              onChange={(event) => setDisplayDensity(event.currentTarget.value as DisplayDensity)}
-            >
-              <option value="COMPACT">글씨 작게</option>
-              <option value="COMFORTABLE">글씨 크게</option>
-            </select>
-          </label>
-
           <button type="button" className="secondary-button" onClick={handleNewProject}>
             초기화
           </button>

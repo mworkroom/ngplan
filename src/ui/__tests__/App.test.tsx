@@ -161,20 +161,13 @@ afterEach(() => {
 });
 
 describe('App project setup flow', () => {
-  it('defaults to compact density and persists a comfortable preference', async () => {
-    const user = renderApp();
+  it('uses the compact view only and omits the former screen-size selector', () => {
+    window.localStorage.setItem('ngplan.display-density', 'COMFORTABLE');
+    renderApp();
     const app = document.getElementById('project-setup');
 
     expect(app?.getAttribute('data-density')).toBe('compact');
-    await user.selectOptions(screen.getByLabelText('화면 크기'), 'COMFORTABLE');
-    expect(app?.getAttribute('data-density')).toBe('comfortable');
-    expect(window.localStorage.getItem('ngplan.display-density')).toBe('COMFORTABLE');
-
-    cleanup();
-    render(<App initialDate={INITIAL_DATE} />);
-    expect(document.getElementById('project-setup')?.getAttribute('data-density')).toBe(
-      'comfortable',
-    );
+    expect(screen.queryByLabelText('화면 크기')).toBeNull();
   });
 
   it('uses Seoul time for the initial half and supports title/slot panel controls', async () => {

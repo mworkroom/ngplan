@@ -59,6 +59,38 @@ function createTreeBundle(): ProjectSetupBundle {
   });
 }
 
+function createLinearBundle(memberCount: number): ProjectSetupBundle {
+  const members = Array.from({ length: memberCount }, (_, index) =>
+    Object.freeze({
+      memberKey: `member-${index + 1}`,
+      memberId: String(1000 + index),
+      name: `회원 ${index + 1}`,
+      pvpTarget: 700 as const,
+      sheetMarker: 'NONE' as const,
+      parentMemberKey: index === 0 ? null : `member-${index}`,
+      sideAtParent: index === 0 ? null : 'LEFT' as const,
+    }),
+  );
+  const openingStateByMember = Object.fromEntries(
+    members.map((member) => [member.memberKey, Object.freeze({ ...ZERO_OPENING })]),
+  );
+  return Object.freeze({
+    project: Object.freeze({
+      projectId: `project-${memberCount}`,
+      title: `${memberCount}명 고정 폭 계획`,
+      period: Object.freeze({ year: 2026, month: 7, half: 'FIRST_HALF' as const }),
+      timezone: 'Asia/Seoul' as const,
+      projectStatus: 'IN_PROGRESS' as const,
+      organizationSnapshotId: `snapshot-${memberCount}`,
+    }),
+    organization: Object.freeze({
+      snapshotId: `snapshot-${memberCount}`,
+      members: Object.freeze(members),
+      openingStateByMember: Object.freeze(openingStateByMember),
+    }),
+  });
+}
+
 function renderWorkspace(
   onReturnToSetup = vi.fn(),
   setupWarnings: readonly ManualPlanIssue[] = [],
@@ -72,8 +104,6 @@ function renderWorkspace(
         bundle={bundle}
         draft={draft}
         setupWarnings={setupWarnings}
-        displayDensity="COMPACT"
-        onDisplayDensityChange={vi.fn()}
         onDraftChange={setDraft}
         onReturnToSetup={onReturnToSetup}
       />
@@ -106,6 +136,32 @@ afterEach(() => {
 });
 
 describe('WP4 manual planning worksheet', () => {
+  it.each([5, 17])(
+    'keeps fixed column widths for a %i-member worksheet',
+    (memberCount) => {
+      const bundle = createLinearBundle(memberCount);
+      render(
+        <ManualPlanWorkspace
+          bundle={bundle}
+          draft={createManualPlanDraft(bundle)}
+          setupWarnings={[]}
+          onDraftChange={vi.fn()}
+          onReturnToSetup={vi.fn()}
+        />,
+      );
+
+      const table = within(
+        screen.getByLabelText('수동 계획표 가로 스크롤 영역'),
+      ).getByRole('table');
+      expect(table.style.width).toBe(`${100 + memberCount * 168}px`);
+      expect(table.querySelectorAll('col')).toHaveLength(memberCount * 3 + 2);
+      expect(table.querySelectorAll('.manual-plan-table__date-column')).toHaveLength(2);
+      expect(
+        table.querySelectorAll('.manual-plan-table__value-column--field-pvp'),
+      ).toHaveLength(memberCount);
+    },
+  );
+
   it('P3-GRID-001/002 renders deterministic semantic headers, editable fields, connected totals, and locked Sundays', () => {
     renderWorkspace();
     const table = within(
@@ -117,14 +173,22 @@ describe('WP4 manual planning worksheet', () => {
       '하위회원번호 미입력',
       '1. 루트회원번호 1000',
       'ID',
-      '현황',
+      '목표값',
+      '700',
+      '2,500',
+      '1,800',
+      '700',
+      '5,000',
+      '1,800',
+      '목표값',
+      '잔액',
       '+700',
       '+2,500',
       '+1,800',
       '+700',
       '+5,000',
       '+1,800',
-      '현황',
+      '잔액',
       '날짜',
       'PVP0',
       '좌0',
@@ -158,7 +222,11 @@ describe('WP4 manual planning worksheet', () => {
     ).toBeNull();
     expect(screen.getAllByLabelText(/5 \(일\).*정산 제외 0/)).toHaveLength(6);
     expect(document.querySelectorAll('.manual-plan-scroll')).toHaveLength(1);
-    expect(document.querySelectorAll('.manual-plan-table thead tr')).toHaveLength(3);
+    expect(document.querySelectorAll('.manual-plan-table thead tr')).toHaveLength(4);
+    expect(screen.getByLabelText('하위 PVP 목표값 700 PV')).toBeDefined();
+    expect(
+      screen.getByLabelText('1. 루트 · 회원 ID 1000 좌 목표값 5,000 PV'),
+    ).toBeDefined();
     expect(within(table).getByText('하위').closest('th')?.className).toContain(
       'manual-plan-table__member-heading--left',
     );

@@ -53,6 +53,12 @@ const FIELD_DEFINITIONS = [
   { field: 'selfRight', label: '우', openingLabel: '우 시작값' },
 ] as const;
 
+const DATE_COLUMN_WIDTH_PX = 50;
+const PVP_COLUMN_WIDTH_PX = 60;
+const SIDE_COLUMN_WIDTH_PX = 54;
+const MEMBER_COLUMN_WIDTH_PX =
+  PVP_COLUMN_WIDTH_PX + SIDE_COLUMN_WIDTH_PX * 2;
+
 interface AchievementBalances {
   readonly pvp: number;
   readonly selfLeft: number;
@@ -330,7 +336,24 @@ export function ManualPlanTable({
         aria-label="수동 계획표 가로 스크롤 영역"
         tabIndex={0}
       >
-        <table className="manual-plan-table">
+        <table
+          className="manual-plan-table"
+          style={{
+            width: `${DATE_COLUMN_WIDTH_PX * 2 + schema.members.length * MEMBER_COLUMN_WIDTH_PX}px`,
+          }}
+        >
+          <colgroup>
+            <col className="manual-plan-table__date-column" />
+            {schema.members.flatMap((member) =>
+              FIELD_DEFINITIONS.map(({ field }) => (
+                <col
+                  className={`manual-plan-table__value-column manual-plan-table__value-column--field-${field.toLowerCase()}`}
+                  key={`${member.memberKey}-${field}-column`}
+                />
+              )),
+            )}
+            <col className="manual-plan-table__date-column" />
+          </colgroup>
           <thead>
             <tr>
               <th className="manual-plan-table__date-heading" scope="col">
@@ -361,7 +384,37 @@ export function ManualPlanTable({
             </tr>
             <tr>
               <th className="manual-plan-table__date-heading" scope="col">
-                현황
+                목표값
+              </th>
+              {schema.members.flatMap((member, memberIndex) => {
+                const targets = achievementTargetsByMember.get(member.memberKey);
+                return FIELD_DEFINITIONS.map(({ field, label }) => {
+                  const value = targets?.[field] ?? null;
+                  const valueLabel = value === null ? '—' : value.toLocaleString('ko-KR');
+                  return (
+                    <th
+                      className={`manual-plan-table__target-heading manual-plan-table__target-heading--field-${field.toLowerCase()} manual-plan-table__target-heading--${memberRegion(memberIndex).toLowerCase()}`}
+                      key={`${member.memberKey}-${field}-target`}
+                      scope="col"
+                      aria-label={`${member.displayLabel} ${label} 목표값 ${valueLabel} PV`}
+                    >
+                      <strong className="manual-plan-table__target-value">
+                        {valueLabel}
+                      </strong>
+                    </th>
+                  );
+                });
+              })}
+              <th
+                className="manual-plan-table__date-heading manual-plan-table__date-heading--end"
+                scope="col"
+              >
+                목표값
+              </th>
+            </tr>
+            <tr>
+              <th className="manual-plan-table__date-heading" scope="col">
+                잔액
               </th>
               {schema.members.flatMap((member, memberIndex) => {
                 const balances = achievementBalancesFor(
@@ -396,7 +449,7 @@ export function ManualPlanTable({
                 className="manual-plan-table__date-heading manual-plan-table__date-heading--end"
                 scope="col"
               >
-                현황
+                잔액
               </th>
             </tr>
             <tr>

@@ -23,14 +23,10 @@ import {
   ManualPlanValidationSummary,
 } from './ManualPlanValidationSummary';
 
-export type ManualPlanDisplayDensity = 'COMPACT' | 'COMFORTABLE';
-
 export interface ManualPlanWorkspaceProps {
   readonly bundle: ProjectSetupBundle;
   readonly draft: ManualPlanDraft;
   readonly setupWarnings: readonly ManualPlanIssue[];
-  readonly displayDensity: ManualPlanDisplayDensity;
-  readonly onDisplayDensityChange: (density: ManualPlanDisplayDensity) => void;
   readonly onDraftChange: (draft: ManualPlanDraft) => void;
   readonly onReturnToSetup: () => void;
   readonly automaticPlanPanel?: ReactNode;
@@ -60,8 +56,6 @@ export function ManualPlanWorkspace({
   bundle,
   draft,
   setupWarnings,
-  displayDensity,
-  onDisplayDensityChange,
   onDraftChange,
   onReturnToSetup,
   automaticPlanPanel,
@@ -128,7 +122,7 @@ export function ManualPlanWorkspace({
     <main
       id="manual-plan-workspace"
       className="app-shell"
-      data-density={displayDensity === 'COMPACT' ? 'compact' : 'comfortable'}
+      data-density="compact"
       tabIndex={-1}
     >
       <header className="app-header">
@@ -154,20 +148,6 @@ export function ManualPlanWorkspace({
                 ? '⚠ 정산 자격 확인 필요'
                 : '⚠ 입력 확인 필요'}
           </span>
-          <label className="density-control">
-            <select
-              aria-label="화면 크기"
-              value={displayDensity}
-              onChange={(event) =>
-                onDisplayDensityChange(
-                  event.currentTarget.value as ManualPlanDisplayDensity,
-                )
-              }
-            >
-              <option value="COMPACT">작게</option>
-              <option value="COMFORTABLE">편안하게</option>
-            </select>
-          </label>
           <button
             type="button"
             className="secondary-button"
