@@ -71,7 +71,7 @@ describe('verified automatic-plan workspace checkpoint', () => {
     expect(restored.status).toBe('RESTORED');
     if (restored.status === 'RESTORED') {
       expect(restored.candidate.candidateId).toBe(fixture.candidate.candidateId);
-      expect(restored.candidate.calculation.engineVersion).toBe('4.0.0');
+      expect(restored.candidate.calculation.engineVersion).toBe('5.0.0');
     }
   });
 

@@ -62,13 +62,13 @@ describe('constructive candidate branch coverage', () => {
         date: '2026-07-01',
         memberKey: 'root',
         pvp: 700,
-        selfLeft: 1_800,
+        selfLeft: 22_500,
       }),
       expect.objectContaining({
         date: '2026-07-01',
         memberKey: 'right',
         pvp: 700,
-        selfLeft: 1_800,
+        selfLeft: 19_300,
         selfRight: 2_500,
       }),
     ]);
@@ -153,15 +153,15 @@ describe('constructive candidate branch coverage', () => {
   it.each([
     {
       opening: 699,
-      expectedTotal: 4_301,
+      expectedTotal: 45_030,
       expectedPvp: 30,
-      expectedLeft: 1_771,
+      expectedLeft: 22_500,
     },
     {
       opening: 799,
-      expectedTotal: 4_201,
+      expectedTotal: 45_000,
       expectedPvp: 0,
-      expectedLeft: 1_701,
+      expectedLeft: 22_500,
     },
   ])(
     'keeps exact totals at cumulative opening $opening',
@@ -194,11 +194,11 @@ describe('constructive candidate branch coverage', () => {
             (value) => value !== undefined && value > 0 && value % 100 === 1,
           ),
         ),
-      ).toBe(opening === 799);
+      ).toBe(false);
     },
   );
 
-  it('absorbs a 20-PV final-anchor remainder instead of emitting a sub-30 cell', () => {
+  it('distributes the root floor without emitting a sub-30 cell', () => {
     const opening = optimizerOpening({
       openingQualificationPvp: 2_180,
       fortnightPvpOpeningCredit: 2_180,
@@ -213,8 +213,8 @@ describe('constructive candidate branch coverage', () => {
       (cell) => !request.calendar.skipDateSet.includes(cell.date),
     );
 
-    expect(businessCells.slice(0, -1).every((cell) => cell.selfLeft === 0)).toBe(true);
-    expect(businessCells.at(-1)?.selfLeft).toBe(320);
+    expect(businessCells.reduce((sum, cell) => sum + cell.selfLeft!, 0)).toBe(22_500);
+    expect(businessCells.reduce((sum, cell) => sum + cell.selfRight!, 0)).toBe(22_500);
     expect(
       businessCells
         .flatMap((cell) => [cell.pvp, cell.selfLeft, cell.selfRight])

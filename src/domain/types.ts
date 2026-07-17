@@ -78,14 +78,15 @@ export interface CalculatePlanInput {
 }
 
 export interface RuleSet {
-  readonly rulesetVersion: '4.0.0';
+  readonly rulesetVersion: '5.0.0';
   readonly commissionTiers: readonly CommissionTier[];
   readonly allowedPvpTargets: readonly PvpTarget[];
   readonly cumulativePvpCap: Pv;
   readonly fortnightSideTarget: Pv;
+  readonly rootFortnightSideTarget: Pv;
   readonly businessCalendarPolicy: 'SUNDAY_SKIP_NO_INPUT';
   readonly pvpTiePolicy: 'LEFT';
-  readonly fortnightPvpSourcePolicy: 'OPENING_PLUS_NEW_EXCLUDING_DAILY_CARRY';
+  readonly fortnightPvpSourcePolicy: 'NEW_ONLY_EXCLUDING_OPENING_AND_DAILY_CARRY';
   readonly target700CommissionPreference: {
     readonly eligiblePvpTarget: 700;
     readonly recommendedDays: 8;

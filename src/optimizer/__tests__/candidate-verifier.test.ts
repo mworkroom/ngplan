@@ -216,7 +216,7 @@ describe('Phase 4 request and candidate boundary', () => {
     expect(verified.candidate.calculation.rulesetVersion).toBe(
       AUTOMATIC_PLAN_RULESET_VERSION,
     );
-    expect(verified.candidate.objective.totalNewPv).toBe(5_000);
+    expect(verified.candidate.objective.totalNewPv).toBe(45_700);
     expect(verified.candidate).not.toHaveProperty('status');
   });
 
@@ -281,8 +281,6 @@ describe('Phase 4 request and candidate boundary', () => {
       built.candidate.allocations.map((cell) => ({ ...cell, pvp: 0 }));
     allocations = replaceCell(allocations, first, {
       pvp: 267,
-      selfLeft: 300,
-      selfRight: 300,
     });
     allocations = replaceCell(allocations, second, { pvp: 433 });
     expect(
@@ -834,7 +832,7 @@ describe('Phase 4 request and candidate boundary', () => {
     });
   });
 
-  it('keeps an opening-680 side budget exact instead of rounding 1,790 to 1,800', () => {
+  it('keeps an opening-680 personal deficit exact while enforcing the root floor', () => {
     const opening = optimizerOpening({
       openingQualificationPvp: 680,
       fortnightPvpOpeningCredit: 680,
@@ -850,14 +848,14 @@ describe('Phase 4 request and candidate boundary', () => {
     });
     expect(verified.status).toBe('SUCCESS');
     if (verified.status !== 'SUCCESS') return;
-    expect(verified.candidate.objective.totalNewPv).toBe(4_320);
+    expect(verified.candidate.objective.totalNewPv).toBe(45_030);
     expect(verified.candidate.calculation.finalAssessmentByMember.root).toMatchObject({
       newPvpTotal: 30,
       personalPvpTotal: 710,
-      rawLeftTotal: 1_790,
-      rawRightTotal: 2_500,
-      assessedLeft: 2_500,
-      assessedRight: 2_500,
+      rawLeftTotal: 22_500,
+      rawRightTotal: 22_500,
+      assessedLeft: 22_530,
+      assessedRight: 22_500,
       allTargetsMet: true,
     });
     expect(

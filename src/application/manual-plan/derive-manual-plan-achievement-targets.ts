@@ -36,7 +36,10 @@ export function deriveManualPlanAchievementTargets(
       member.rightChildMemberKey === null
         ? null
         : derive(member.rightChildMemberKey);
-    const pvp = member.pvpTarget;
+    const pvp = Math.max(
+      0,
+      member.pvpTarget - member.openingState.fortnightPvpOpeningCredit,
+    );
     let selfLeft =
       leftChildTargets === null
         ? DEFAULT_RULE_SET.fortnightSideTarget
@@ -50,6 +53,11 @@ export function deriveManualPlanAchievementTargets(
       selfRight = Math.max(0, selfRight - pvp);
     } else if (leftChildTargets === null) {
       selfLeft = Math.max(0, selfLeft - pvp);
+    }
+
+    if (memberKey === schema.rootMemberKey) {
+      selfLeft = Math.max(selfLeft, DEFAULT_RULE_SET.rootFortnightSideTarget);
+      selfRight = Math.max(selfRight, DEFAULT_RULE_SET.rootFortnightSideTarget);
     }
 
     const targets = Object.freeze({ pvp, selfLeft, selfRight });

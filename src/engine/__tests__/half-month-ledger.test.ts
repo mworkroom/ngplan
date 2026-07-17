@@ -196,30 +196,30 @@ describe('half-month-ledger', () => {
     expect(source).toEqual(sourceBefore);
   });
 
-  it('[HALF-P01] 보름 시작값과 신규 PVP 전액을 작은 쪽에 적용', () => {
+  it('[HALF-P01] 신규 PVP 전액만 작은 쪽에 적용', () => {
     const result = assess(700, 300, 400, 2500, 1800);
 
     expect(result).toMatchObject({
       personalPvpTotal: 700,
       remainingPvp: 0,
-      periodPvpForSide: 700,
+      periodPvpForSide: 400,
       pvpAppliedSide: 'RIGHT',
       assessedLeft: 2500,
-      assessedRight: 2500,
-      allTargetsMet: true,
+      assessedRight: 2200,
+      allTargetsMet: false,
     });
   });
 
-  it('[HALF-P02] 목표 초과 PVP도 자르지 않고 전액 적용', () => {
+  it('[HALF-P02] 누적 PVP가 목표를 넘겨도 신규 PVP만 좌·우에 적용', () => {
     const result = assess(1500, 1600, 400, 2500, 500);
 
     expect(result).toMatchObject({
       personalPvpTotal: 2000,
       personalPvpTarget: 1500,
-      periodPvpForSide: 2000,
+      periodPvpForSide: 400,
       assessedLeft: 2500,
-      assessedRight: 2500,
-      allTargetsMet: true,
+      assessedRight: 900,
+      allTargetsMet: false,
     });
   });
 
@@ -247,7 +247,7 @@ describe('half-month-ledger', () => {
       newPvpTotal: 0,
       rawLeftTotal: 0,
       rawRightTotal: 0,
-      periodPvpForSide: 300,
+      periodPvpForSide: 0,
     });
   });
 
@@ -290,8 +290,8 @@ describe('half-month-ledger', () => {
     expect(final).toMatchObject({
       openingQualificationPvp: 33,
       closingQualificationPvp: 433,
-      periodPvpForSide: 700,
-      assessedLeft: 700,
+      periodPvpForSide: 400,
+      assessedLeft: 400,
       assessedRight: 200,
     });
   });
@@ -458,7 +458,7 @@ describe('half-month-ledger', () => {
       openingState: opening(),
     })).toThrow(PvAggregateOutOfRangeError);
 
-    expect(() => assess(700, 1, 0, Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER))
+    expect(() => assess(700, 0, 1, Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER))
       .toThrow(PvAggregateOutOfRangeError);
   });
 });

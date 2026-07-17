@@ -152,7 +152,7 @@ function achievementBalancesFor(
     return null;
   }
   return {
-    pvp: targets.pvp - assessment.personalPvpTotal,
+    pvp: targets.pvp - assessment.newPvpTotal,
     selfLeft: targets.selfLeft - assessment.rawLeftTotal,
     selfRight: targets.selfRight - assessment.rawRightTotal,
   };

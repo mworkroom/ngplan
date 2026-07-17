@@ -31,7 +31,10 @@ function member(
   });
 }
 
-function bundle(members: readonly MemberSnapshot[]): ProjectSetupBundle {
+function bundle(
+  members: readonly MemberSnapshot[],
+  openingByMember: Readonly<Record<string, OpeningStateInput>> = {},
+): ProjectSetupBundle {
   return Object.freeze({
     project: Object.freeze({
       projectId: 'project-1',
@@ -45,7 +48,12 @@ function bundle(members: readonly MemberSnapshot[]): ProjectSetupBundle {
       snapshotId: 'snapshot-1',
       members: Object.freeze([...members]),
       openingStateByMember: Object.freeze(
-        Object.fromEntries(members.map((item) => [item.memberKey, ZERO_OPENING])),
+        Object.fromEntries(
+          members.map((item) => [
+            item.memberKey,
+            openingByMember[item.memberKey] ?? ZERO_OPENING,
+          ]),
+        ),
       ),
     }),
   });
@@ -83,8 +91,41 @@ describe('manual-plan achievement targets', () => {
     });
     expect(targets.get('root')).toEqual({
       pvp: 2400,
-      selfLeft: 22100,
-      selfRight: 100,
+      selfLeft: 22500,
+      selfRight: 22500,
+    });
+  });
+
+  it('subtracts cumulative PVP before rolling targets upward and keeps the root floor', () => {
+    const members = [
+      member('root', null, null, 2400),
+      member('left', 'root', 'LEFT', 700),
+    ];
+    const fullyAchieved = Object.freeze({
+      ...ZERO_OPENING,
+      openingQualificationPvp: 2400,
+      fortnightPvpOpeningCredit: 2400,
+    });
+    const partiallyAchieved = Object.freeze({
+      ...ZERO_OPENING,
+      openingQualificationPvp: 300,
+      fortnightPvpOpeningCredit: 300,
+    });
+    const schema = deriveManualPlanSchema(bundle(members, {
+      root: fullyAchieved,
+      left: partiallyAchieved,
+    }));
+    const targets = deriveManualPlanAchievementTargets(schema);
+
+    expect(targets.get('left')).toEqual({
+      pvp: 400,
+      selfLeft: 2500,
+      selfRight: 2100,
+    });
+    expect(targets.get('root')).toEqual({
+      pvp: 0,
+      selfLeft: 22500,
+      selfRight: 22500,
     });
   });
 });

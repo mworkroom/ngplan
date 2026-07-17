@@ -9,7 +9,7 @@ export {
   CALENDAR_VERSION,
   DEFAULT_RULE_SET,
   ENGINE_VERSION,
-  RULE_SET_4_0_0,
+  RULE_SET_5_0_0,
 } from '../domain/constants';
 export {
   validateOrganizationSnapshot,

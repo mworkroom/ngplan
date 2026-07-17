@@ -210,7 +210,7 @@ describe('WP5 daily and fortnight result presentation', () => {
     expect(screen.queryByText('보름 PVP 시작')).toBeNull();
     expect(screen.queryByText('개인 PVP 합계')).toBeNull();
     expect(screen.getByText('2,500 PV · 좌 목표 달성')).toBeDefined();
-    expect(screen.getByText('2,800 PV · 우 목표 달성')).toBeDefined();
+    expect(screen.getByText('2,500 PV · 우 목표 달성')).toBeDefined();
     expect(screen.getByText('7월 1일')).toBeDefined();
     expect(screen.getByText('2,400 PV 단계')).toBeDefined();
   });

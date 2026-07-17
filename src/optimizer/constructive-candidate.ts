@@ -1,4 +1,4 @@
-import type { NormalizedAllocationCell } from '../engine';
+import { DEFAULT_RULE_SET, type NormalizedAllocationCell } from '../engine';
 import {
   automaticPlanCoordinateKey,
   deriveAutomaticPlanCoordinates,
@@ -16,7 +16,8 @@ import type {
 } from './types';
 
 const CUMULATIVE_PVP_CAP = 2_400;
-const FORTNIGHT_SIDE_TARGET = 2_500;
+const FORTNIGHT_SIDE_TARGET = DEFAULT_RULE_SET.fortnightSideTarget;
+const ROOT_FORTNIGHT_SIDE_TARGET = DEFAULT_RULE_SET.rootFortnightSideTarget;
 const MINIMUM_AUTOMATIC_DIRECT_PV = 30;
 const PREFERRED_DIRECT_PV_BLOCK = 100;
 
@@ -512,10 +513,9 @@ export function buildConstructiveCandidate(
   for (const memberKey of [...request.canonicalMemberKeys].reverse()) {
     const opening = request.openingPvpByMember[memberKey]!;
     const plannedPvp = plannedPvpByMember.get(memberKey)!;
-    const periodPvp = opening.cumulativePvpOpening + plannedPvp;
     const smallerSideRequirement = Math.max(
       0,
-      FORTNIGHT_SIDE_TARGET - periodPvp,
+      FORTNIGHT_SIDE_TARGET - plannedPvp,
     );
     const children = childSlots.get(memberKey)!;
     let leftTotal: number;
@@ -564,6 +564,22 @@ export function buildConstructiveCandidate(
       }
     }
     subtreeTotalByMember.set(memberKey, plannedPvp + leftTotal + rightTotal);
+  }
+  const rootChildren = childSlots.get(rootKey)!;
+  const rootLeftTotal = rootChildren.left === undefined
+    ? sideTotalByField.get(sideFieldKey({ memberKey: rootKey, field: 'SELF_LEFT' }))!
+    : subtreeTotalByMember.get(rootChildren.left)!;
+  const rootRightTotal = rootChildren.right === undefined
+    ? sideTotalByField.get(sideFieldKey({ memberKey: rootKey, field: 'SELF_RIGHT' }))!
+    : subtreeTotalByMember.get(rootChildren.right)!;
+  for (const [side, total] of [
+    ['LEFT', rootLeftTotal],
+    ['RIGHT', rootRightTotal],
+  ] as const) {
+    const deficit = Math.max(0, ROOT_FORTNIGHT_SIDE_TARGET - total);
+    if (deficit === 0) continue;
+    const anchorKey = sideFieldKey(rootSideAnchor(rootKey, side, childSlots));
+    sideTotalByField.set(anchorKey, sideTotalByField.get(anchorKey)! + deficit);
   }
   const finalAnchors = new Set([
     sideFieldKey(rootSideAnchor(rootKey, 'LEFT', childSlots)),

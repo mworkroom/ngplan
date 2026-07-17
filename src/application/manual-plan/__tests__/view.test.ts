@@ -249,12 +249,12 @@ describe('WP5 pure result view models', () => {
       personalPvpStatusLabel: '개인 PVP 목표 달성',
       rawLeftTotal: 2500,
       rawRightTotal: 2100,
-      periodPvpForSide: 700,
+      periodPvpForSide: 400,
       pvpAppliedSide: 'RIGHT',
       pvpApplicationReason: 'SMALLER_RIGHT',
       pvpApplicationLabel: '작은 쪽 우에 적용',
       assessedLeft: 2500,
-      assessedRight: 2800,
+      assessedRight: 2500,
       leftTargetLabel: '좌 목표 달성',
       rightTargetLabel: '우 목표 달성',
       sideTargetsMet: true,
@@ -273,10 +273,10 @@ describe('WP5 pure result view models', () => {
     expect(deriveManualPlanMemberSummaryView(result, schema, 'A')).toMatchObject({
       rawLeftTotal: 2300,
       rawRightTotal: 2300,
-      periodPvpForSide: 700,
+      periodPvpForSide: 400,
       pvpAppliedSide: 'LEFT',
       pvpApplicationLabel: '동률 → 좌 적용',
-      assessedLeft: 3000,
+      assessedLeft: 2700,
       assessedRight: 2300,
       leftTargetMet: true,
       rightTargetMet: false,
@@ -284,7 +284,7 @@ describe('WP5 pure result view models', () => {
     });
   });
 
-  it('HALF-P01 includes opening fortnight PVP in target and side assessment', () => {
+  it('HALF-P01 includes opening PVP in personal target but excludes it from side assessment', () => {
     const { schema, result } = currentResult(
       bundle([member('A')], { A: { fortnightPvpOpeningCredit: 300 } }),
       (schema, initial) => {
@@ -298,12 +298,12 @@ describe('WP5 pure result view models', () => {
       newPvpTotal: 400,
       personalPvpTotal: 700,
       remainingPvp: 0,
-      periodPvpForSide: 700,
+      periodPvpForSide: 400,
       pvpAppliedSide: 'RIGHT',
       assessedLeft: 2500,
-      assessedRight: 2500,
-      sideTargetsMet: true,
-      allTargetsMet: true,
+      assessedRight: 2200,
+      sideTargetsMet: false,
+      allTargetsMet: false,
     });
   });
 
@@ -346,9 +346,9 @@ describe('WP5 pure result view models', () => {
       newPvpTotal: 267,
       personalPvpTotal: 300,
       remainingPvp: 400,
-      periodPvpForSide: 300,
+      periodPvpForSide: 267,
       pvpAppliedSide: 'LEFT',
-      assessedLeft: 300,
+      assessedLeft: 267,
       assessedRight: 200,
       sideTargetsMet: false,
     });

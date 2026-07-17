@@ -211,6 +211,23 @@ export function verifyAutomaticPlanCandidate(
       ? undefined
       : settlementAt(calculation, finalBusinessDate, rootKey);
     const requiredFinalRootTier = rootMember?.pvpTarget === 2_400 ? 700 : 300;
+    const rootAssessment = rootKey === undefined
+      ? undefined
+      : calculation.finalAssessmentByMember[rootKey];
+    if (
+      rootAssessment === undefined ||
+      rootAssessment.rawLeftTotal < DEFAULT_RULE_SET.rootFortnightSideTarget ||
+      rootAssessment.rawRightTotal < DEFAULT_RULE_SET.rootFortnightSideTarget
+    ) {
+      return {
+        status: 'FAILURE',
+        error: automaticPlanError(
+          'AUTOMATIC_PLAN_TARGET_UNMET',
+          '맨 위 회원의 이번 기간 좌·우 실적은 각각 22,500 PV 이상이어야 합니다.',
+          { location: rootKey === undefined ? {} : { memberKey: rootKey } },
+        ),
+      };
+    }
     if (
       finalBusinessDate === undefined ||
       rootKey === undefined ||

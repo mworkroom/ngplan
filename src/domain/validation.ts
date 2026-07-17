@@ -835,6 +835,7 @@ function hasCanonicalRuleSetBody(rules: RuleSet): boolean {
       ) &&
       rules.cumulativePvpCap === expected.cumulativePvpCap &&
       rules.fortnightSideTarget === expected.fortnightSideTarget &&
+      rules.rootFortnightSideTarget === expected.rootFortnightSideTarget &&
       rules.businessCalendarPolicy === expected.businessCalendarPolicy &&
       rules.pvpTiePolicy === expected.pvpTiePolicy &&
       rules.fortnightPvpSourcePolicy === expected.fortnightPvpSourcePolicy &&
@@ -947,8 +948,8 @@ export function validatePlan(
       issues,
       'RULESET_BODY_MISMATCH',
       { snapshotId, field: 'ruleset' },
-      '규칙 버전 4.0.0의 본문이 확정된 규칙과 일치하지 않습니다.',
-      '내보낸 기본 RuleSet 4.0.0을 변경하지 않고 사용해 주세요.',
+      '규칙 버전 5.0.0의 본문이 확정된 규칙과 일치하지 않습니다.',
+      '내보낸 기본 RuleSet 5.0.0을 변경하지 않고 사용해 주세요.',
     );
   }
 

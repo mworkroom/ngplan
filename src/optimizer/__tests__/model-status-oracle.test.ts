@@ -59,6 +59,37 @@ function certificate(overrides: Partial<ModelCertificate> = {}): ModelCertificat
   };
 }
 
+function constructiveSideDomains(
+  request: ReturnType<typeof createOptimizerRequest>,
+): Record<string, readonly number[]> {
+  const built = buildVerifiedConstructiveCandidate(request, {
+    candidateId: 'side-domain-source',
+    sequence: 1,
+    foundAtElapsedMs: 0,
+  });
+  if (built.status !== 'SUCCESS') {
+    throw new Error(`constructive side fixture failed: ${built.error.code}`);
+  }
+  return Object.fromEntries(
+    built.candidate.allocations.flatMap((cell) => [
+      ...(cell.selfLeft === undefined
+        ? []
+        : [[automaticPlanCoordinateKey({
+            date: cell.date,
+            memberKey: cell.memberKey,
+            field: 'SELF_LEFT',
+          }), [cell.selfLeft] as const] as const]),
+      ...(cell.selfRight === undefined
+        ? []
+        : [[automaticPlanCoordinateKey({
+            date: cell.date,
+            memberKey: cell.memberKey,
+            field: 'SELF_RIGHT',
+          }), [cell.selfRight] as const] as const]),
+    ]),
+  );
+}
+
 function completeProgress(
   vectorLength: number,
   primaryLowerBound: number | null,
@@ -236,34 +267,12 @@ describe('bounded tiny exhaustive oracle', () => {
     const firstDate = request.calendar.dates.find(
       (date) => !request.calendar.skipDateSet.includes(date),
     )!;
-    const finalDate = request.calendar.dates
-      .filter((date) => !request.calendar.skipDateSet.includes(date))
-      .at(-1)!;
     const domainByCoordinate = {
+      ...constructiveSideDomains(request),
       [automaticPlanCoordinateKey({ date: firstDate, memberKey: 'root', field: 'PVP' })]: [
         700,
         800,
       ],
-      [automaticPlanCoordinateKey({
-        date: firstDate,
-        memberKey: 'root',
-        field: 'SELF_LEFT',
-      })]: [1_500],
-      [automaticPlanCoordinateKey({
-        date: firstDate,
-        memberKey: 'root',
-        field: 'SELF_RIGHT',
-      })]: [2_200],
-      [automaticPlanCoordinateKey({
-        date: finalDate,
-        memberKey: 'root',
-        field: 'SELF_LEFT',
-      })]: [300],
-      [automaticPlanCoordinateKey({
-        date: finalDate,
-        memberKey: 'root',
-        field: 'SELF_RIGHT',
-      })]: [300],
     };
     const searched = searchTinyAutomaticPlan(request, {
       defaultDomain: [0],
@@ -274,7 +283,7 @@ describe('bounded tiny exhaustive oracle', () => {
     if (searched.status !== 'SUCCESS') return;
     expect(searched.completeWithinBounds).toBe(true);
     expect(searched.evaluatedCandidateCount).toBe(2);
-    expect(searched.bestCandidate?.objective.totalNewPv).toBe(5_000);
+    expect(searched.bestCandidate?.objective.totalNewPv).toBe(45_700);
     expect(searched.bestCandidate?.candidateId).toBe('tiny-oracle-0');
     expect(searched).not.toHaveProperty('proof');
   });
@@ -305,6 +314,7 @@ describe('bounded tiny exhaustive oracle', () => {
     const secondDate = businessDates[1]!;
     const finalDate = businessDates.at(-1)!;
     const domainByCoordinate = {
+      ...constructiveSideDomains(request),
       [automaticPlanCoordinateKey({
         date: firstDate,
         memberKey: 'root',
@@ -320,26 +330,6 @@ describe('bounded tiny exhaustive oracle', () => {
         memberKey: 'root',
         field: 'PVP',
       })]: [0, 100],
-      [automaticPlanCoordinateKey({
-        date: firstDate,
-        memberKey: 'root',
-        field: 'SELF_LEFT',
-      })]: [1_500],
-      [automaticPlanCoordinateKey({
-        date: firstDate,
-        memberKey: 'root',
-        field: 'SELF_RIGHT',
-      })]: [2_200],
-      [automaticPlanCoordinateKey({
-        date: finalDate,
-        memberKey: 'root',
-        field: 'SELF_LEFT',
-      })]: [300],
-      [automaticPlanCoordinateKey({
-        date: finalDate,
-        memberKey: 'root',
-        field: 'SELF_RIGHT',
-      })]: [300],
     };
     const searched = searchTinyAutomaticPlan(request, {
       defaultDomain: [0],
@@ -351,7 +341,7 @@ describe('bounded tiny exhaustive oracle', () => {
     expect(searched.status).toBe('SUCCESS');
     if (searched.status !== 'SUCCESS') return;
     expect(searched.evaluatedCandidateCount).toBe(4);
-    expect(searched.bestCandidate?.objective.totalNewPv).toBe(5_800);
+    expect(searched.bestCandidate?.objective.totalNewPv).toBe(46_500);
     expect(searched.bestCandidate?.candidateId).toBe('ranked-2');
   });
 

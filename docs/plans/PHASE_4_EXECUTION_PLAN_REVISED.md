@@ -95,9 +95,9 @@ Phase 4 is successful when all of the following are true:
 - Business dates are canonical date-only values; Sunday classification never depends on the browser, device, UTC offset, or current locale.
 - Every Sunday allocation is zero.
 - Every candidate shown to the operator has passed the updated, independently tested Phase 1 calculation engine.
-- Every member's selected half-month PVP target is met or exceeded, and both assessed side targets are at least 2,500.
+- Every member's selected half-month PVP target is met or exceeded, both assessed side targets are at least 2,500, and the root's raw left and right period totals are each at least 22,500.
 - A member may not trigger any planned commission before cumulative qualification PVP reaches 300; PVP added on the same date counts before that date's gate is checked.
-- The one visible cumulative PVP opening is capped at 2,400, starts both qualification and half-month PVP, and never becomes first-date daily PVP carry; first-date daily PVP carry is always zero.
+- The one visible cumulative PVP opening is capped at 2,400 and starts qualification and personal-PVP target progress. It does not contribute to the half-month side application or first-date daily PVP carry; first-date daily PVP carry is always zero.
 - A member starting at cumulative PVP 2,400 receives no new direct PVP. Every other member's period direct PVP stays within `2,400 - cumulativePvpOpening`.
 - Every non-zero automatic direct PVP or editable `SELF` value is at least 30. Manual and actual-value entry continue to support exact 1-PV values.
 - The constructive candidate uses the full business-date range and the root earns a qualification-valid commission on the last business date: at least tier 700 for root target 2,400, otherwise at least tier 300.
@@ -197,7 +197,7 @@ Only the current rule—PVP applies to the smaller side according to the authori
 The optimizer must enforce:
 
 1. `fortnightAssessedPvp(member) >= selectedPvpTarget(member)` for every member;
-2. every member's assessed left and right half-month values are each at least 2,500;
+2. every member's assessed left and right half-month values are each at least 2,500, and the root's raw left and right period totals are each at least 22,500;
 3. zero new allocation on every `SKIP_NO_INPUT` date, including every canonical Sunday;
 4. no direct value for a connected `CHILD` direction;
 5. non-negative exact integer PV, rejecting decimals, `NaN`, infinities, unsafe integers, overflow, and negative zero at the boundary; every non-zero automatic direct value is at least 30;
@@ -517,7 +517,7 @@ Tests may inject a fake clock, deterministic work/node budget, or test-only shor
 
 The `problemFingerprint` includes the normalized bundle/business inputs, ruleset version, objective version, calendar version/date set, canonical member sequence, and relevant schema versions. It excludes elapsed time, run ID, candidate sequence, warm start, and transient UI state. A warm start may change search speed but must not change the definition of the problem or the proven optimum.
 
-The synchronized versions are ruleset/engine `4.0.0`, policy/objective `3.0.0`, request/fingerprint/model/model-certificate/checkpoint `2.0.0`, worker protocol `2.0.0`, and calendar `1.0.0`.
+The synchronized versions are ruleset/engine `5.0.0`, policy/objective `3.0.0`, request/fingerprint/model/model-certificate/checkpoint `2.0.0`, worker protocol `2.0.0`, and calendar `1.0.0`.
 
 ### 6.2 Objective Vector and Display Metrics
 
@@ -650,7 +650,7 @@ A vector objective may require many internal proof steps. A single unconstrained
 - Every date/member qualification trace must equal `cumulativePvpOpening` plus inclusive cumulative direct new PVP.
 - Every member's cumulative PVP opening and period direct PVP obey the lifetime 2,400 cap.
 - No candidate may contain an automatic commission-triggering settlement while that trace is below 300.
-- Every final `FortnightAssessment.allTargetsMet` must be true, including `fortnightAssessedPvp >= selectedPvpTarget` and both 2,500 side targets.
+- Every final `FortnightAssessment.allTargetsMet` must be true, including `fortnightAssessedPvp >= selectedPvpTarget` and both 2,500 side targets; additionally, the root raw left and right totals must each be at least 22,500.
 - The final business date contains the required qualification-valid root tier (700 for root target 2,400; 300 otherwise).
 - A 6,000+ full commission causes `AUTOMATIC_PLAN_PAYOUT_TABLE_INCOMPLETE` until its payout is supplied; the verifier never invents a payout score.
 - Count target-700 days only with the exact section 3.7 predicate.
@@ -699,7 +699,7 @@ The selected exact model must represent all of the following without excluding a
 - canonical business date/Sunday restrictions;
 - canonical stable member identity/order and topology;
 - linear organization propagation from descendants to every ancestor path used by Phase 1;
-- one 0–2,400 cumulative opening mapped to qualification and half-month PVP, with first-date daily PVP balance fixed at zero;
+- one 0–2,400 cumulative opening mapped to qualification and personal-PVP target progress, excluded from half-month side application, with first-date daily PVP balance fixed at zero;
 - non-resetting cumulative personal qualification PVP from the cumulative opening plus inclusive date-by-date direct PVP;
 - member-level period PVP no greater than the remaining lifetime headroom;
 - automatic direct domains restricted to zero or integers at least 30;
@@ -893,7 +893,7 @@ Existing files likely to change:
 - `src/domain/period.ts` or the shared calendar module to expose date-only Sunday/skip behavior independent of device timezone.
 - `src/engine/daily-ledger.ts`, `half-month-ledger.ts`, and/or a focused qualification module to calculate inclusive cumulative PVP, distinguish settlement from full-commission eligibility, and preserve actual reset/period-end behavior.
 - `src/engine/index.ts` to publish the qualification-aware calculation contract used by manual and automatic plans.
-- `src/application/project-setup/` to normalize the one visible cumulative-PVP opening into qualification and half-month ledgers, fix first-date daily PVP carry at zero, and preserve manual left/right openings.
+- `src/application/project-setup/` to normalize the one visible cumulative-PVP opening into qualification and personal-target ledgers, exclude it from half-month side application, fix first-date daily PVP carry at zero, and preserve manual left/right openings.
 - `src/application/manual-plan/` to convert a verified candidate to manual draft strings without duplicating schema rules.
 - `src/ui/App.tsx` for run lifecycle, candidate pinning, and atomic application.
 - `src/ui/workspace-session-storage.ts` for a versioned optional minimal incumbent checkpoint and migration/fallback.
@@ -916,7 +916,7 @@ Tasks:
 - Record the revised Q-SIM-06 policy: exact PVP value 100 is not an objective; retain only general 100-multiple readability and maximum-direct-PVP concentration rules after higher objectives.
 - Remove all authoritative wording that says `PVP 100 + 100` inherently beats `PVP 200` or that maximizes exact-PVP-100 cells.
 - Add the current-rule PVP-placement cases: child PVP 100 versus parent PVP 100 with equal total PV and different discarded excess; and the countercase where child PVP 100 reduces total PV because the child needs it.
-- Add the one cumulative PVP opening, 2,400 cap/headroom, qualification/fortnight mapping, and fixed-zero daily PVP opening.
+- Add the one cumulative PVP opening, 2,400 cap/headroom, qualification/personal-target mapping, new-PVP-only half-month side application, root 22,500 raw-side floors, and fixed-zero daily PVP opening.
 - Add the PVP 300 qualification counter, inclusive same-date eligibility, automatic pre-qualification commission prohibition, and manual below-300 reset/warning semantics to `CALCULATION_CASES.md`.
 - Assign new ruleset and objective versions and define migration/unsupported-version behavior.
 - Define canonical date-only business calendar, Sunday/skip calculation, and stable member ordering. Remove any browser-time-zone-dependent path.
@@ -1141,7 +1141,7 @@ Do not lower a threshold to make Phase 4 pass. Add optimizer paths to the covera
 | P4-REQ-002 | Unsupported policy/rules/objective/calendar version | Stable failure before solving |
 | P4-REQ-003 | Same business dates under Seoul, Brazil, and UTC host time zones | Identical canonical dates, Sundays, and fingerprint |
 | P4-REQ-004 | Warm start differs but business request is identical | Same problem fingerprint; warm start excluded |
-| P4-OPEN-001 | Visible cumulative PVP opening is 33 | Qualification and half-month PVP both start at 33; first-date daily PVP carry is 0 |
+| P4-OPEN-001 | Visible cumulative PVP opening is 33 | Qualification and personal-PVP target progress start at 33; half-month side application uses only new PVP and first-date daily PVP carry is 0 |
 | P4-OPEN-002 | Cumulative PVP opening is 2,400 | Remaining direct-PVP headroom is 0 and every automatic direct PVP value is 0 |
 | P4-OPEN-003 | Cumulative PVP opening is 1,600 | Period direct PVP may total at most 800; left/right openings remain independent manual inputs |
 | P4-SHAPE-001 | Full candidate matrix | One date/member cell; exact PVP/SELF/CHILD shape |
@@ -1311,7 +1311,7 @@ There is no 3-hour benchmark requirement or product acceptance path. The key mea
 ### B — Authority, Calendar, and Verification
 
 - The newly versioned qualification/current-rule Phase 1 engine is the only business-calculation authority.
-- One visible cumulative PVP opening explicitly initializes qualification and half-month PVP, first-date daily PVP carry is fixed at zero, and left/right openings remain separate manual inputs.
+- One visible cumulative PVP opening explicitly initializes qualification and personal-PVP target progress, is excluded from half-month side application, first-date daily PVP carry is fixed at zero, and left/right openings remain separate manual inputs.
 - Lifetime PVP headroom is capped at 2,400; an opening of 2,400 prohibits new direct PVP.
 - Canonical date-only Sunday/skip behavior is independent of host timezone.
 - Solver-derived values never bypass independent verification.
@@ -1388,7 +1388,7 @@ There is no 3-hour benchmark requirement or product acceptance path. The key mea
 | Exact PVP 100 historical habit becomes a universal rule | Wrong placement, excess waste, unnecessary splitting | Remove exact-100 objective; test child-versus-parent placement under current rules |
 | PVP concentrates into one large remainder | Hard-to-use plan despite tied business outcome | Minimize maximum direct PVP only after general 100-multiple readability and all higher objectives |
 | PVP concentration rule over-influences real business results | More PV or worse commissions for prettier cells | Place max PVP after total, waste, fairness, and roundness; dominance tests |
-| Cumulative PVP is mistaken for first-date daily carry | Wrong first-day settlement or duplicate inherited PVP | Map the single visible cumulative opening only to qualification and half-month PVP; fix daily carry at zero and keep left/right manual |
+| Cumulative PVP is mistaken for current-period side PV or first-date daily carry | Wrong half-month target or duplicate inherited PVP | Map the single visible cumulative opening only to qualification and personal-PVP target progress; use new PVP for half-month sides, fix daily carry at zero, and keep left/right manual |
 | Lifetime PVP cap/headroom is omitted | PVP is allocated to a completed member or beyond 2,400 | Verify cumulative opening plus period direct PVP at every boundary; force zero direct PVP when opening is 2,400 |
 | Small automatic values create impractical purchase instructions | Operator must round 1–29 PV up and wastes money | Restrict generated direct values to zero or at least 30; retain exact 1-PV support only for manual/actual calculation |
 | Last-date root activity is optimized away | The team finishes early and stops contributing to the wider organization | Build across the full business period and verify the required final root tier as a hard constraint |
@@ -1417,7 +1417,7 @@ Phase 4 is complete only when:
 - Revised Q-SIM-01 through Q-SIM-06 decisions are synchronized into authoritative documents and calculation cases are finalized.
 - Product code, UI, tests, and documentation contain one fixed 30-minute run and no 3-hour/custom mode.
 - New ruleset, objective, calendar/fingerprint, checkpoint, and model-certificate versions identify the revised semantics.
-- The one cumulative PVP opening maps explicitly to qualification and half-month PVP, first-date daily PVP carry is zero, and manual left/right openings remain separate and tested.
+- The one cumulative PVP opening maps explicitly to qualification and personal-PVP target progress, half-month side application uses new PVP only, first-date daily PVP carry is zero, and manual left/right openings remain separate and tested.
 - Canonical ISO date-only Sunday/skip behavior is independent of browser/device timezone.
 - One exact objective comparator is used or independently validated everywhere.
 - The comparator has no target-700 total-days stage and no exact-PVP-100 stage.

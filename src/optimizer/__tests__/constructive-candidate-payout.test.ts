@@ -48,7 +48,7 @@ describe('constructive payout-aligned candidate', () => {
     expect(aligned.candidate.allocations.some((cell) => cell.selfRight! > 0)).toBe(true);
   });
 
-  it('keeps the same direct PV while aligning a 22,100-PV root organization at tier 2,400', () => {
+  it('keeps the same direct PV while aligning a 22,500-PV root organization at tier 2,400', () => {
     const members = memberSpecs.map(([memberKey, parentMemberKey, sideAtParent]) =>
       optimizerMember(
         memberKey,
@@ -88,8 +88,8 @@ describe('constructive payout-aligned candidate', () => {
 
     expect(payoutAligned!.objective.totalNewPv).toBe(staggered!.objective.totalNewPv);
     expect(payoutAligned!.calculation.finalAssessmentByMember.root).toMatchObject({
-      rawLeftTotal: 22_100,
-      rawRightTotal: 22_100,
+      rawLeftTotal: 22_500,
+      rawRightTotal: 22_500,
     });
     const rootTiers = request.calendar.dates
       .map((date) => payoutAligned!.calculation.dailySettlementByDateAndMember[date]!.root!)

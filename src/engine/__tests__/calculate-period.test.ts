@@ -5,6 +5,7 @@ import type {
   CalculatePlanInput,
   CalculationResult,
   CommissionTier,
+  Pv,
 } from '../../domain/types';
 import { deepFreeze, makePlanInput, member } from '../../test-support/fixtures';
 import { calculatePlan } from '../calculate-period';
@@ -161,7 +162,7 @@ describe('calculatePlan', () => {
     });
   });
 
-  test('[HALF-P03] uses cumulative PVP for fortnight totals but not as daily carry', () => {
+  test('[HALF-P03] uses cumulative PVP for personal progress but not side assessment or daily carry', () => {
     const result = calculate(
       makePlanInput({
         opening: {
@@ -181,7 +182,7 @@ describe('calculatePlan', () => {
     expect(result.finalAssessmentByMember.A).toMatchObject({
       newPvpTotal: 400,
       personalPvpTotal: 700,
-      periodPvpForSide: 700,
+      periodPvpForSide: 400,
       remainingPvp: 0,
     });
   });
@@ -201,8 +202,8 @@ describe('calculatePlan', () => {
 
     expect(result.finalAssessmentByMember.B).toMatchObject({
       personalPvpTotal: 300,
-      periodPvpForSide: 300,
-      assessedLeft: 300,
+      periodPvpForSide: 0,
+      assessedLeft: 0,
       assessedRight: 0,
     });
     expect(result.finalAssessmentByMember.A!.rawLeftTotal).toBe(0);
@@ -240,7 +241,7 @@ describe('calculatePlan', () => {
     });
   });
 
-  test('[OPEN-P01] applies only opening credit plus new PVP at fortnight close', () => {
+  test('[OPEN-P01] applies only new PVP at fortnight close', () => {
     const result = calculate(
       makePlanInput({
         opening: {
@@ -256,9 +257,9 @@ describe('calculatePlan', () => {
     );
 
     expect(result.finalAssessmentByMember.A).toMatchObject({
-      periodPvpForSide: 700,
+      periodPvpForSide: 400,
       pvpAppliedSide: 'LEFT',
-      assessedLeft: 700,
+      assessedLeft: 400,
       assessedRight: 200,
       sideTargetsMet: false,
     });
@@ -672,7 +673,7 @@ describe('calculatePlan', () => {
     }
   });
 
-  test('uses ruleset and engine 4.0.0 and canonical root-first LEFT-before-RIGHT output order', () => {
+  test('uses ruleset and engine 5.0.0 and canonical root-first LEFT-before-RIGHT output order', () => {
     const result = calculate(
       makePlanInput({
         members: [
@@ -684,8 +685,8 @@ describe('calculatePlan', () => {
       }),
     );
 
-    expect(result.rulesetVersion).toBe('4.0.0');
-    expect(result.engineVersion).toBe('4.0.0');
+    expect(result.rulesetVersion).toBe('5.0.0');
+    expect(result.engineVersion).toBe('5.0.0');
     expect(result.inputSnapshot.organization.members.map(({ memberKey }) => memberKey))
       .toEqual(['Z', 'M', 'A', 'B']);
     expect(Object.keys(result.finalAssessmentByMember)).toEqual(['Z', 'M', 'A', 'B']);
@@ -771,10 +772,10 @@ describe('calculatePlan', () => {
     }
   });
 
-  test('rejects a modified RuleSet body that reuses version 4.0.0', () => {
+  test('rejects a modified RuleSet body that reuses version 5.0.0', () => {
     const alteredRules = {
       ...DEFAULT_RULE_SET,
-      commissionTiers: [700, 700, 1500, 2400, 6000, 20000, 60000] as const,
+      rootFortnightSideTarget: 22_499 as Pv,
     };
     const outcome = calculatePlan(makePlanInput(), alteredRules);
 

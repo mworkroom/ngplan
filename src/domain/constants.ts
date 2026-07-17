@@ -2,11 +2,11 @@ import type { CommissionTier, PvpTarget, Pv, RuleSet } from './types';
 
 const pvLiteral = (value: number): Pv => value as Pv;
 
-export const ENGINE_VERSION = '4.0.0';
+export const ENGINE_VERSION = '5.0.0';
 export const CALENDAR_VERSION = '1.0.0';
 
-export const RULE_SET_4_0_0: RuleSet = Object.freeze({
-  rulesetVersion: '4.0.0',
+export const RULE_SET_5_0_0: RuleSet = Object.freeze({
+  rulesetVersion: '5.0.0',
   commissionTiers: Object.freeze([
     300,
     700,
@@ -19,9 +19,10 @@ export const RULE_SET_4_0_0: RuleSet = Object.freeze({
   allowedPvpTargets: Object.freeze([2400, 1500, 700] satisfies PvpTarget[]),
   cumulativePvpCap: pvLiteral(2400),
   fortnightSideTarget: pvLiteral(2500),
+  rootFortnightSideTarget: pvLiteral(22500),
   businessCalendarPolicy: 'SUNDAY_SKIP_NO_INPUT',
   pvpTiePolicy: 'LEFT',
-  fortnightPvpSourcePolicy: 'OPENING_PLUS_NEW_EXCLUDING_DAILY_CARRY',
+  fortnightPvpSourcePolicy: 'NEW_ONLY_EXCLUDING_OPENING_AND_DAILY_CARRY',
   target700CommissionPreference: Object.freeze({
     eligiblePvpTarget: 700,
     recommendedDays: 8,
@@ -33,7 +34,7 @@ export const RULE_SET_4_0_0: RuleSet = Object.freeze({
   }),
 });
 
-export const DEFAULT_RULE_SET = RULE_SET_4_0_0;
+export const DEFAULT_RULE_SET = RULE_SET_5_0_0;
 
 export function isAllowedPvpTarget(
   value: number,

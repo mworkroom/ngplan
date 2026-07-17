@@ -158,7 +158,7 @@ export function accumulateFortnightDay(
   };
 }
 
-/** 누적 원본과 보름 시작 PVP로 개인·좌·우 목표를 최종 판정한다. */
+/** 누적 원본과 이번 기간 신규 PVP로 개인·좌·우 목표를 최종 판정한다. */
 export function evaluateFortnight(
   input: EvaluateFortnightInput,
 ): FortnightAssessment {
@@ -177,7 +177,7 @@ export function evaluateFortnight(
       field: 'finalAssessment.closingQualificationPvp',
     },
   );
-  const periodPvpForSide = progress.personalPvpTotal;
+  const periodPvpForSide = input.accumulator.newPvpTotal;
   const leftIsSmallerOrTied =
     input.accumulator.rawLeftTotal <= input.accumulator.rawRightTotal;
   const pvpAppliedSide = leftIsSmallerOrTied ? 'LEFT' : 'RIGHT';
