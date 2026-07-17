@@ -16,7 +16,11 @@ import {
   evaluateAutomaticPlanObjective,
   type AutomaticPlanObjectiveVector,
 } from '..';
-import { createOptimizerRequest } from './fixtures';
+import {
+  createOptimizerRequest,
+  optimizerMember,
+  optimizerOpening,
+} from './fixtures';
 
 function objective(
   overrides: Partial<AutomaticPlanObjectiveVector> = {},
@@ -25,6 +29,7 @@ function objective(
     totalNewPv: 100,
     confirmedPayoutWon: 0,
     discardedExcessPv: 0,
+    priorityDepthAscendingDayVector: [],
     highTargetAscendingDayVector: [],
     target700AscendingDayVector: [],
     futureCumulativePvpInvestmentPv: 0,
@@ -125,7 +130,21 @@ describe('Phase 4 canonical objective comparator', () => {
     expect(discardedExcessForSettlement(settlement('SKIPPED'))).toBe(0);
   });
 
-  it('compares high-target fairness before target-700 fairness', () => {
+  it('compares organization-depth priority before both target-group vectors', () => {
+    const strongerPriority = objective({
+      priorityDepthAscendingDayVector: [10, 10],
+      highTargetAscendingDayVector: [0, 0],
+      target700AscendingDayVector: [0, 0],
+    });
+    const strongerTargetGroups = objective({
+      priorityDepthAscendingDayVector: [9, 13],
+      highTargetAscendingDayVector: [14, 14],
+      target700AscendingDayVector: [14, 14],
+    });
+    expect(
+      compareAutomaticPlanObjectives(strongerPriority, strongerTargetGroups),
+    ).toBe(-1);
+
     const strongerHighTarget = objective({
       highTargetAscendingDayVector: [8, 9],
       target700AscendingDayVector: [0, 0],
@@ -213,6 +232,11 @@ describe('Phase 4 canonical objective comparator', () => {
       ['confirmed payout', { confirmedPayoutWon: 0 }, { confirmedPayoutWon: 1 }],
       ['discarded excess', { discardedExcessPv: 1 }, { discardedExcessPv: 0 }],
       [
+        'priority-depth vector',
+        { priorityDepthAscendingDayVector: [9, 13] },
+        { priorityDepthAscendingDayVector: [10, 10] },
+      ],
+      [
         'high-target vector',
         { highTargetAscendingDayVector: [7, 14] },
         { highTargetAscendingDayVector: [8, 8] },
@@ -255,6 +279,11 @@ describe('Phase 4 canonical objective comparator', () => {
       Partial<AutomaticPlanObjectiveVector>,
     ][] = [
       [
+        'priority-depth vector',
+        { priorityDepthAscendingDayVector: [8] },
+        { priorityDepthAscendingDayVector: [8, 9] },
+      ],
+      [
         'high-target vector',
         { highTargetAscendingDayVector: [8] },
         { highTargetAscendingDayVector: [8, 9] },
@@ -286,6 +315,12 @@ describe('Phase 4 canonical objective comparator', () => {
   it('rejects fairness vectors that are not sorted ascending', () => {
     expect(() =>
       compareAutomaticPlanObjectives(
+        objective({ priorityDepthAscendingDayVector: [2, 1] }),
+        objective(),
+      ),
+    ).toThrow(TypeError);
+    expect(() =>
+      compareAutomaticPlanObjectives(
         objective({ highTargetAscendingDayVector: [2, 1] }),
         objective(),
       ),
@@ -305,6 +340,7 @@ describe('Phase 4 canonical objective comparator', () => {
       return seed % 20;
     };
     const values = Array.from({ length: 40 }, () => {
+      const priorityDays = [next() % 10, next() % 10].sort((a, b) => a - b);
       const highDays = [next() % 10, next() % 10].sort((a, b) => a - b);
       const target700Days = [next() % 10, next() % 10].sort(
         (a, b) => a - b,
@@ -313,6 +349,7 @@ describe('Phase 4 canonical objective comparator', () => {
         totalNewPv: next(),
         confirmedPayoutWon: next() * 60_000,
         discardedExcessPv: next(),
+        priorityDepthAscendingDayVector: priorityDays,
         highTargetAscendingDayVector: highDays,
         target700AscendingDayVector: target700Days,
         futureCumulativePvpInvestmentPv: next(),
@@ -384,6 +421,55 @@ describe('Phase 4 canonical objective comparator', () => {
     expect(evaluated.objective).not.toHaveProperty(
       'target700MembersAtLeastEight',
     );
+  });
+
+  it('derives priority members from organization depth rather than sheet markers or targets', () => {
+    const members = [
+      { ...optimizerMember('root', null, null, 2400), sheetMarker: 'BLUE_3' as const },
+      { ...optimizerMember('depth-2', 'root', 'LEFT', 700), sheetMarker: 'PURPLE_4' as const },
+      { ...optimizerMember('depth-3', 'depth-2', 'LEFT', 1500), sheetMarker: 'NONE' as const },
+      { ...optimizerMember('depth-4', 'depth-3', 'LEFT', 2400), sheetMarker: 'PINK_1' as const },
+    ];
+    const achievedOpening = optimizerOpening({
+      openingQualificationPvp: 2_400,
+      fortnightPvpOpeningCredit: 2_400,
+    });
+    const request = createOptimizerRequest(
+      members,
+      Object.freeze(Object.fromEntries(
+        members.map((member) => [member.memberKey, achievedOpening]),
+      )),
+    );
+    const built = buildConstructiveCandidate(request);
+    expect(built.status).toBe('SUCCESS');
+    if (built.status !== 'SUCCESS') return;
+    const calculated = calculatePlan({
+      period: request.period,
+      organization: request.organization,
+      allocations: built.candidate.allocations,
+    });
+    expect(calculated.status).toBe('SUCCESS');
+    if (calculated.status !== 'SUCCESS') return;
+    const evaluated = evaluateAutomaticPlanObjective(
+      request,
+      built.candidate.allocations,
+      calculated.result,
+    );
+    expect(evaluated.status).toBe('SUCCESS');
+    if (evaluated.status !== 'SUCCESS') return;
+
+    expect(evaluated.display.priorityDepthMemberDayCounts.map((item) => [
+      item.memberKey,
+      item.organizationDepth,
+    ])).toEqual([
+      ['depth-2', 2],
+      ['depth-3', 3],
+    ]);
+    expect(evaluated.objective.priorityDepthAscendingDayVector).toHaveLength(2);
+    expect(evaluated.display.highTargetMemberDayCounts.map((item) => item.memberKey))
+      .toEqual(['depth-4']);
+    expect(evaluated.objective.highTargetAscendingDayVector).toHaveLength(1);
+    expect(evaluated.display.target700MemberDayCounts).toEqual([]);
   });
 
   it('fails closed when a full commission uses an unconfirmed payout tier', () => {

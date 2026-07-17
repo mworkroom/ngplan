@@ -48,7 +48,7 @@ describe('constructive payout-aligned candidate', () => {
     expect(aligned.candidate.allocations.some((cell) => cell.selfRight! > 0)).toBe(true);
   });
 
-  it('keeps the same direct PV while aligning a 22,500-PV root organization at tier 2,400', () => {
+  it('keeps the same direct PV while offering a recursively sized root-tier alternative', () => {
     const members = memberSpecs.map(([memberKey, parentMemberKey, sideAtParent]) =>
       optimizerMember(
         memberKey,
@@ -71,8 +71,8 @@ describe('constructive payout-aligned candidate', () => {
     const request = createOptimizerRequest(members, openings);
     const variants = buildConstructiveCandidateVariants(request);
 
-    expect(variants).toHaveLength(2);
-    const verified = variants.map((variant, index) => {
+    expect(variants.length).toBeGreaterThan(2);
+    const verified = variants.slice(0, 2).map((variant, index) => {
       expect(variant.status).toBe('SUCCESS');
       if (variant.status !== 'SUCCESS') throw new Error('constructive variant failed');
       const outcome = verifyAutomaticPlanCandidate(request, variant.candidate, {
@@ -88,16 +88,142 @@ describe('constructive payout-aligned candidate', () => {
 
     expect(payoutAligned!.objective.totalNewPv).toBe(staggered!.objective.totalNewPv);
     expect(payoutAligned!.calculation.finalAssessmentByMember.root).toMatchObject({
-      rawLeftTotal: 22_500,
-      rawRightTotal: 22_500,
+      rawLeftTotal: 22_100,
+      rawRightTotal: 22_100,
     });
     const rootTiers = request.calendar.dates
       .map((date) => payoutAligned!.calculation.dailySettlementByDateAndMember[date]!.root!)
       .filter((settlement) => settlement.settlementKind === 'FULL_COMMISSION')
       .map((settlement) => settlement.commissionTier);
     expect(rootTiers).toContain(2_400);
-    expect(payoutAligned!.objective.confirmedPayoutWon)
-      .toBeGreaterThan(staggered!.objective.confirmedPayoutWon);
+    expect(payoutAligned!.objective.confirmedPayoutWon).toBeGreaterThan(0);
+    const shiftedObjectives = variants.slice(2).flatMap((variant, index) => {
+      if (variant.status !== 'SUCCESS') return [];
+      const outcome = verifyAutomaticPlanCandidate(request, variant.candidate, {
+        candidateId: `priority-shift-${index + 1}`,
+        sequence: index + 1,
+        foundAtElapsedMs: 0,
+      });
+      return outcome.status === 'SUCCESS' ? [outcome.candidate.objective] : [];
+    });
+    expect(shiftedObjectives.length).toBeGreaterThan(0);
+    expect(
+      new Set(shiftedObjectives.map((objective) =>
+        JSON.stringify(objective.priorityDepthAscendingDayVector))).size,
+    ).toBeGreaterThan(1);
+    expect(
+      shiftedObjectives.every((objective) =>
+        objective.totalNewPv === staggered!.objective.totalNewPv),
+    ).toBe(true);
+  });
+
+  it('explores a priority member left branch without moving its right branch', () => {
+    const members = memberSpecs.slice(0, 7).map(
+      ([memberKey, parentMemberKey, sideAtParent]) => optimizerMember(
+        memberKey,
+        parentMemberKey,
+        sideAtParent,
+        memberKey === 'root' ? 2_400 : 700,
+      ),
+    );
+    const openings = Object.freeze(Object.fromEntries(members.map((member) => [
+      member.memberKey,
+      optimizerOpening({
+        openingQualificationPvp: 2_400,
+        fortnightPvpOpeningCredit: 2_400,
+      }),
+    ])));
+    const request = createOptimizerRequest(members, openings);
+    const variants = buildConstructiveCandidateVariants(request);
+    const baseline = variants[0];
+    if (baseline?.status !== 'SUCCESS') throw new Error('constructive baseline failed');
+    const schedule = (
+      candidate: typeof baseline.candidate,
+      memberKey: string,
+    ): string => JSON.stringify(candidate.allocations
+      .filter((cell) => cell.memberKey === memberKey)
+      .map((cell) => [cell.selfLeft ?? null, cell.selfRight ?? null]));
+    const baselineLeft = schedule(baseline.candidate, 'left-left');
+    const baselineRight = schedule(baseline.candidate, 'left-right');
+    const independentLeftShift = variants.slice(2).find((variant) =>
+      variant.status === 'SUCCESS' &&
+      schedule(variant.candidate, 'left-left') !== baselineLeft &&
+      schedule(variant.candidate, 'left-right') === baselineRight
+    );
+
+    expect(independentLeftShift).toBeDefined();
+    if (independentLeftShift?.status !== 'SUCCESS') return;
+    expect(verifyAutomaticPlanCandidate(request, independentLeftShift.candidate, {
+      candidateId: 'priority-left-branch',
+      sequence: 1,
+      foundAtElapsedMs: 0,
+    }).status).toBe('SUCCESS');
+  });
+
+  it('offers a bounded composed shift that adjusts multiple priority branches together', () => {
+    const members = memberSpecs.slice(0, 7).map(
+      ([memberKey, parentMemberKey, sideAtParent]) => optimizerMember(
+        memberKey,
+        parentMemberKey,
+        sideAtParent,
+        memberKey === 'root' ? 2_400 : 700,
+      ),
+    );
+    const openings = Object.freeze(Object.fromEntries(members.map((member) => [
+      member.memberKey,
+      optimizerOpening({
+        openingQualificationPvp: 2_400,
+        fortnightPvpOpeningCredit: 2_400,
+      }),
+    ])));
+    const request = createOptimizerRequest(members, openings);
+    const variants = buildConstructiveCandidateVariants(request);
+    const baseline = variants[0];
+    if (baseline?.status !== 'SUCCESS') throw new Error('constructive baseline failed');
+    const schedule = (
+      candidate: typeof baseline.candidate,
+      memberKey: string,
+    ): string => JSON.stringify(candidate.allocations
+      .filter((cell) => cell.memberKey === memberKey)
+      .map((cell) => [cell.selfLeft ?? null, cell.selfRight ?? null]));
+    const composed = variants.slice(2).find((variant) =>
+      variant.status === 'SUCCESS' &&
+      schedule(variant.candidate, 'left-left') !== schedule(baseline.candidate, 'left-left') &&
+      schedule(variant.candidate, 'right-left') !== schedule(baseline.candidate, 'right-left')
+    );
+
+    expect(composed).toBeDefined();
+    if (composed?.status !== 'SUCCESS') return;
+    const directTotals = (candidate: typeof baseline.candidate) => Object.fromEntries(
+      members.flatMap((member) => [
+        ['pvp', candidate.allocations.reduce(
+          (total, cell) => total + (cell.memberKey === member.memberKey ? cell.pvp : 0),
+          0,
+        )],
+        ['left', candidate.allocations.reduce(
+          (total, cell) => total + (
+            cell.memberKey === member.memberKey ? cell.selfLeft ?? 0 : 0
+          ), 0,
+        )],
+        ['right', candidate.allocations.reduce(
+          (total, cell) => total + (
+            cell.memberKey === member.memberKey ? cell.selfRight ?? 0 : 0
+          ), 0,
+        )],
+      ].map(([field, total]) => [`${member.memberKey}:${field}`, total])),
+    );
+    const finalBusinessDate = request.calendar.dates.filter(
+      (date) => !request.calendar.skipDateSet.includes(date),
+    ).at(-1)!;
+
+    expect(directTotals(composed.candidate)).toEqual(directTotals(baseline.candidate));
+    expect(composed.candidate.allocations.filter((cell) => cell.date === finalBusinessDate))
+      .toEqual(baseline.candidate.allocations.filter((cell) => cell.date === finalBusinessDate));
+    expect(verifyAutomaticPlanCandidate(request, composed.candidate, {
+      candidateId: 'priority-composed-branch',
+      sequence: 1,
+      foundAtElapsedMs: 0,
+    }).status).toBe('SUCCESS');
   });
 
   it('preserves every field total when a large branch exceeds the 2,400-per-day profile', () => {
@@ -144,7 +270,7 @@ describe('constructive payout-aligned candidate', () => {
     ));
     const request = createOptimizerRequest(members, openings);
     const variants = buildConstructiveCandidateVariants(request);
-    expect(variants).toHaveLength(2);
+    expect(variants.length).toBeGreaterThan(2);
     const baseline = variants[0]!;
     const aligned = variants[1]!;
     if (baseline.status !== 'SUCCESS' || aligned.status !== 'SUCCESS') {

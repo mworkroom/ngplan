@@ -139,7 +139,7 @@ function automaticPlanPreviewMetrics(
             ? '계산 중지 · 최소값 미증명'
             : runState.status === 'FAILED'
               ? '검증 계획 · 최소값 증명 미완료'
-              : '최소값 미증명';
+               : '최소값 미증명';
   return Object.freeze({
     candidateId: candidate.candidateId,
     foundAtElapsedMs: candidate.foundAtElapsedMs,
@@ -148,6 +148,16 @@ function automaticPlanPreviewMetrics(
     optimalityProven,
     runStatusLabel,
     discardedExcessPv: candidate.objective.discardedExcessPv,
+    priorityDepthMemberDayCounts: Object.freeze(
+      candidate.display.priorityDepthMemberDayCounts.map((item) =>
+        Object.freeze({
+          memberKey: item.memberKey,
+          memberLabel: memberByKey.get(item.memberKey)?.name ?? item.memberKey,
+          organizationDepth: item.organizationDepth,
+          days: item.commissionDays,
+        }),
+      ),
+    ),
     highTargetMemberDayCounts: Object.freeze(
       candidate.display.highTargetMemberDayCounts.map((item) =>
         Object.freeze({

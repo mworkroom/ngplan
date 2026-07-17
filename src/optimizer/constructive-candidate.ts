@@ -17,7 +17,6 @@ import type {
 
 const CUMULATIVE_PVP_CAP = 2_400;
 const FORTNIGHT_SIDE_TARGET = DEFAULT_RULE_SET.fortnightSideTarget;
-const ROOT_FORTNIGHT_SIDE_TARGET = DEFAULT_RULE_SET.rootFortnightSideTarget;
 const MINIMUM_AUTOMATIC_DIRECT_PV = 30;
 const PREFERRED_DIRECT_PV_BLOCK = 100;
 
@@ -59,11 +58,13 @@ interface SideFieldRef {
 
 type RootSide = 'LEFT' | 'RIGHT';
 type DirectField = 'PVP' | 'SELF_LEFT' | 'SELF_RIGHT';
+type PriorityBranchSide = 'LEFT' | 'RIGHT';
 
 interface PayoutFieldPlan {
   readonly memberKey: string;
   readonly field: DirectField;
   readonly rootSide: RootSide;
+  readonly earliestBusinessDateIndex: number;
   readonly chunks: readonly number[];
 }
 
@@ -302,14 +303,23 @@ function buildRootPayoutAlignedCandidate(
 
       groupTotal[rootSide] += total;
       let remaining = total;
+      const opening = request.openingPvpByMember[memberKey]!.cumulativePvpOpening;
+      const qualificationIndex = opening >= 300
+        ? 0
+        : businessDates.findIndex((date) =>
+            directValue(baselineCells.get(cellKey(date, memberKey))!, 'PVP') > 0
+          );
+      if (qualificationIndex < 0) return baseline;
       if (field === 'PVP') {
-        const opening = request.openingPvpByMember[memberKey]!.cumulativePvpOpening;
         if (opening < 300 && remaining > 0) {
           const qualification = Math.max(300 - opening, MINIMUM_AUTOMATIC_DIRECT_PV);
           if (remaining < qualification) return baseline;
-          const target = alignedCells.get(cellKey(businessDates[0]!, memberKey))!;
+          const target = alignedCells.get(
+            cellKey(businessDates[qualificationIndex]!, memberKey),
+          )!;
           addDirectValue(target, field, qualification);
-          groupFixed[rootSide][0] = groupFixed[rootSide][0]! + qualification;
+          groupFixed[rootSide][qualificationIndex] =
+            groupFixed[rootSide][qualificationIndex]! + qualification;
           remaining -= qualification;
         }
       } else {
@@ -328,6 +338,7 @@ function buildRootPayoutAlignedCandidate(
         memberKey,
         field,
         rootSide,
+        earliestBusinessDateIndex: qualificationIndex,
         chunks: preferredPvpChunks(remaining),
       });
     }
@@ -345,8 +356,15 @@ function buildRootPayoutAlignedCandidate(
     for (const plan of plans) {
       if (plan.rootSide !== rootSide) continue;
       for (const chunk of plan.chunks) {
-        let bestIndex = 0;
-        for (let index = 1; index < earlierBusinessDates.length; index += 1) {
+        let bestIndex = Math.min(
+          plan.earliestBusinessDateIndex,
+          earlierBusinessDates.length - 1,
+        );
+        for (
+          let index = bestIndex + 1;
+          index < earlierBusinessDates.length;
+          index += 1
+        ) {
           if (remainingCapacity[index]! > remainingCapacity[bestIndex]!) {
             bestIndex = index;
           }
@@ -374,6 +392,152 @@ function buildRootPayoutAlignedCandidate(
     problemFingerprint: request.problemFingerprint,
     allocations: Object.freeze(allocations),
   });
+}
+
+function deriveOrganizationDepthByMember(
+  request: AutomaticPlanRequest,
+): ReadonlyMap<string, number> {
+  const memberByKey = new Map(
+    request.organization.members.map((member) => [member.memberKey, member] as const),
+  );
+  const depthByMember = new Map<string, number>();
+  const derive = (memberKey: string): number => {
+    const cached = depthByMember.get(memberKey);
+    if (cached !== undefined) return cached;
+    const member = memberByKey.get(memberKey)!;
+    const depth = member.parentMemberKey === null
+      ? 1
+      : derive(member.parentMemberKey) + 1;
+    depthByMember.set(memberKey, depth);
+    return depth;
+  };
+  for (const memberKey of request.canonicalMemberKeys) derive(memberKey);
+  return depthByMember;
+}
+
+function collectSubtreeMemberKeys(
+  memberKey: string,
+  childSlots: ReadonlyMap<string, ChildSlots>,
+): readonly string[] {
+  const result: string[] = [];
+  const visit = (currentKey: string): void => {
+    result.push(currentKey);
+    const children = childSlots.get(currentKey)!;
+    if (children.left !== undefined) visit(children.left);
+    if (children.right !== undefined) visit(children.right);
+  };
+  visit(memberKey);
+  return Object.freeze(result);
+}
+
+function buildPriorityBranchShiftCandidate(
+  request: AutomaticPlanRequest,
+  source: RawAutomaticPlanCandidate,
+  priorityMemberKey: string,
+  branchSide: PriorityBranchSide,
+  shift: number,
+): RawAutomaticPlanCandidate {
+  const skipDates = new Set(request.calendar.skipDateSet);
+  const shiftDates = request.calendar.dates
+    .filter((date) => !skipDates.has(date))
+    .slice(0, -1);
+  if (shiftDates.length < 2) return source;
+
+  const childSlots = deriveChildSlots(request);
+  const branchChildKey = branchSide === 'LEFT'
+    ? childSlots.get(priorityMemberKey)!.left
+    : childSlots.get(priorityMemberKey)!.right;
+  const memberKeys = branchChildKey === undefined
+    ? Object.freeze([priorityMemberKey])
+    : collectSubtreeMemberKeys(branchChildKey, childSlots);
+  const sourceByCell = new Map(
+    source.allocations.map((cell) => [cellKey(cell.date, cell.memberKey), cell] as const),
+  );
+  const shiftedByCell = new Map<string, MutableCell>();
+  for (const cell of source.allocations) {
+    shiftedByCell.set(cellKey(cell.date, cell.memberKey), {
+      date: cell.date,
+      memberKey: cell.memberKey,
+      pvp: cell.pvp,
+      ...(Object.hasOwn(cell, 'selfLeft') ? { selfLeft: cell.selfLeft! } : {}),
+      ...(Object.hasOwn(cell, 'selfRight') ? { selfRight: cell.selfRight! } : {}),
+    });
+  }
+
+  const fields: readonly DirectField[] = branchChildKey === undefined
+    ? Object.freeze([branchSide === 'LEFT' ? 'SELF_LEFT' : 'SELF_RIGHT'])
+    : Object.freeze(['SELF_LEFT', 'SELF_RIGHT']);
+  for (const memberKey of memberKeys) {
+    let cumulativePvp = request.openingPvpByMember[memberKey]!.cumulativePvpOpening;
+    let firstQualifiedDateIndex = cumulativePvp >= 300 ? 0 : -1;
+    if (firstQualifiedDateIndex < 0) {
+      for (let index = 0; index < shiftDates.length; index += 1) {
+        cumulativePvp += sourceByCell.get(cellKey(shiftDates[index]!, memberKey))!.pvp;
+        if (cumulativePvp >= 300) {
+          firstQualifiedDateIndex = index;
+          break;
+        }
+      }
+    }
+    if (firstQualifiedDateIndex < 0) continue;
+    const memberShiftDates = shiftDates.slice(firstQualifiedDateIndex);
+    if (memberShiftDates.length < 2) continue;
+    for (const field of fields) {
+      const firstSource = sourceByCell.get(cellKey(request.calendar.dates[0]!, memberKey))!;
+      if (
+        field !== 'PVP' &&
+        !Object.hasOwn(firstSource, field === 'SELF_LEFT' ? 'selfLeft' : 'selfRight')
+      ) continue;
+      const values = memberShiftDates.map((date) =>
+        directValue(sourceByCell.get(cellKey(date, memberKey))!, field)
+      );
+      for (let targetIndex = 0; targetIndex < memberShiftDates.length; targetIndex += 1) {
+        const sourceIndex = (
+          targetIndex - shift + memberShiftDates.length
+        ) % memberShiftDates.length;
+        const target = shiftedByCell.get(
+          cellKey(memberShiftDates[targetIndex]!, memberKey),
+        )!;
+        if (field === 'PVP') target.pvp = values[sourceIndex]!;
+        else if (field === 'SELF_LEFT') target.selfLeft = values[sourceIndex]!;
+        else target.selfRight = values[sourceIndex]!;
+      }
+    }
+  }
+
+  return Object.freeze({
+    problemFingerprint: request.problemFingerprint,
+    allocations: Object.freeze(source.allocations.map((cell) => {
+      const shifted = shiftedByCell.get(cellKey(cell.date, cell.memberKey))!;
+      return Object.freeze({
+        date: shifted.date,
+        memberKey: shifted.memberKey,
+        pvp: shifted.pvp,
+        ...(Object.hasOwn(shifted, 'selfLeft') ? { selfLeft: shifted.selfLeft! } : {}),
+        ...(Object.hasOwn(shifted, 'selfRight') ? { selfRight: shifted.selfRight! } : {}),
+      });
+    })),
+  });
+}
+
+function buildComposedPriorityBranchShiftCandidate(
+  request: AutomaticPlanRequest,
+  baseline: RawAutomaticPlanCandidate,
+  memberKeys: readonly string[],
+  branchSide: PriorityBranchSide,
+  shift: number,
+): RawAutomaticPlanCandidate {
+  let candidate = baseline;
+  for (const memberKey of memberKeys) {
+    candidate = buildPriorityBranchShiftCandidate(
+      request,
+      candidate,
+      memberKey,
+      branchSide,
+      shift,
+    );
+  }
+  return candidate;
 }
 
 /**
@@ -521,8 +685,10 @@ export function buildConstructiveCandidate(
     let leftTotal: number;
     let rightTotal: number;
     if (children.left === undefined && children.right === undefined) {
-      leftTotal = smallerSideRequirement;
-      rightTotal = FORTNIGHT_SIDE_TARGET;
+      // The workbook convention keeps a leaf's full 2,500 PV on the left and
+      // subtracts the member's own PVP from the right-side direct total.
+      leftTotal = FORTNIGHT_SIDE_TARGET;
+      rightTotal = smallerSideRequirement;
       sideTotalByField.set(
         sideFieldKey({ memberKey, field: 'SELF_LEFT' }),
         leftTotal,
@@ -533,11 +699,11 @@ export function buildConstructiveCandidate(
       );
       sideStartIndexByField.set(
         sideFieldKey({ memberKey, field: 'SELF_LEFT' }),
-        qualificationStartIndexByMember.get(memberKey)!,
+        memberKey === rootKey || opening.cumulativePvpOpening >= 300 ? 0 : 1,
       );
       sideStartIndexByField.set(
         sideFieldKey({ memberKey, field: 'SELF_RIGHT' }),
-        memberKey === rootKey || opening.cumulativePvpOpening >= 300 ? 0 : 1,
+        qualificationStartIndexByMember.get(memberKey)!,
       );
     } else {
       leftTotal = children.left === undefined
@@ -564,22 +730,6 @@ export function buildConstructiveCandidate(
       }
     }
     subtreeTotalByMember.set(memberKey, plannedPvp + leftTotal + rightTotal);
-  }
-  const rootChildren = childSlots.get(rootKey)!;
-  const rootLeftTotal = rootChildren.left === undefined
-    ? sideTotalByField.get(sideFieldKey({ memberKey: rootKey, field: 'SELF_LEFT' }))!
-    : subtreeTotalByMember.get(rootChildren.left)!;
-  const rootRightTotal = rootChildren.right === undefined
-    ? sideTotalByField.get(sideFieldKey({ memberKey: rootKey, field: 'SELF_RIGHT' }))!
-    : subtreeTotalByMember.get(rootChildren.right)!;
-  for (const [side, total] of [
-    ['LEFT', rootLeftTotal],
-    ['RIGHT', rootRightTotal],
-  ] as const) {
-    const deficit = Math.max(0, ROOT_FORTNIGHT_SIDE_TARGET - total);
-    if (deficit === 0) continue;
-    const anchorKey = sideFieldKey(rootSideAnchor(rootKey, side, childSlots));
-    sideTotalByField.set(anchorKey, sideTotalByField.get(anchorKey)! + deficit);
   }
   const finalAnchors = new Set([
     sideFieldKey(rootSideAnchor(rootKey, 'LEFT', childSlots)),
@@ -674,10 +824,61 @@ export function buildConstructiveCandidateVariants(
   const baseline = buildConstructiveCandidate(request);
   if (baseline.status === 'FAILURE') return Object.freeze([baseline]);
   const payoutAligned = buildRootPayoutAlignedCandidate(request, baseline.candidate);
-  return Object.freeze([
+  const variants: AutomaticPlanConstructionOutcome[] = [
     baseline,
     Object.freeze({ status: 'SUCCESS', candidate: payoutAligned }),
-  ]);
+  ];
+  const depthByMember = deriveOrganizationDepthByMember(request);
+  const childSlots = deriveChildSlots(request);
+  const priorityMemberKeys = request.canonicalMemberKeys.filter((memberKey) => {
+    const depth = depthByMember.get(memberKey);
+    return depth === 2 || depth === 3;
+  });
+  const rootMemberKey = request.organization.members.find(
+    (member) => member.parentMemberKey === null,
+  )!.memberKey;
+  const rootChildren = childSlots.get(rootMemberKey)!;
+  const composedMemberKeys = (
+    rootChildren.left === undefined && rootChildren.right === undefined
+      ? priorityMemberKeys
+      : [rootMemberKey, ...priorityMemberKeys]
+  );
+  const shiftableDateCount = request.calendar.dates.filter(
+    (date) => !request.calendar.skipDateSet.includes(date),
+  ).length - 1;
+  for (const memberKey of priorityMemberKeys) {
+    for (const branchSide of ['LEFT', 'RIGHT'] as const) {
+      for (let shift = 1; shift < shiftableDateCount; shift += 1) {
+        variants.push(Object.freeze({
+          status: 'SUCCESS',
+          candidate: buildPriorityBranchShiftCandidate(
+            request,
+            baseline.candidate,
+            memberKey,
+            branchSide,
+            shift,
+          ),
+        }));
+      }
+    }
+  }
+  if (composedMemberKeys.length > 1) {
+    for (let shift = 1; shift < shiftableDateCount; shift += 1) {
+      for (const branchSide of ['LEFT', 'RIGHT'] as const) {
+        variants.push(Object.freeze({
+          status: 'SUCCESS',
+          candidate: buildComposedPriorityBranchShiftCandidate(
+            request,
+            baseline.candidate,
+            composedMemberKeys,
+            branchSide,
+            shift,
+          ),
+        }));
+      }
+    }
+  }
+  return Object.freeze(variants);
 }
 
 export { automaticPlanCoordinateKey };

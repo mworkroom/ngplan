@@ -73,7 +73,7 @@ describe('Phase 4 request and candidate boundary', () => {
     });
   });
 
-  it('P4-REQ-002 accepts 50 members and rejects 51 members', () => {
+  it('P4-REQ-002 accepts 57 members and rejects 58 members', () => {
     const requestWithMemberCount = (count: number) => {
       const members = Array.from({ length: count }, (_, index) =>
         optimizerMember(
@@ -89,10 +89,10 @@ describe('Phase 4 request and candidate boundary', () => {
       );
       return createOptimizerRequest(members, openings);
     };
-    expect(validateAutomaticPlanRequest(requestWithMemberCount(50))).toEqual({
+    expect(validateAutomaticPlanRequest(requestWithMemberCount(57))).toEqual({
       status: 'SUCCESS',
     });
-    expect(validateAutomaticPlanRequest(requestWithMemberCount(51))).toMatchObject({
+    expect(validateAutomaticPlanRequest(requestWithMemberCount(58))).toMatchObject({
       status: 'FAILURE',
       error: { code: 'AUTOMATIC_PLAN_MEMBER_LIMIT_EXCEEDED' },
     });
@@ -216,7 +216,7 @@ describe('Phase 4 request and candidate boundary', () => {
     expect(verified.candidate.calculation.rulesetVersion).toBe(
       AUTOMATIC_PLAN_RULESET_VERSION,
     );
-    expect(verified.candidate.objective.totalNewPv).toBe(45_700);
+    expect(verified.candidate.objective.totalNewPv).toBe(5_000);
     expect(verified.candidate).not.toHaveProperty('status');
   });
 
@@ -832,7 +832,7 @@ describe('Phase 4 request and candidate boundary', () => {
     });
   });
 
-  it('keeps an opening-680 personal deficit exact while enforcing the root floor', () => {
+  it('keeps an opening-680 personal deficit exact with recursive side targets', () => {
     const opening = optimizerOpening({
       openingQualificationPvp: 680,
       fortnightPvpOpeningCredit: 680,
@@ -848,14 +848,14 @@ describe('Phase 4 request and candidate boundary', () => {
     });
     expect(verified.status).toBe('SUCCESS');
     if (verified.status !== 'SUCCESS') return;
-    expect(verified.candidate.objective.totalNewPv).toBe(45_030);
+    expect(verified.candidate.objective.totalNewPv).toBe(5_000);
     expect(verified.candidate.calculation.finalAssessmentByMember.root).toMatchObject({
       newPvpTotal: 30,
       personalPvpTotal: 710,
-      rawLeftTotal: 22_500,
-      rawRightTotal: 22_500,
-      assessedLeft: 22_530,
-      assessedRight: 22_500,
+      rawLeftTotal: 2_500,
+      rawRightTotal: 2_470,
+      assessedLeft: 2_500,
+      assessedRight: 2_500,
       allTargetsMet: true,
     });
     expect(
@@ -942,6 +942,7 @@ describe('Phase 4 request and candidate boundary', () => {
             totalNewPv: 1,
             confirmedPayoutWon: 0,
             discardedExcessPv: 0,
+            priorityDepthAscendingDayVector: [],
             highTargetAscendingDayVector: [],
             target700AscendingDayVector: [1, 0],
             futureCumulativePvpInvestmentPv: 0,
@@ -965,6 +966,7 @@ describe('Phase 4 request and candidate boundary', () => {
             totalNewPv: 5_700,
             confirmedPayoutWon: 0,
             discardedExcessPv: 0,
+            priorityDepthAscendingDayVector: [],
             highTargetAscendingDayVector: [],
             target700AscendingDayVector: [0],
             futureCumulativePvpInvestmentPv: 0,

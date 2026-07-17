@@ -19,6 +19,7 @@ import {
   assertValidAutomaticPlanObjective,
   automaticPlanError,
   buildConstructiveCandidate,
+  buildConstructiveCandidateVariants,
   buildVerifiedConstructiveCandidate,
   certifyCompleteProof,
   certifyModelCertificate,
@@ -496,6 +497,7 @@ describe('optimizer arithmetic, construction, objective, and oracle defenses', (
       totalNewPv: 1,
       confirmedPayoutWon: 0,
       discardedExcessPv: 0,
+      priorityDepthAscendingDayVector: [],
       highTargetAscendingDayVector: [],
       target700AscendingDayVector: [8, 7],
       futureCumulativePvpInvestmentPv: 0,
@@ -545,7 +547,8 @@ describe('optimizer arithmetic, construction, objective, and oracle defenses', (
       Object.freeze({ root: optimizerOpening() }),
     );
     const target1500 = verifiedFixture(target1500Request);
-    expect(target1500.objective.highTargetAscendingDayVector).toHaveLength(1);
+    expect(target1500.objective.priorityDepthAscendingDayVector).toEqual([]);
+    expect(target1500.objective.highTargetAscendingDayVector).toEqual([]);
     expect(target1500.objective.target700AscendingDayVector).toEqual([]);
 
     const request = createOptimizerRequest();
@@ -767,9 +770,9 @@ describe('optimizer certificate and run-state defensive coverage', () => {
   });
 });
 
-describe('50-member first-candidate scale path', () => {
-  it('builds and verifies a normalized 50-member binary tree', () => {
-    const members = Array.from({ length: 50 }, (_, index) => {
+describe('57-member first-candidate scale path', () => {
+  it('builds and verifies a normalized 57-member binary tree', () => {
+    const members = Array.from({ length: 57 }, (_, index) => {
       if (index === 0) return optimizerMember('member-0');
       const parentIndex = Math.floor((index - 1) / 2);
       return optimizerMember(
@@ -780,21 +783,28 @@ describe('50-member first-candidate scale path', () => {
     });
     const openings = Object.freeze(
       Object.fromEntries(
-        members.map((member) => [member.memberKey, optimizerOpening()]),
+        members.map((member) => [
+          member.memberKey,
+          optimizerOpening({
+            openingQualificationPvp: 2_400,
+            fortnightPvpOpeningCredit: 2_400,
+          }),
+        ]),
       ),
     );
     const request = createOptimizerRequest(members, openings);
     const startedAt = performance.now();
-    const built = buildConstructiveCandidate(request);
-    expect(built.status).toBe('SUCCESS');
-    if (built.status !== 'SUCCESS') return;
-    const verified = verifyAutomaticPlanCandidate(request, built.candidate, {
-      candidateId: 'fifty-member-first-candidate',
-      sequence: 1,
-      foundAtElapsedMs: 0,
-    });
+    const variants = buildConstructiveCandidateVariants(request);
+    const outcomes = variants
+      .filter((variant) => variant.status === 'SUCCESS')
+      .map((variant, index) => verifyAutomaticPlanCandidate(request, variant.candidate, {
+        candidateId: `fifty-seven-member-candidate-${index + 1}`,
+        sequence: index + 1,
+        foundAtElapsedMs: 0,
+      }));
+    const verified = outcomes.find((outcome) => outcome.status === 'SUCCESS');
     const elapsedMs = performance.now() - startedAt;
-    console.info(`50-member constructive+verify elapsed: ${elapsedMs.toFixed(2)} ms`);
+    console.info(`57-member constructive+verify elapsed: ${elapsedMs.toFixed(2)} ms`);
     expect(verified).toMatchObject({ status: 'SUCCESS' });
     expect(elapsedMs).toBeGreaterThanOrEqual(0);
   });

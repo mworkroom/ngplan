@@ -35,7 +35,7 @@ describe('automatic plan request and atomic application', () => {
     }
   });
 
-  it('rejects a bundle outside the 1..50 member product boundary', () => {
+  it('rejects a bundle outside the 1..57 member product boundary', () => {
     const bundle = createAutomaticPlanBundle();
     const empty = {
       ...bundle,
@@ -47,7 +47,7 @@ describe('automatic plan request and atomic application', () => {
       ...bundle,
       organization: {
         ...bundle.organization,
-        members: Array.from({ length: 51 }, () => bundle.organization.members[0]!),
+        members: Array.from({ length: 58 }, () => bundle.organization.members[0]!),
       },
     };
     expect(createAutomaticPlanRequest(tooMany).status).toBe('FAILURE');

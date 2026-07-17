@@ -55,11 +55,6 @@ export function deriveManualPlanAchievementTargets(
       selfLeft = Math.max(0, selfLeft - pvp);
     }
 
-    if (memberKey === schema.rootMemberKey) {
-      selfLeft = Math.max(selfLeft, DEFAULT_RULE_SET.rootFortnightSideTarget);
-      selfRight = Math.max(selfRight, DEFAULT_RULE_SET.rootFortnightSideTarget);
-    }
-
     const targets = Object.freeze({ pvp, selfLeft, selfRight });
     targetsByMember.set(memberKey, targets);
     visiting.delete(memberKey);

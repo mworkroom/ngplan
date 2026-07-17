@@ -75,7 +75,7 @@ describe('automatic plan run controller', () => {
       candidate: built.candidate,
     });
     expect(candidates).toHaveBeenCalledOnce();
-    expect(states.at(-1)?.bestCandidate?.objective.totalNewPv).toBe(45_700);
+    expect(states.at(-1)?.bestCandidate?.objective.totalNewPv).toBe(5_000);
 
     worker.emit({
       protocolVersion: AUTOMATIC_PLAN_WORKER_PROTOCOL_VERSION,

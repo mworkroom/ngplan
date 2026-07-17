@@ -2,7 +2,7 @@
 
 > 기준 요구사항: `docs/requirements/pyramid-app-requirements-v2.md`  
 > 작성일: 2026-07-11  
-> Phase 4 계약 개정일: 2026-07-14
+> Phase 4 계약 개정일: 2026-07-17
 > 목적: 계산 엔진, 자동 계획기, 부분 재시뮬레이션의 입력과 기대 결과를 사람이 검토 가능한 형태로 고정
 
 ## 1. 사용 방법
@@ -33,8 +33,8 @@
 
 ### Phase 4 버전 계약
 
-- 누적 PVP 원천 분리와 맨 위 좌·우 하한을 포함한 현재 규칙 계산 계약과 엔진 계약은 `5.0.0`이다.
-- 자동 계획 request/fingerprint/checkpoint/model/certificate는 `2.0.0`, 정책과 목적함수는 `3.0.0`, calendar는 `1.0.0`이다.
+- 누적 PVP 원천 분리와 순수 재귀 목표를 포함한 현재 규칙 계산 계약과 엔진 계약은 `6.0.0`이다.
+- 자동 계획 request/fingerprint/checkpoint/model/certificate는 `2.0.0`, 정책과 목적함수는 `4.0.0`, calendar는 `1.0.0`이다.
 - 제품의 `PVP 시작값`은 0~2,400 회사 누적 달성값이다. 정규화 시 같은 값을 `openingQualificationPvp`와 `fortnightPvpOpeningCredit`에 기록하고 `dailyCarryPvp`는 0으로 기록한다. 일일 좌·우 시작값은 별도 사용자 입력이다.
 - `qualificationPvp`는 `openingQualificationPvp + 해당 날짜까지의 직접 신규 PVP 누계`이며 일일 정산으로 초기화되지 않는다. 당일 직접 PVP를 먼저 포함한 뒤 300 자격을 판정한다.
 - 회사 누적 PVP와 이번 기간 신규 PVP 합은 2,400을 넘을 수 없다. 시작값 2,400 회원은 신규 PVP가 항상 0이다.
@@ -532,14 +532,22 @@ PVP 목표 700인 회원 한 명에게 다음을 입력한다.
 
 **기대 결과:** 신규 직접 PVP는 모든 날짜에 0이어야 한다. 시작값 2,400은 qualification과 개인 PVP 목표에는 사용하지만 보름 좌·우 적용량, 첫날 일일 PVP 잔액이나 신규 조직 실적으로 사용하지 않는다. 자동 후보가 PVP 30 이상을 하나라도 배정하면 누적 상한 위반이다.
 
-### TARGET-001 — 누적 PVP 차감 후 재귀 목표와 맨 위 22,500 하한
+### TARGET-001 — 누적 PVP 차감 후 맨 위까지 순수 재귀 목표
 
 **상태:** 확정 · **대상:** Phase 3/4
 
 - 맨 위 회원의 선택 PVP 목표와 누적 PVP 시작값은 모두 2,400이다.
 - 하위부터 `MAX(0, 선택 PVP 목표 - 누적 PVP 시작값)`과 각 회원의 좌·우 2,500을 재귀 합산한 맨 위 왼쪽 조직 목표는 22,810, 오른쪽 조직 목표는 22,540이다.
 
-**기대 결과:** 작업표의 맨 위 목표 행은 `PVP 0 / 좌 22,810 / 우 22,540`이다. PVP에 선택 목표 2,400을 그대로 표시하거나 누적 PVP를 재귀 합계에 다시 더하면 오답이다. 재귀 합계가 22,500 미만인 방향은 22,500으로 올리며 자동 후보의 맨 위 원본 좌·우도 각각 이 하한 이상이어야 한다.
+**기대 결과:** 작업표의 맨 위 목표 행은 `PVP 0 / 좌 22,810 / 우 22,540`이다. PVP에 선택 목표 2,400을 그대로 표시하거나 누적 PVP를 재귀 합계에 다시 더하면 오답이다. 이 값은 17명이라는 인원표나 22,500 고정 하한에서 고른 수치가 아니라 실제 하위 목표를 순수 재귀 합산한 결과다.
+
+### TARGET-002 — 조직 규모가 달라도 같은 재귀식 사용
+
+**상태:** 확정 · **대상:** Phase 3/4
+
+동일한 `MAX(0, 선택 PVP 목표 - 누적 PVP 시작값)`과 좌·우 2,500 재귀식을 서로 다른 실제 조직에 적용한다.
+
+**기대 결과:** 소규모 조직의 맨 위 좌·우 목표가 약 7,500이면 22,500으로 올리지 않는다. 대규모 조직의 재귀 결과가 좌 67,700·우 67,500이면 57명이라는 이유로 67,500에 맞추거나 자르지 않고 각각의 계산값을 그대로 사용한다. 회원 수를 세어 7,500·22,500·67,500을 조회하는 구현은 오답이다.
 
 ### PVP-CAP-002 — 2,400까지의 headroom만 사용
 
@@ -690,16 +698,18 @@ PVP 목표 700인 회원 한 명에게 다음을 입력한다.
 - 8회 권장 미달을 표시할 수 있다.
 - 프로젝트의 필수 보름 목표 실패로 처리하지 않는다.
 
-### COUNT-P01 — 목표값별 커미션 일수 분포 대상
+### COUNT-P01 — 조직 깊이와 목표값별 커미션 일수 분포 대상
 
 **상태:** 확정 · **대상:** Phase 1/4
 
-조직 위치가 서로 다른 목표 700 회원과 목표 1,500·2,400 회원을 함께 둔다.
+루트를 깊이 1로 두고 실제 부모 연결상 깊이 2·3 회원과 더 깊은 목표 700·1,500·2,400 회원을 함께 둔다. 일부 회원의 화면 찾기 표지판은 실제 깊이와 일부러 다르게 입력한다.
 
 **기대 결과:**
 
-- 목표 700 회원: 조직 위치와 무관하게 6~9일이 흔한 운영 범위이며 완전한 오름차순 일수 vector로 균형을 비교한다.
-- 목표 1,500·2,400 회원: 조직 위치와 무관하게 가능한 영업일에 거의 매일 받도록 별도의 오름차순 일수 vector로 비교한다.
+- 실제 깊이 2·3 회원: PVP 목표나 화면 표지판과 무관하게 첫 번째 완전한 오름차순 일수 vector로 비교한다. 13영업일에 13회가 이상적이어도 하드 합격선은 아니다.
+- 나머지 목표 1,500·2,400 회원: 루트와 깊이 2·3 회원을 제외한 뒤 두 번째 vector로 비교한다.
+- 나머지 목표 700 회원: 같은 제외를 적용한 뒤 세 번째 vector로 비교하며 6~9일이 흔한 운영 범위다.
+- 루트는 세 일수 vector 모두에서 제외하고 한 회원을 여러 집단에 중복 포함하지 않는다.
 - 어떤 일수 선호도 하드 목표가 아니며 미달을 실패로 처리하거나 이를 위해 신규 PV를 추가하지 않는다.
 - 목표 700의 8일 이상 회원 수와 총 발생일은 화면 통계로 표시할 수 있지만 comparator 단계가 아니다.
 
@@ -911,7 +921,7 @@ OPT-007과 같은 조직에서 B의 회사 누적 PVP 시작값과 다른 신규
 
 **상태:** 확정 · **대상:** Phase 4
 
-목표 700 회원 세 명의 qualification-valid full commission 일수만 센다. 총 신규 PV와 초과 소멸량은 두 후보가 같다.
+깊이 2·3 우선 집단과 루트에 속하지 않는 목표 700 회원 세 명의 qualification-valid full commission 일수만 센다. 총 신규 PV와 초과 소멸량은 두 후보가 같다.
 
 - 후보 A의 오름차순 일수 벡터: `[0,8,8]`, 8일 이상 회원 수 2
 - 후보 B의 오름차순 일수 벡터: `[7,7,7]`, 8일 이상 회원 수 0
@@ -932,7 +942,7 @@ OPT-007과 같은 조직에서 B의 회사 누적 PVP 시작값과 다른 신규
 
 조직의 모든 회원이 목표 1,500 또는 2,400이다.
 
-**기대 결과:** `target700AscendingDayVector=[]`, 표시용 `target700MembersAtLeastEight=0`과 총 일수도 0이다. 빈 벡터는 유효하며 target-700 vector 단계는 모든 후보에서 동률로 지나간다. 목표 1,500·2,400 회원은 별도의 high-target vector에 포함한다.
+**기대 결과:** `target700AscendingDayVector=[]`, 표시용 `target700MembersAtLeastEight=0`과 총 일수도 0이다. 빈 벡터는 유효하며 target-700 vector 단계는 모든 후보에서 동률로 지나간다. 깊이 2·3 회원은 먼저 `priorityDepthAscendingDayVector`에 포함하고, 그 밖의 목표 1,500·2,400 회원은 별도의 high-target vector에 포함한다. 루트는 어느 일수 vector에도 포함하지 않는다.
 
 ### OPT-012 — exact PVP 100 개수는 독립 선호가 아님
 
@@ -949,7 +959,7 @@ OPT-007과 같은 조직에서 B의 회사 누적 PVP 시작값과 다른 신규
 
 **상태:** 확정 · **대상:** Phase 4
 
-모든 하드 제약, 총 신규 PV, known payout, 초과 소멸량, 목표군 일수 vector, 미래 PVP 투자와 `nonHundredCellCount`가 같은 두 후보가 있다.
+모든 하드 제약, 총 신규 PV, known payout, 초과 소멸량, 우선 집단별 일수 vector, 미래 PVP 투자와 `nonHundredCellCount`가 같은 두 후보가 있다.
 
 - 후보 A 직접 PVP 분포: `[200,200]`, `maxDirectPvp=200`
 - 후보 B 직접 PVP 분포: `[300,100]`, `maxDirectPvp=300`
@@ -984,16 +994,24 @@ OPT-007과 같은 조직에서 B의 회사 누적 PVP 시작값과 다른 신규
 
 **기대 결과:** Phase 1 엔진은 공식 tier와 정산 결과를 그대로 계산한다. 자동 objective ranking은 금액을 0이나 임의 배수로 추측하지 않고 `AUTOMATIC_PLAN_PAYOUT_TABLE_INCOMPLETE`로 fail-closed한다. 수당표가 확정되기 전에는 이 후보를 다른 후보보다 돈을 더 버는 계획이라고 순위화하지 않는다.
 
-### OPT-017 — 목표 1,500·2,400 회원의 균형 일수 vector
+### OPT-017 — 실제 조직 깊이 2·3 회원의 균형 일수 vector
 
 **상태:** 확정 · **대상:** Phase 4
 
-총 직접 신규 PV, known payout와 초과 소멸량이 같은 두 후보에서 목표 1,500·2,400 회원 세 명의 일수 vector가 다음과 같다.
+총 직접 신규 PV, known payout와 초과 소멸량이 같은 두 후보에서 실제 부모 연결상 깊이 2·3 회원 세 명의 일수 vector가 다음과 같다. 이들의 PVP 목표와 화면 찾기 표지판은 서로 달라도 된다.
 
 - 후보 A: `[0,12,12]`
 - 후보 B: `[10,10,10]`
 
-**기대 선택:** 후보 B. 오름차순 vector 첫 값 10이 0보다 크므로 한 명을 버리지 않는 계획이 이긴다. 조직 깊이가 아니라 선택한 PVP 목표군으로 분류한다.
+**기대 선택:** 후보 B. 오름차순 vector 첫 값 10이 0보다 크므로 한 명을 버리지 않는 계획이 이긴다. 집단은 화면 표지판이 아닌 실제 부모 연결의 깊이로 분류하며 루트는 제외한다. 13회 미만이라는 이유만으로 후보 A나 B를 무효로 만들지 않는다.
+
+### OPT-017A — 남은 목표 집단은 깊이 우선 집단 뒤에 비교
+
+**상태:** 확정 · **대상:** Phase 4
+
+두 후보의 깊이 2·3 vector까지 같고, 깊이 4의 목표 1,500 회원과 목표 700 회원이 각각 있다.
+
+**기대 결과:** 깊이 4의 목표 1,500 회원은 남은 high-target vector에서 먼저 비교하고 목표 700 회원은 그다음 target-700 vector에서 비교한다. 이미 깊이 2·3 vector에 들어간 같은 목표 회원을 다시 넣거나 루트를 high-target vector에 넣으면 오답이다.
 
 ### OPT-018 — 비용 중립인 미래 누적 PVP 투자
 
@@ -1022,7 +1040,7 @@ OPT-007과 같은 조직에서 B의 회사 누적 PVP 시작값과 다른 신규
 
 각 직접 셀은 허용 범위 안이지만 전체 후보의 총 신규 PV 또는 재시뮬레이션 점수 합계가 선택한 정수 표현 범위를 넘는다.
 
-**기대 결과:** 부동소수점 반올림, 거대한 가중합 또는 가중치 포화 상태로 후보 순서를 정하지 않는다. 총 신규 PV, known payout, 초과 소멸량, 미래 투자, 벡터 prefix와 각 파생 합계에 checked integer 연산을 사용한다. 모델 생성 전에 솔버의 정확한 정수 범위를 검증하고 하나라도 표현할 수 없으면 명시적인 `OPTIMIZATION_SCORE_OUT_OF_RANGE` 오류를 반환한다. 목적 단계는 `objectiveVersion=3.0.0` 순서대로 각각 정확히 고정한다.
+**기대 결과:** 부동소수점 반올림, 거대한 가중합 또는 가중치 포화 상태로 후보 순서를 정하지 않는다. 총 신규 PV, known payout, 초과 소멸량, 미래 투자, 벡터 prefix와 각 파생 합계에 checked integer 연산을 사용한다. 모델 생성 전에 솔버의 정확한 정수 범위를 검증하고 하나라도 표현할 수 없으면 명시적인 `OPTIMIZATION_SCORE_OUT_OF_RANGE` 오류를 반환한다. 목적 단계는 `objectiveVersion=4.0.0` 순서대로 각각 정확히 고정한다.
 
 ### MODEL-001 — 모델 해는 정본 엔진에 대해 sound해야 함
 
@@ -1030,7 +1048,7 @@ OPT-007과 같은 조직에서 B의 회사 누적 PVP 시작값과 다른 신규
 
 테스트 모델이 Sunday nonzero, 연결된 `CHILD` 방향 직접값 또는 자격 299의 기계적 정산을 포함한 벡터를 해로 반환한다.
 
-**기대 결과:** 정본 shape/numeric 검증과 `rulesetVersion=5.0.0` 계산이 후보를 거부한다. raw 솔버 벡터에는 candidate ID를 부여하지 않고 화면·checkpoint·apply 경계로 내보내지 않는다. 솔버가 feasible이라고 보고했다는 이유로 `OPTIMAL`을 표시하면 오답이다.
+**기대 결과:** 정본 shape/numeric 검증과 `rulesetVersion=6.0.0` 계산이 후보를 거부한다. raw 솔버 벡터에는 candidate ID를 부여하지 않고 화면·checkpoint·apply 경계로 내보내지 않는다. 솔버가 feasible이라고 보고했다는 이유로 `OPTIMAL`을 표시하면 오답이다.
 
 ### MODEL-002 — 유효한 더 나은 배정을 누락하면 completeness 실패
 
@@ -1044,15 +1062,15 @@ OPT-007과 같은 조직에서 B의 회사 누적 PVP 시작값과 다른 신규
 
 **상태:** 설계 계약 · **대상:** Phase 4
 
-솔버가 한 후보의 초과 소멸량, 목표 700 벡터, `nonHundredCellCount`, `maxDirectPvp` 또는 결정적 배정 벡터를 정본 재계산과 다르게 보고한다.
+솔버가 한 후보의 초과 소멸량, 조직 깊이 2·3 벡터, 남은 목표 700 벡터, `nonHundredCellCount`, `maxDirectPvp` 또는 결정적 배정 벡터를 정본 재계산과 다르게 보고한다.
 
-**기대 결과:** `objectiveVersion=3.0.0` 정본 evaluator의 값만 권위가 있으며 후보를 model-consistency failure로 거부한다. 솔버 점수를 덮어써서 usable candidate로 계속 사용하거나 낮은 목적 단계로 진행하면 오답이다.
+**기대 결과:** `objectiveVersion=4.0.0` 정본 evaluator의 값만 권위가 있으며 후보를 model-consistency failure로 거부한다. 솔버 점수를 덮어써서 usable candidate로 계속 사용하거나 낮은 목적 단계로 진행하면 오답이다.
 
 ### MODEL-004 — model certificate와 활성 버전의 정확한 결합
 
 **상태:** 설계 계약 · **대상:** Phase 4
 
-`ModelCertificate 2.0.0`은 최소한 모델 구현, 계산 규칙·엔진 `5.0.0`, 목적 `3.0.0`, 달력/fingerprint 버전, 솔버 adapter와 버전, exact integer·tolerance 조건, soundness/completeness/objective-preservation 증거 모음을 식별한다.
+`ModelCertificate 2.0.0`은 최소한 모델 구현, 계산 규칙·엔진 `6.0.0`, 목적 `4.0.0`, 달력/fingerprint 버전, 솔버 adapter와 버전, exact integer·tolerance 조건, soundness/completeness/objective-preservation 증거 모음을 식별한다.
 
 **기대 결과:** 활성 요청과 certificate의 식별자 중 하나라도 다르면 proof 상태를 사용할 수 없다. 후보는 현재 버전으로 독립 재검증될 때만 unproven candidate로 사용할 수 있으며, 이전 certificate의 `OPTIMAL`·`INFEASIBLE`을 승계하지 않는다.
 
@@ -1257,7 +1275,7 @@ deadline 소진을 `OPTIMAL`, `INFEASIBLE` 또는 백그라운드 계산 계속�
 - 조직 스냅샷에 회원 A와 B가 있다.
 - 회사 누적 PVP를 qualification·보름 역할로 매핑한 값과 일일 `P=0/L/R`의 다섯 필드를 가진 OpeningState는 A에만 있고 B에는 없다.
 
-**기대 결과:** `OPENING_STATE_MISSING` 오류를 B 위치와 함께 반환한다. 조직에 없는 회원의 OpeningState가 추가로 있으면 `OPENING_STATE_MEMBER_NOT_FOUND` 오류다. 한 회원의 다섯 필드 중 하나가 없거나 `openingQualificationPvp !== fortnightPvpOpeningCredit`, `dailyCarryPvp !== 0`, 누적값이 2,400 초과이면 완전한 `5.0.0` 제품 입력이 아니다.
+**기대 결과:** `OPENING_STATE_MISSING` 오류를 B 위치와 함께 반환한다. 조직에 없는 회원의 OpeningState가 추가로 있으면 `OPENING_STATE_MEMBER_NOT_FOUND` 오류다. 한 회원의 다섯 필드 중 하나가 없거나 `openingQualificationPvp !== fortnightPvpOpeningCredit`, `dailyCarryPvp !== 0`, 누적값이 2,400 초과이면 완전한 `6.0.0` 제품 입력이 아니다.
 
 ### VAL-P01 — PVP 목표와 찾기 표지판
 

@@ -55,11 +55,15 @@ describe('verified automatic-plan workspace checkpoint', () => {
     expect(snapshot.objective.highTargetAscendingDayVector).toEqual(
       fixture.candidate.objective.highTargetAscendingDayVector,
     );
+    expect(snapshot.objective.priorityDepthAscendingDayVector).toEqual(
+      fixture.candidate.objective.priorityDepthAscendingDayVector,
+    );
     expect(snapshot.objective).not.toHaveProperty(
       'target700MembersAtLeastEight',
     );
     expect(snapshot.display).toMatchObject({
       target700MembersAtLeastEight: expect.any(Number),
+      priorityDepthMemberDayCounts: expect.any(Array),
       highTargetMemberDayCounts: expect.any(Array),
     });
     expect(snapshot.savedAtIso).toBe('1970-01-01T00:00:00.000Z');
@@ -71,7 +75,7 @@ describe('verified automatic-plan workspace checkpoint', () => {
     expect(restored.status).toBe('RESTORED');
     if (restored.status === 'RESTORED') {
       expect(restored.candidate.candidateId).toBe(fixture.candidate.candidateId);
-      expect(restored.candidate.calculation.engineVersion).toBe('5.0.0');
+      expect(restored.candidate.calculation.engineVersion).toBe('6.0.0');
     }
   });
 

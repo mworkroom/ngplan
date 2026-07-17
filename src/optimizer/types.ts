@@ -54,12 +54,19 @@ export interface AutomaticPlanObjectiveVector {
   readonly totalNewPv: number;
   readonly confirmedPayoutWon: number;
   readonly discardedExcessPv: number;
+  readonly priorityDepthAscendingDayVector: readonly number[];
   readonly highTargetAscendingDayVector: readonly number[];
   readonly target700AscendingDayVector: readonly number[];
   readonly futureCumulativePvpInvestmentPv: number;
   readonly nonHundredCellCount: number;
   readonly maxDirectPvp: number;
   readonly deterministicAllocationVector: readonly number[];
+}
+
+export interface PriorityDepthMemberDayCount {
+  readonly memberKey: string;
+  readonly organizationDepth: 2 | 3;
+  readonly commissionDays: number;
 }
 
 export interface HighTargetMemberDayCount {
@@ -89,6 +96,7 @@ export interface TerminalCarrySummary {
 }
 
 export interface AutomaticPlanDisplayMetrics {
+  readonly priorityDepthMemberDayCounts: readonly PriorityDepthMemberDayCount[];
   readonly highTargetMemberDayCounts: readonly HighTargetMemberDayCount[];
   readonly target700MembersAtLeastEight: number;
   readonly target700TotalCommissionDays: number;
@@ -127,6 +135,7 @@ export interface AutomaticPlanProofProgress {
   readonly provenVectorPrefix:
     | {
         readonly objective:
+          | 'PRIORITY_DEPTH_ASCENDING_VECTOR'
           | 'HIGH_TARGET_ASCENDING_VECTOR'
           | 'TARGET_700_ASCENDING_VECTOR'
           | 'DETERMINISTIC_ALLOCATION_VECTOR';

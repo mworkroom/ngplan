@@ -91,12 +91,12 @@ describe('manual-plan achievement targets', () => {
     });
     expect(targets.get('root')).toEqual({
       pvp: 2400,
-      selfLeft: 22500,
-      selfRight: 22500,
+      selfLeft: 22100,
+      selfRight: 100,
     });
   });
 
-  it('subtracts cumulative PVP before rolling targets upward and keeps the root floor', () => {
+  it('subtracts cumulative PVP before rolling targets upward without a root floor', () => {
     const members = [
       member('root', null, null, 2400),
       member('left', 'root', 'LEFT', 700),
@@ -124,8 +124,8 @@ describe('manual-plan achievement targets', () => {
     });
     expect(targets.get('root')).toEqual({
       pvp: 0,
-      selfLeft: 22500,
-      selfRight: 22500,
+      selfLeft: 5000,
+      selfRight: 2500,
     });
   });
 });

@@ -182,16 +182,16 @@ describe('WP4 manual planning worksheet', () => {
       '2,500',
       '1,800',
       '700',
-      '22,500',
-      '22,500',
+      '5,000',
+      '1,800',
       '목표값',
       '잔액',
       '+700',
       '+2,500',
       '+1,800',
       '+700',
-      '+22,500',
-      '+22,500',
+      '+5,000',
+      '+1,800',
       '잔액',
       '날짜',
       'PVP0',
@@ -229,7 +229,7 @@ describe('WP4 manual planning worksheet', () => {
     expect(document.querySelectorAll('.manual-plan-table thead tr')).toHaveLength(4);
     expect(screen.getByLabelText('하위 PVP 목표값 700 PV')).toBeDefined();
     expect(
-      screen.getByLabelText('1. 루트 · 회원 ID 1000 좌 목표값 22,500 PV'),
+      screen.getByLabelText('1. 루트 · 회원 ID 1000 좌 목표값 5,000 PV'),
     ).toBeDefined();
     expect(within(table).getByText('하위').closest('th')?.className).toContain(
       'manual-plan-table__member-heading--left',
@@ -303,7 +303,7 @@ describe('WP4 manual planning worksheet', () => {
       screen.getByLabelText('1 (수) 1. 루트 · 회원 ID 1000 좌 조직 합계 600 PV'),
     ).toBeDefined();
     expect(
-      screen.getByLabelText('1. 루트 · 회원 ID 1000 좌 잔액 +21,900 PV'),
+      screen.getByLabelText('1. 루트 · 회원 ID 1000 좌 잔액 +4,400 PV'),
     ).toBeDefined();
     expect(screen.getByLabelText('하위 이번 기간 PVP 총합 100 PV')).toBeDefined();
     expect(screen.getByLabelText('하위 이번 기간 좌 총합 200 PV')).toBeDefined();

@@ -15,6 +15,7 @@ import type {
   AutomaticPlanObjectiveVector,
   AutomaticPlanRequest,
   HighTargetMemberDayCount,
+  PriorityDepthMemberDayCount,
   SafeAutomaticPlanError,
   Target700MemberDayCount,
   TerminalCarryMemberSummary,
@@ -113,6 +114,36 @@ function assertAscendingDayVector(
   }
 }
 
+function organizationDepths(
+  request: AutomaticPlanRequest,
+): ReadonlyMap<string, number> {
+  const memberByKey = new Map(
+    request.organization.members.map((member) => [member.memberKey, member] as const),
+  );
+  const depthByMember = new Map<string, number>();
+  const visiting = new Set<string>();
+  const derive = (memberKey: string): number => {
+    const cached = depthByMember.get(memberKey);
+    if (cached !== undefined) return cached;
+    if (visiting.has(memberKey)) {
+      throw new TypeError('organization depth contains a cycle');
+    }
+    const member = memberByKey.get(memberKey);
+    if (member === undefined) {
+      throw new TypeError(`missing member ${memberKey}`);
+    }
+    visiting.add(memberKey);
+    const depth = member.parentMemberKey === null
+      ? 1
+      : derive(member.parentMemberKey) + 1;
+    visiting.delete(memberKey);
+    depthByMember.set(memberKey, depth);
+    return depth;
+  };
+  for (const memberKey of request.canonicalMemberKeys) derive(memberKey);
+  return depthByMember;
+}
+
 export function assertValidAutomaticPlanObjective(
   objective: AutomaticPlanObjectiveVector,
 ): void {
@@ -129,6 +160,10 @@ export function assertValidAutomaticPlanObjective(
   ] as const) {
     assertCanonicalNonNegativeSafeInteger(value, label);
   }
+  assertAscendingDayVector(
+    objective.priorityDepthAscendingDayVector,
+    'priorityDepth',
+  );
   assertAscendingDayVector(
     objective.highTargetAscendingDayVector,
     'highTarget',
@@ -153,6 +188,10 @@ export function compareAutomaticPlanObjectives(
     compareMin(left.totalNewPv, right.totalNewPv) ||
     compareMax(left.confirmedPayoutWon, right.confirmedPayoutWon) ||
     compareMin(left.discardedExcessPv, right.discardedExcessPv) ||
+    compareMaxVector(
+      left.priorityDepthAscendingDayVector,
+      right.priorityDepthAscendingDayVector,
+    ) ||
     compareMaxVector(
       left.highTargetAscendingDayVector,
       right.highTargetAscendingDayVector,
@@ -209,6 +248,8 @@ export function evaluateAutomaticPlanObjective(
     let confirmedPayoutWon = 0;
     let discardedExcessPv = 0;
     let futureCumulativePvpInvestmentPv = 0;
+    const depthByMember = organizationDepths(request);
+    const priorityDepthMemberDayCounts: PriorityDepthMemberDayCount[] = [];
     const highTargetMemberDayCounts: HighTargetMemberDayCount[] = [];
     const target700MemberDayCounts: Target700MemberDayCount[] = [];
     let target700TotalCommissionDays = 0;
@@ -248,7 +289,18 @@ export function evaluateAutomaticPlanObjective(
           discardedExcessForSettlement(settlement),
         );
       }
-      if (member.pvpTarget === 1500 || member.pvpTarget === 2400) {
+      const organizationDepth = depthByMember.get(memberKey);
+      if (organizationDepth === undefined) {
+        throw new TypeError(`missing organization depth for ${memberKey}`);
+      }
+      if (organizationDepth === 2 || organizationDepth === 3) {
+        priorityDepthMemberDayCounts.push(
+          Object.freeze({ memberKey, organizationDepth, commissionDays }),
+        );
+      } else if (
+        organizationDepth > 1 &&
+        (member.pvpTarget === 1500 || member.pvpTarget === 2400)
+      ) {
         highTargetMemberDayCounts.push(
           Object.freeze({
             memberKey,
@@ -256,7 +308,7 @@ export function evaluateAutomaticPlanObjective(
             commissionDays,
           }),
         );
-      } else if (member.pvpTarget === 700) {
+      } else if (organizationDepth > 1 && member.pvpTarget === 700) {
         target700MemberDayCounts.push(Object.freeze({ memberKey, commissionDays }));
         target700TotalCommissionDays = checkedAddScore(
           target700TotalCommissionDays,
@@ -282,6 +334,9 @@ export function evaluateAutomaticPlanObjective(
         futureInvestment,
       );
     }
+    const priorityDepthAscendingDayVector = priorityDepthMemberDayCounts
+      .map((item) => item.commissionDays)
+      .sort((left, right) => left - right);
     const highTargetAscendingDayVector = highTargetMemberDayCounts
       .map((item) => item.commissionDays)
       .sort((left, right) => left - right);
@@ -322,6 +377,9 @@ export function evaluateAutomaticPlanObjective(
       totalNewPv,
       confirmedPayoutWon,
       discardedExcessPv,
+      priorityDepthAscendingDayVector: Object.freeze(
+        priorityDepthAscendingDayVector,
+      ),
       highTargetAscendingDayVector: Object.freeze(
         highTargetAscendingDayVector,
       ),
@@ -332,6 +390,7 @@ export function evaluateAutomaticPlanObjective(
       deterministicAllocationVector: Object.freeze(deterministicAllocationVector),
     });
     const display: AutomaticPlanDisplayMetrics = Object.freeze({
+      priorityDepthMemberDayCounts: Object.freeze(priorityDepthMemberDayCounts),
       highTargetMemberDayCounts: Object.freeze(highTargetMemberDayCounts),
       target700MembersAtLeastEight,
       target700TotalCommissionDays,

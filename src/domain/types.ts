@@ -78,12 +78,11 @@ export interface CalculatePlanInput {
 }
 
 export interface RuleSet {
-  readonly rulesetVersion: '5.0.0';
+  readonly rulesetVersion: '6.0.0';
   readonly commissionTiers: readonly CommissionTier[];
   readonly allowedPvpTargets: readonly PvpTarget[];
   readonly cumulativePvpCap: Pv;
   readonly fortnightSideTarget: Pv;
-  readonly rootFortnightSideTarget: Pv;
   readonly businessCalendarPolicy: 'SUNDAY_SKIP_NO_INPUT';
   readonly pvpTiePolicy: 'LEFT';
   readonly fortnightPvpSourcePolicy: 'NEW_ONLY_EXCLUDING_OPENING_AND_DAILY_CARRY';

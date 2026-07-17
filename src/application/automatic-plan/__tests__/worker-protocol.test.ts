@@ -60,6 +60,7 @@ describe('automatic plan worker protocol variants', () => {
   it('validates proof progress scalar, bound, and vector-prefix variants', () => {
     expect(isAutomaticPlanWorkerResponse(progress())).toBe(true);
     for (const objective of [
+      'PRIORITY_DEPTH_ASCENDING_VECTOR',
       'HIGH_TARGET_ASCENDING_VECTOR',
       'TARGET_700_ASCENDING_VECTOR',
       'DETERMINISTIC_ALLOCATION_VECTOR',

@@ -17,6 +17,14 @@ const METRICS = {
   optimalityProven: false,
   runStatusLabel: '최적성 확인 중',
   discardedExcessPv: 0,
+  priorityDepthMemberDayCounts: [
+    {
+      memberKey: 'priority',
+      memberLabel: '조직 우선 회원',
+      organizationDepth: 2,
+      days: 12,
+    },
+  ],
   highTargetMemberDayCounts: [
     { memberKey: 'high', memberLabel: '고목표 회원', pvpTarget: 2400, days: 10 },
   ],
@@ -195,6 +203,8 @@ describe('automatic plan operator components', () => {
 
     expect(screen.getByText(/지금 보는 계획은 바뀌지 않았습니다/)).toBeTruthy();
     expect(screen.getByText('200 (폐기 아님)')).toBeTruthy();
+    expect(screen.getByText('그 외 700 목표 중 8일 이상')).toBeTruthy();
+    expect(screen.getByRole('list', { name: '그 외 700 목표 회원별 발생일' })).toBeTruthy();
     await user.click(screen.getByRole('button', { name: '새 계획 보기' }));
     await user.click(screen.getByRole('button', { name: '이 계획을 계획표에 적용' }));
     expect(onSwitch).toHaveBeenCalledOnce();
@@ -210,6 +220,7 @@ describe('automatic plan operator components', () => {
           ...METRICS,
           optimalityProven: true,
           runStatusLabel: '최소값 확인 완료',
+          priorityDepthMemberDayCounts: [],
           highTargetMemberDayCounts: [],
           target700MemberDayCounts: [],
           allTargetsMet: false,
@@ -224,7 +235,7 @@ describe('automatic plan operator components', () => {
     expect(screen.getByText(/최소값 확인 완료/)).toBeTruthy();
     expect(screen.getByText('⚠ 목표 확인 필요')).toBeTruthy();
     expect(screen.getByText('⚠ 자격 확인 필요')).toBeTruthy();
-    expect(screen.queryByRole('list', { name: '700 목표 회원별 발생일' })).toBeNull();
+    expect(screen.queryByRole('list', { name: '그 외 700 목표 회원별 발생일' })).toBeNull();
     await user.click(screen.getByRole('button', { name: '닫기' }));
     expect(onClose).toHaveBeenCalledOnce();
   });

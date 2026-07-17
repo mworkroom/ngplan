@@ -137,6 +137,7 @@ describe('Phase 4 model certificate and truthful statuses', () => {
       'TOTAL_NEW_PV',
       'CONFIRMED_PAYOUT_WON',
       'DISCARDED_EXCESS',
+      'PRIORITY_DEPTH_ASCENDING_VECTOR',
       'HIGH_TARGET_ASCENDING_VECTOR',
       'TARGET_700_ASCENDING_VECTOR',
       'FUTURE_CUMULATIVE_PVP_INVESTMENT',
@@ -283,7 +284,7 @@ describe('bounded tiny exhaustive oracle', () => {
     if (searched.status !== 'SUCCESS') return;
     expect(searched.completeWithinBounds).toBe(true);
     expect(searched.evaluatedCandidateCount).toBe(2);
-    expect(searched.bestCandidate?.objective.totalNewPv).toBe(45_700);
+    expect(searched.bestCandidate?.objective.totalNewPv).toBe(5_000);
     expect(searched.bestCandidate?.candidateId).toBe('tiny-oracle-0');
     expect(searched).not.toHaveProperty('proof');
   });
@@ -341,7 +342,7 @@ describe('bounded tiny exhaustive oracle', () => {
     expect(searched.status).toBe('SUCCESS');
     if (searched.status !== 'SUCCESS') return;
     expect(searched.evaluatedCandidateCount).toBe(4);
-    expect(searched.bestCandidate?.objective.totalNewPv).toBe(46_500);
+    expect(searched.bestCandidate?.objective.totalNewPv).toBe(5_000);
     expect(searched.bestCandidate?.candidateId).toBe('ranked-2');
   });
 

@@ -62,14 +62,14 @@ describe('constructive candidate branch coverage', () => {
         date: '2026-07-01',
         memberKey: 'root',
         pvp: 700,
-        selfLeft: 22_500,
+        selfLeft: 1_800,
       }),
       expect.objectContaining({
         date: '2026-07-01',
         memberKey: 'right',
         pvp: 700,
-        selfLeft: 19_300,
-        selfRight: 2_500,
+        selfLeft: 2_500,
+        selfRight: 1_800,
       }),
     ]);
     expect(
@@ -153,19 +153,21 @@ describe('constructive candidate branch coverage', () => {
   it.each([
     {
       opening: 699,
-      expectedTotal: 45_030,
+      expectedTotal: 5_000,
       expectedPvp: 30,
-      expectedLeft: 22_500,
+      expectedLeft: 2_500,
+      expectedRight: 2_470,
     },
     {
       opening: 799,
-      expectedTotal: 45_000,
+      expectedTotal: 5_000,
       expectedPvp: 0,
-      expectedLeft: 22_500,
+      expectedLeft: 2_500,
+      expectedRight: 2_500,
     },
   ])(
     'keeps exact totals at cumulative opening $opening',
-    ({ opening, expectedTotal, expectedPvp, expectedLeft }) => {
+    ({ opening, expectedTotal, expectedPvp, expectedLeft, expectedRight }) => {
       const openingState = optimizerOpening({
         openingQualificationPvp: opening,
         fortnightPvpOpeningCredit: opening,
@@ -189,6 +191,9 @@ describe('constructive candidate branch coverage', () => {
         candidate.allocations.reduce((sum, cell) => sum + (cell.selfLeft ?? 0), 0),
       ).toBe(expectedLeft);
       expect(
+        candidate.allocations.reduce((sum, cell) => sum + (cell.selfRight ?? 0), 0),
+      ).toBe(expectedRight);
+      expect(
         candidate.allocations.some((cell) =>
           [cell.pvp, cell.selfLeft, cell.selfRight].some(
             (value) => value !== undefined && value > 0 && value % 100 === 1,
@@ -198,7 +203,7 @@ describe('constructive candidate branch coverage', () => {
     },
   );
 
-  it('distributes the root floor without emitting a sub-30 cell', () => {
+  it('keeps the recursive 2,500 side targets without emitting a sub-30 cell', () => {
     const opening = optimizerOpening({
       openingQualificationPvp: 2_180,
       fortnightPvpOpeningCredit: 2_180,
@@ -213,8 +218,8 @@ describe('constructive candidate branch coverage', () => {
       (cell) => !request.calendar.skipDateSet.includes(cell.date),
     );
 
-    expect(businessCells.reduce((sum, cell) => sum + cell.selfLeft!, 0)).toBe(22_500);
-    expect(businessCells.reduce((sum, cell) => sum + cell.selfRight!, 0)).toBe(22_500);
+    expect(businessCells.reduce((sum, cell) => sum + cell.selfLeft!, 0)).toBe(2_500);
+    expect(businessCells.reduce((sum, cell) => sum + cell.selfRight!, 0)).toBe(2_500);
     expect(
       businessCells
         .flatMap((cell) => [cell.pvp, cell.selfLeft, cell.selfRight])
