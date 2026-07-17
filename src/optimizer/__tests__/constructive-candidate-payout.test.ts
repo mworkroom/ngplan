@@ -95,7 +95,14 @@ describe('constructive payout-aligned candidate', () => {
       .map((date) => payoutAligned!.calculation.dailySettlementByDateAndMember[date]!.root!)
       .filter((settlement) => settlement.settlementKind === 'FULL_COMMISSION')
       .map((settlement) => settlement.commissionTier);
-    expect(rootTiers).toContain(2_400);
+    expect(rootTiers).toHaveLength(13);
+    expect(payoutAligned!.display.rootCommissionGoal).toMatchObject({
+      businessDayCount: 13,
+      targetCommissionDays: 13,
+      actualCommissionDays: 13,
+      shortfallDays: 0,
+      met: true,
+    });
     expect(payoutAligned!.objective.confirmedPayoutWon).toBeGreaterThan(0);
     const shiftedObjectives = variants.slice(2).flatMap((variant, index) => {
       if (variant.status !== 'SUCCESS') return [];
@@ -107,9 +114,17 @@ describe('constructive payout-aligned candidate', () => {
       return outcome.status === 'SUCCESS' ? [outcome.candidate.objective] : [];
     });
     expect(shiftedObjectives.length).toBeGreaterThan(0);
+    const goalPreservingObjectives = shiftedObjectives.filter(
+      (objective) => objective.rootCommissionGoalShortfallDays === 0,
+    );
+    expect(goalPreservingObjectives.length).toBeGreaterThan(0);
+    expect(
+      new Set([payoutAligned!.objective, ...goalPreservingObjectives].map((objective) =>
+        JSON.stringify(objective.priorityDepthAscendingDayVector))).size,
+    ).toBeGreaterThan(1);
     expect(
       new Set(shiftedObjectives.map((objective) =>
-        JSON.stringify(objective.priorityDepthAscendingDayVector))).size,
+        JSON.stringify(objective.deterministicAllocationVector))).size,
     ).toBeGreaterThan(1);
     expect(
       shiftedObjectives.every((objective) =>
@@ -135,20 +150,20 @@ describe('constructive payout-aligned candidate', () => {
     ])));
     const request = createOptimizerRequest(members, openings);
     const variants = buildConstructiveCandidateVariants(request);
-    const baseline = variants[0];
-    if (baseline?.status !== 'SUCCESS') throw new Error('constructive baseline failed');
+    const aligned = variants[1];
+    if (aligned?.status !== 'SUCCESS') throw new Error('aligned construction failed');
     const schedule = (
-      candidate: typeof baseline.candidate,
+      candidate: typeof aligned.candidate,
       memberKey: string,
     ): string => JSON.stringify(candidate.allocations
       .filter((cell) => cell.memberKey === memberKey)
       .map((cell) => [cell.selfLeft ?? null, cell.selfRight ?? null]));
-    const baselineLeft = schedule(baseline.candidate, 'left-left');
-    const baselineRight = schedule(baseline.candidate, 'left-right');
+    const alignedLeft = schedule(aligned.candidate, 'left-left');
+    const alignedRight = schedule(aligned.candidate, 'left-right');
     const independentLeftShift = variants.slice(2).find((variant) =>
       variant.status === 'SUCCESS' &&
-      schedule(variant.candidate, 'left-left') !== baselineLeft &&
-      schedule(variant.candidate, 'left-right') === baselineRight
+      schedule(variant.candidate, 'left-left') !== alignedLeft &&
+      schedule(variant.candidate, 'left-right') === alignedRight
     );
 
     expect(independentLeftShift).toBeDefined();
@@ -178,23 +193,23 @@ describe('constructive payout-aligned candidate', () => {
     ])));
     const request = createOptimizerRequest(members, openings);
     const variants = buildConstructiveCandidateVariants(request);
-    const baseline = variants[0];
-    if (baseline?.status !== 'SUCCESS') throw new Error('constructive baseline failed');
+    const aligned = variants[1];
+    if (aligned?.status !== 'SUCCESS') throw new Error('aligned construction failed');
     const schedule = (
-      candidate: typeof baseline.candidate,
+      candidate: typeof aligned.candidate,
       memberKey: string,
     ): string => JSON.stringify(candidate.allocations
       .filter((cell) => cell.memberKey === memberKey)
       .map((cell) => [cell.selfLeft ?? null, cell.selfRight ?? null]));
     const composed = variants.slice(2).find((variant) =>
       variant.status === 'SUCCESS' &&
-      schedule(variant.candidate, 'left-left') !== schedule(baseline.candidate, 'left-left') &&
-      schedule(variant.candidate, 'right-left') !== schedule(baseline.candidate, 'right-left')
+      schedule(variant.candidate, 'left-left') !== schedule(aligned.candidate, 'left-left') &&
+      schedule(variant.candidate, 'right-left') !== schedule(aligned.candidate, 'right-left')
     );
 
     expect(composed).toBeDefined();
     if (composed?.status !== 'SUCCESS') return;
-    const directTotals = (candidate: typeof baseline.candidate) => Object.fromEntries(
+    const directTotals = (candidate: typeof aligned.candidate) => Object.fromEntries(
       members.flatMap((member) => [
         ['pvp', candidate.allocations.reduce(
           (total, cell) => total + (cell.memberKey === member.memberKey ? cell.pvp : 0),
@@ -216,9 +231,9 @@ describe('constructive payout-aligned candidate', () => {
       (date) => !request.calendar.skipDateSet.includes(date),
     ).at(-1)!;
 
-    expect(directTotals(composed.candidate)).toEqual(directTotals(baseline.candidate));
+    expect(directTotals(composed.candidate)).toEqual(directTotals(aligned.candidate));
     expect(composed.candidate.allocations.filter((cell) => cell.date === finalBusinessDate))
-      .toEqual(baseline.candidate.allocations.filter((cell) => cell.date === finalBusinessDate));
+      .toEqual(aligned.candidate.allocations.filter((cell) => cell.date === finalBusinessDate));
     expect(verifyAutomaticPlanCandidate(request, composed.candidate, {
       candidateId: 'priority-composed-branch',
       sequence: 1,

@@ -10,6 +10,7 @@ import {
 import { validateAutomaticPlanCandidateShape } from './candidate-shape';
 import { discardedExcessForSettlement } from './discarded-excess';
 import { automaticPlanError, errorFromUnknown } from './errors';
+import { deriveRootCommissionGoalCapacity } from './root-commission-goal';
 import type {
   AutomaticPlanDisplayMetrics,
   AutomaticPlanObjectiveVector,
@@ -148,6 +149,10 @@ export function assertValidAutomaticPlanObjective(
   objective: AutomaticPlanObjectiveVector,
 ): void {
   for (const [label, value] of [
+    [
+      'rootCommissionGoalShortfallDays',
+      objective.rootCommissionGoalShortfallDays,
+    ],
     ['totalNewPv', objective.totalNewPv],
     ['confirmedPayoutWon', objective.confirmedPayoutWon],
     ['discardedExcessPv', objective.discardedExcessPv],
@@ -186,6 +191,10 @@ export function compareAutomaticPlanObjectives(
   assertValidAutomaticPlanObjective(right);
   return (
     compareMin(left.totalNewPv, right.totalNewPv) ||
+    compareMin(
+      left.rootCommissionGoalShortfallDays,
+      right.rootCommissionGoalShortfallDays,
+    ) ||
     compareMax(left.confirmedPayoutWon, right.confirmedPayoutWon) ||
     compareMin(left.discardedExcessPv, right.discardedExcessPv) ||
     compareMaxVector(
@@ -248,6 +257,8 @@ export function evaluateAutomaticPlanObjective(
     let confirmedPayoutWon = 0;
     let discardedExcessPv = 0;
     let futureCumulativePvpInvestmentPv = 0;
+    const rootGoalCapacity = deriveRootCommissionGoalCapacity(request);
+    let rootActualCommissionDays = 0;
     const depthByMember = organizationDepths(request);
     const priorityDepthMemberDayCounts: PriorityDepthMemberDayCount[] = [];
     const highTargetMemberDayCounts: HighTargetMemberDayCount[] = [];
@@ -283,6 +294,9 @@ export function evaluateAutomaticPlanObjective(
           }
           confirmedPayoutWon = checkedAddScore(confirmedPayoutWon, payoutWon);
           commissionDays = checkedAddScore(commissionDays, 1);
+          if (memberKey === rootGoalCapacity.rootMemberKey) {
+            rootActualCommissionDays = checkedAddScore(rootActualCommissionDays, 1);
+          }
         }
         discardedExcessPv = checkedAddScore(
           discardedExcessPv,
@@ -373,7 +387,12 @@ export function evaluateAutomaticPlanObjective(
       checkedAddScore(totalPvp, totalLeft),
       totalRight,
     );
+    const rootCommissionGoalShortfallDays = Math.max(
+      0,
+      rootGoalCapacity.targetCommissionDays - rootActualCommissionDays,
+    );
     const objective: AutomaticPlanObjectiveVector = Object.freeze({
+      rootCommissionGoalShortfallDays,
       totalNewPv,
       confirmedPayoutWon,
       discardedExcessPv,
@@ -390,6 +409,15 @@ export function evaluateAutomaticPlanObjective(
       deterministicAllocationVector: Object.freeze(deterministicAllocationVector),
     });
     const display: AutomaticPlanDisplayMetrics = Object.freeze({
+      rootCommissionGoal: Object.freeze({
+        rootMemberKey: rootGoalCapacity.rootMemberKey,
+        businessDayCount: rootGoalCapacity.businessDayCount,
+        targetCommissionDays: rootGoalCapacity.targetCommissionDays,
+        actualCommissionDays: rootActualCommissionDays,
+        shortfallDays: rootCommissionGoalShortfallDays,
+        capacityLimited: rootGoalCapacity.capacityLimited,
+        met: rootCommissionGoalShortfallDays === 0,
+      }),
       priorityDepthMemberDayCounts: Object.freeze(priorityDepthMemberDayCounts),
       highTargetMemberDayCounts: Object.freeze(highTargetMemberDayCounts),
       target700MembersAtLeastEight,

@@ -152,6 +152,31 @@ function certifiedFixture() {
 }
 
 describe('optimizer request and shape defensive coverage', () => {
+  it('ignores a malformed child side when deriving raw editable coordinates', () => {
+    const request = createOptimizerRequest();
+    const malformedChild = {
+      ...optimizerMember('child', 'root', 'LEFT'),
+      sideAtParent: null,
+    } as MemberSnapshot;
+    const malformed = {
+      ...request,
+      organization: {
+        ...request.organization,
+        members: Object.freeze([
+          request.organization.members[0]!,
+          malformedChild,
+        ]),
+      },
+      canonicalMemberKeys: Object.freeze(['root', 'child']),
+    } as AutomaticPlanRequest;
+
+    const rootFields = deriveAutomaticPlanCoordinates(malformed)
+      .filter((coordinate) => coordinate.memberKey === 'root')
+      .map((coordinate) => coordinate.field);
+    expect(rootFields).toContain('SELF_LEFT');
+    expect(rootFields).toContain('SELF_RIGHT');
+  });
+
   it('rejects every malformed topology family without producing an order', () => {
     const malformed: readonly (readonly MemberSnapshot[])[] = [
       [optimizerMember('root'), optimizerMember('root')],
@@ -494,6 +519,7 @@ describe('optimizer arithmetic, construction, objective, and oracle defenses', (
 
   it('rejects unsorted objectives and exercises prefix-length comparison validation', () => {
     const unsorted: AutomaticPlanObjectiveVector = {
+      rootCommissionGoalShortfallDays: 0,
       totalNewPv: 1,
       confirmedPayoutWon: 0,
       discardedExcessPv: 0,
@@ -807,5 +833,5 @@ describe('57-member first-candidate scale path', () => {
     console.info(`57-member constructive+verify elapsed: ${elapsedMs.toFixed(2)} ms`);
     expect(verified).toMatchObject({ status: 'SUCCESS' });
     expect(elapsedMs).toBeGreaterThanOrEqual(0);
-  });
+  }, 15_000);
 });

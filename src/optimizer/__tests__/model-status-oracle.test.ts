@@ -135,6 +135,7 @@ describe('Phase 4 model certificate and truthful statuses', () => {
     if (outcome.status !== 'SUCCESS') return;
     expect(outcome.model.objectiveStages).toEqual([
       'TOTAL_NEW_PV',
+      'ROOT_COMMISSION_GOAL_SHORTFALL',
       'CONFIRMED_PAYOUT_WON',
       'DISCARDED_EXCESS',
       'PRIORITY_DEPTH_ASCENDING_VECTOR',
@@ -263,6 +264,30 @@ describe('Phase 4 model certificate and truthful statuses', () => {
 });
 
 describe('bounded tiny exhaustive oracle', () => {
+  it('serializes only structurally editable SELF fields for a two-branch root', () => {
+    const members = [
+      optimizerMember('root'),
+      optimizerMember('left', 'root', 'LEFT'),
+      optimizerMember('right', 'root', 'RIGHT'),
+    ];
+    const request = createOptimizerRequest(
+      members,
+      Object.freeze(Object.fromEntries(
+        members.map((member) => [member.memberKey, optimizerOpening()]),
+      )),
+    );
+
+    expect(searchTinyAutomaticPlan(request, {
+      defaultDomain: [0],
+      maxCombinations: 1,
+    })).toMatchObject({
+      status: 'SUCCESS',
+      bestCandidate: null,
+      evaluatedCandidateCount: 1,
+      completeWithinBounds: true,
+    });
+  });
+
   it('ORACLE-001 selects the lower-total candidate inside exact finite domains', () => {
     const request = createOptimizerRequest();
     const firstDate = request.calendar.dates.find(
@@ -303,7 +328,7 @@ describe('bounded tiny exhaustive oracle', () => {
     });
   });
 
-  it('replaces an incumbent when a later equal-total assignment wins the final vector tie-break', () => {
+  it('prefers lower root-goal shortfall before the final vector tie-break', () => {
     const request = createOptimizerRequest(
       [optimizerMember('root', null, null, 1500)],
       Object.freeze({ root: optimizerOpening() }),
@@ -343,7 +368,7 @@ describe('bounded tiny exhaustive oracle', () => {
     if (searched.status !== 'SUCCESS') return;
     expect(searched.evaluatedCandidateCount).toBe(4);
     expect(searched.bestCandidate?.objective.totalNewPv).toBe(5_000);
-    expect(searched.bestCandidate?.candidateId).toBe('ranked-2');
+    expect(searched.bestCandidate?.candidateId).toBe('ranked-1');
   });
 
   it('ORACLE-003 stops before enumeration when the bounded product exceeds the guard', () => {

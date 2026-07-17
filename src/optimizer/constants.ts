@@ -1,6 +1,6 @@
 export const AUTOMATIC_PLAN_REQUEST_VERSION = '2.0.0' as const;
-export const AUTOMATIC_PLAN_POLICY_VERSION = '4.0.0' as const;
-export const AUTOMATIC_PLAN_OBJECTIVE_VERSION = '4.0.0' as const;
+export const AUTOMATIC_PLAN_POLICY_VERSION = '5.0.0' as const;
+export const AUTOMATIC_PLAN_OBJECTIVE_VERSION = '5.0.0' as const;
 export const AUTOMATIC_PLAN_CALENDAR_VERSION = '1.0.0' as const;
 export const AUTOMATIC_PLAN_FINGERPRINT_VERSION = '2.0.0' as const;
 export const AUTOMATIC_PLAN_MODEL_VERSION = '2.0.0' as const;
@@ -21,6 +21,7 @@ export const AUTOMATIC_PLAN_FIELD_ORDER = Object.freeze([
 
 export const AUTOMATIC_PLAN_OBJECTIVE_STAGE_ORDER = Object.freeze([
   'TOTAL_NEW_PV',
+  'ROOT_COMMISSION_GOAL_SHORTFALL',
   'CONFIRMED_PAYOUT_WON',
   'DISCARDED_EXCESS',
   'PRIORITY_DEPTH_ASCENDING_VECTOR',

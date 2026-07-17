@@ -51,6 +51,7 @@ export interface AutomaticPlanRequest {
 }
 
 export interface AutomaticPlanObjectiveVector {
+  readonly rootCommissionGoalShortfallDays: number;
   readonly totalNewPv: number;
   readonly confirmedPayoutWon: number;
   readonly discardedExcessPv: number;
@@ -61,6 +62,16 @@ export interface AutomaticPlanObjectiveVector {
   readonly nonHundredCellCount: number;
   readonly maxDirectPvp: number;
   readonly deterministicAllocationVector: readonly number[];
+}
+
+export interface RootCommissionGoalMetric {
+  readonly rootMemberKey: string;
+  readonly businessDayCount: number;
+  readonly targetCommissionDays: number;
+  readonly actualCommissionDays: number;
+  readonly shortfallDays: number;
+  readonly capacityLimited: boolean;
+  readonly met: boolean;
 }
 
 export interface PriorityDepthMemberDayCount {
@@ -96,6 +107,7 @@ export interface TerminalCarrySummary {
 }
 
 export interface AutomaticPlanDisplayMetrics {
+  readonly rootCommissionGoal: RootCommissionGoalMetric;
   readonly priorityDepthMemberDayCounts: readonly PriorityDepthMemberDayCount[];
   readonly highTargetMemberDayCounts: readonly HighTargetMemberDayCount[];
   readonly target700MembersAtLeastEight: number;

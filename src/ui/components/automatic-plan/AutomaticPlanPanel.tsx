@@ -16,6 +16,7 @@ export interface AutomaticPlanPanelProps {
   readonly latestCandidate: AutomaticPlanPreviewMetrics | null;
   readonly pinnedCandidate: AutomaticPlanPreviewMetrics | null;
   readonly errorMessage?: string | null;
+  readonly proofOnlyFailure?: boolean;
   readonly onStart: () => void;
   readonly onStop: () => void;
   readonly onOpenPreview: () => void;
@@ -32,6 +33,7 @@ export function AutomaticPlanPanel({
   latestCandidate,
   pinnedCandidate,
   errorMessage = null,
+  proofOnlyFailure = false,
   onStart,
   onStop,
   onOpenPreview,
@@ -64,6 +66,7 @@ export function AutomaticPlanPanel({
           bestTotalNewPv={latestCandidate?.totalNewPv ?? null}
           phaseLabel={phaseLabel}
           errorMessage={errorMessage}
+          proofOnlyFailure={proofOnlyFailure}
         />
       )}
 

@@ -51,6 +51,7 @@ import {
   type TopologyCommandOutcome,
 } from '../application/project-setup';
 import {
+  AUTOMATIC_PLAN_OBJECTIVE_STAGE_ORDER,
   AUTOMATIC_PLAN_PRODUCT_TIME_LIMIT_MS,
   type AutomaticPlanProofProgress,
   type AutomaticPlanRunState,
@@ -79,7 +80,7 @@ type Side = ChildSlotState['side'];
 type AppScreen = 'SETUP' | 'MANUAL_PLAN';
 
 const EMPTY_AUTOMATIC_PLAN_PROOF: AutomaticPlanProofProgress = Object.freeze({
-  stage: 'TOTAL_NEW_PV',
+  stage: AUTOMATIC_PLAN_OBJECTIVE_STAGE_ORDER[0],
   provenScalarObjectiveCount: 0,
   provenVectorPrefix: null,
   primaryLowerBound: null,
@@ -100,7 +101,7 @@ function automaticPlanPhaseLabel(state: AutomaticPlanRunState | null): string {
     case 'VERIFIED_PLAN_FOUND':
       return '더 적은 값을 찾는 중';
     case 'EXACT_PROOF_BACKEND_UNAVAILABLE':
-      return '정확한 최소값 확인을 계속하지 못함';
+      return '최소값 확인만 중단됨';
     case 'CANCELLED_BY_OPERATOR':
       return '계산을 중지함';
     default:
@@ -121,9 +122,6 @@ function automaticPlanPreviewMetrics(
       (member) => [member.memberKey, member] as const,
     ),
   );
-  const settlements = Object.values(
-    candidate.calculation.dailySettlementByDateAndMember,
-  ).flatMap((byMember) => Object.values(byMember));
   const optimalityProven =
     runState?.status === 'OPTIMAL' &&
     runState.bestCandidate.candidateId === candidate.candidateId;
@@ -138,7 +136,7 @@ function automaticPlanPreviewMetrics(
           : runState.status === 'CANCELLED'
             ? '계산 중지 · 최소값 미증명'
             : runState.status === 'FAILED'
-              ? '검증 계획 · 최소값 증명 미완료'
+              ? '검증 계획 · 최소값 확인만 중단'
                : '최소값 미증명';
   return Object.freeze({
     candidateId: candidate.candidateId,
@@ -148,6 +146,12 @@ function automaticPlanPreviewMetrics(
     optimalityProven,
     runStatusLabel,
     discardedExcessPv: candidate.objective.discardedExcessPv,
+    rootCommissionGoal: Object.freeze({
+      ...candidate.display.rootCommissionGoal,
+      rootMemberLabel:
+        memberByKey.get(candidate.display.rootCommissionGoal.rootMemberKey)?.name ??
+        candidate.display.rootCommissionGoal.rootMemberKey,
+    }),
     priorityDepthMemberDayCounts: Object.freeze(
       candidate.display.priorityDepthMemberDayCounts.map((item) =>
         Object.freeze({
@@ -186,13 +190,6 @@ function automaticPlanPreviewMetrics(
     nonHundredCellCount: candidate.objective.nonHundredCellCount,
     maxDirectPvp: candidate.objective.maxDirectPvp,
     terminalCarryTotal: candidate.display.terminalCarrySummary.totalCarryPv,
-    allTargetsMet: Object.values(
-      candidate.calculation.finalAssessmentByMember,
-    ).every((assessment) => assessment.allTargetsMet),
-    allCommissionsQualified: settlements.every(
-      (settlement) =>
-        settlement.settlementKind !== 'BELOW_QUALIFICATION_SETTLEMENT',
-    ),
   });
 }
 
@@ -788,6 +785,12 @@ export function App({
               latestCandidate={latestAutomaticPlanMetrics}
               pinnedCandidate={pinnedAutomaticPlanMetrics}
               errorMessage={automaticPlanErrorMessage}
+              proofOnlyFailure={
+                automaticPlanState?.status === 'FAILED' &&
+                automaticPlanState.messageCode ===
+                  'EXACT_PROOF_BACKEND_UNAVAILABLE' &&
+                automaticPlanState.bestCandidate !== null
+              }
               onStart={startAutomaticPlan}
               onStop={() => automaticPlanControllerRef.current?.cancel()}
               onOpenPreview={handleOpenAutomaticPlanPreview}

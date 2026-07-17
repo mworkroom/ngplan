@@ -26,6 +26,7 @@ function objective(
   overrides: Partial<AutomaticPlanObjectiveVector> = {},
 ): AutomaticPlanObjectiveVector {
   return {
+    rootCommissionGoalShortfallDays: 0,
     totalNewPv: 100,
     confirmedPayoutWon: 0,
     discardedExcessPv: 0,
@@ -106,6 +107,31 @@ describe('Phase 4 canonical objective comparator', () => {
       nonHundredCellCount: 0,
     });
     expect(compareAutomaticPlanObjectives(exact, rounded)).toBe(-1);
+  });
+
+  it('minimizes the root commission goal shortfall after total PV and before payout', () => {
+    const lowerTotalWithShortfall = objective({
+      totalNewPv: 99,
+      rootCommissionGoalShortfallDays: 1,
+    });
+    const higherTotalWithoutShortfall = objective({
+      totalNewPv: 100,
+      rootCommissionGoalShortfallDays: 0,
+      confirmedPayoutWon: 480_000,
+    });
+    expect(
+      compareAutomaticPlanObjectives(lowerTotalWithShortfall, higherTotalWithoutShortfall),
+    ).toBe(-1);
+
+    const goalMet = objective({
+      rootCommissionGoalShortfallDays: 0,
+      confirmedPayoutWon: 0,
+    });
+    const morePayoutWithShortfall = objective({
+      rootCommissionGoalShortfallDays: 1,
+      confirmedPayoutWon: 480_000,
+    });
+    expect(compareAutomaticPlanObjectives(goalMet, morePayoutWithShortfall)).toBe(-1);
   });
 
   it('maximizes confirmed payout before minimizing discarded excess', () => {

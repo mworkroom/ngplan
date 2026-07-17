@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  AUTOMATIC_PLAN_OBJECTIVE_STAGE_ORDER,
   buildConstructiveCandidate,
   type AutomaticPlanProofProgress,
   type AutomaticPlanRunState,
@@ -15,7 +16,7 @@ import { createAutomaticPlanRequest } from '../create-request';
 import { createAutomaticPlanBundle } from './fixtures';
 
 const PROOF: AutomaticPlanProofProgress = Object.freeze({
-  stage: 'TOTAL_NEW_PV',
+  stage: AUTOMATIC_PLAN_OBJECTIVE_STAGE_ORDER[0],
   provenScalarObjectiveCount: 0,
   provenVectorPrefix: null,
   primaryLowerBound: 5_000,

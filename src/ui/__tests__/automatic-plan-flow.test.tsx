@@ -34,6 +34,7 @@ import {
   type AutomaticPlanWorkerResponse,
 } from '../../application/automatic-plan';
 import {
+  AUTOMATIC_PLAN_OBJECTIVE_STAGE_ORDER,
   buildConstructiveCandidate,
   verifyAutomaticPlanCandidate,
   type AutomaticPlanProofProgress,
@@ -48,7 +49,7 @@ import {
 } from '../workspace-session-storage';
 
 const PROOF: AutomaticPlanProofProgress = Object.freeze({
-  stage: 'TOTAL_NEW_PV',
+  stage: AUTOMATIC_PLAN_OBJECTIVE_STAGE_ORDER[0],
   provenScalarObjectiveCount: 0,
   provenVectorPrefix: null,
   primaryLowerBound: null,
@@ -289,6 +290,19 @@ describe('App automatic-plan integration', () => {
       1,
       pinnedRaw.allocations,
     );
+    const pinnedVerification = verifyAutomaticPlanCandidate(
+      firstWorker.startMessage().request,
+      pinnedRaw,
+      {
+        candidateId: pinnedCandidateId,
+        sequence: 1,
+        foundAtElapsedMs: 1_000,
+      },
+    );
+    if (pinnedVerification.status === 'FAILURE') {
+      throw new Error(pinnedVerification.error.message);
+    }
+    const pinnedRootGoal = pinnedVerification.candidate.display.rootCommissionGoal;
 
     act(() => emitIncumbent(firstWorker, pinnedRaw, 1, 1_000));
     await screen.findByText('현재까지 찾은 가장 좋은 검증 계획');
@@ -308,7 +322,12 @@ describe('App automatic-plan integration', () => {
     });
 
     expect(await screen.findByText('계산은 멈췄지만 검증 계획은 사용 가능')).toBeDefined();
-    expect(screen.getByRole('alert').textContent).toContain('정확한 최소값 증명');
+    expect(
+      screen.getByText(
+        '정확한 최소값 확인만 중단됐습니다. 찾은 검증 계획은 사용할 수 있습니다.',
+      ),
+    ).toBeDefined();
+    expect(screen.queryByRole('alert')).toBeNull();
     expect(firstWorker.terminated).toBe(true);
     expect(screen.getByText(/아래 계획표와 확인 안내는 아직 기존 입력 기준/)).toBeDefined();
     await user.click(screen.getByRole('button', { name: '검증 계획 확인·적용' }));
@@ -316,6 +335,18 @@ describe('App automatic-plan integration', () => {
     expect(
       within(previewRegion()).getByText(formatPv(pinnedTotalNewPv)),
     ).toBeDefined();
+    const rootGoalMetric = within(previewRegion())
+      .getByText('맨 위 회원 수당')
+      .closest('div');
+    expect(rootGoalMetric).not.toBeNull();
+    expect(
+      within(rootGoalMetric!).getByText(
+        `${pinnedRootGoal.actualCommissionDays} / ${pinnedRootGoal.targetCommissionDays}영업일`,
+      ),
+    ).toBeDefined();
+    expect(
+      within(previewRegion()).getByText('계획 영업일').nextElementSibling?.textContent,
+    ).toBe(`${pinnedRootGoal.businessDayCount}일`);
 
     await user.click(screen.getByRole('button', { name: '다시 계산' }));
     expect(factory.workers).toHaveLength(2);

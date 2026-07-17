@@ -2,8 +2,8 @@
 
 > 기준 요구사항: `docs/requirements/pyramid-app-requirements-v2.md`  
 > 작성일: 2026-07-11  
-> 최종 갱신일: 2026-07-17
-> 문서 상태: Phase 4 자동 계획 확정 계약 반영 — 규칙·엔진 `6.0.0`, 정책·목적함수 `4.0.0`
+> 최종 갱신일: 2026-07-18
+> 문서 상태: Phase 4 자동 계획 확정 계약 반영 — 규칙·엔진 `6.0.0`, 정책·목적함수 `5.0.0`
 > Phase 1 결정 확정일: 2026-07-11
 > Phase 4 Q-SIM-01~06 확정일: 2026-07-12
 
@@ -77,6 +77,7 @@ Phase 2는 아직 완전하지 않은 문자열과 임시로 연결이 끊긴 �
 - 개인 PVP 목표 잔여량
 - 보름 좌·우 최종 판정과 달성 여부
 - 조직 깊이 2·3 우선 회원과 나머지 목표 집단의 커미션 발생일 수
+- 요청별 입력 가능 영업일 수, 맨 위 회원의 총량상 커미션 목표·실제 일수·미달 일수
 - 계획과 실제 또는 재시뮬레이션 사이의 차이
 
 Phase 4 자동 계획은 정규화된 설정 묶음, 회사 누적 PVP와 그 내부 매핑, canonical 날짜 집합과 skip 집합, canonical 회원 순서, ruleset·objective·calendar·schema version으로 `problemFingerprint`를 만든다. Policy seed, 제품 deadline, run ID, 경과 시간, candidate sequence, warm start와 UI 상태는 문제 정의가 아니므로 fingerprint에서 제외한다. fingerprint는 무결성·동일성 확인 수단일 뿐 입력 자체를 재현하지 못하므로 전체 입력 스냅샷을 별도로 보존해야 한다.
@@ -109,8 +110,8 @@ Phase 4 호환성 식별자는 다음 값으로 고정한다.
 |---|---|
 | 규칙·계산 엔진 | `6.0.0` |
 | 자동 계획 request | `2.0.0` |
-| 자동 계획 policy | `4.0.0` |
-| 자동 계획 objective | `4.0.0` |
+| 자동 계획 policy | `5.0.0` |
+| 자동 계획 objective | `5.0.0` |
 | calendar contract | `1.0.0` |
 | problem fingerprint | `2.0.0` |
 | incumbent checkpoint | `2.0.0` |
@@ -494,7 +495,7 @@ member.pvpTarget === 700
 && qualificationPvp >= 300
 ```
 
-일수 목적의 첫 집단은 화면의 `1·2·3` 표지판이 아니라 실제 부모 연결에서 계산한 조직 깊이 2·3 회원이다. 맨 위 회원은 깊이 1이며 모든 일수 경쟁에서 제외한다. 깊이 2·3 회원은 PVP 목표와 무관하게 첫 집단에 한 번만 들어가고, 나머지 목표 1,500·2,400 회원과 나머지 목표 700 회원은 각각 후속 집단에 들어간다. 입력 가능 영업일이 13일이면 13회가 이상적이지만 하드 제약은 아니다.
+일수 목적의 첫 일반 공평성 집단은 화면의 `1·2·3` 표지판이 아니라 실제 부모 연결에서 계산한 조직 깊이 2·3 회원이다. 맨 위 회원은 깊이 1이며 일반 공평성 벡터에서는 제외하고 별도의 총량상 커미션 목표로 평가한다. 깊이 2·3 회원은 PVP 목표와 무관하게 첫 집단에 한 번만 들어가고, 나머지 목표 1,500·2,400 회원과 나머지 목표 700 회원은 각각 후속 집단에 들어간다. 이 집단의 이상적 상한은 고정 13회가 아니라 요청의 실제 입력 가능 영업일 수다.
 
 ## 10. 전체 기간 계산 순서
 
@@ -522,7 +523,7 @@ member.pvpTarget === 700
 | `settleDaily` | 날짜, 한 회원의 `carryIn`, 하루 원본, inclusive qualification PVP, 규칙 | 실제 reset과 full/below-300 상태를 구분한 완전한 결과 |
 | `evaluateFortnight` | 회원·시작값·원본 누계·규칙 | `FortnightAssessment` |
 | `calculatePlan` | 기간·조직 스냅샷·정규 직접 입력 집합·규칙 | 전체 `CalculationResult` 또는 검증 실패 |
-| `simulatePlan` | 정규 자동 계획 요청·policy `4.0.0`·solve control | verified candidate, proof progress와 `RUNNING/OPTIMAL/TIME_LIMIT/CANCELLED/INFEASIBLE/FAILED` 상태 |
+| `simulatePlan` | 정규 자동 계획 요청·policy `5.0.0`·solve control | verified candidate, 맨 위 회원 목표·미달 안내, proof progress와 `RUNNING/OPTIMAL/TIME_LIMIT/CANCELLED/INFEASIBLE/FAILED` 상태 |
 | `resimulateFuture` | 실제 스냅샷·고정 경계·미래 기준안·규칙 | 미래 후보, 차이, 검증 결과 |
 
 앞의 다섯 계약은 cumulative-PVP-cap-aware ruleset·engine `6.0.0`의 계산 권위다. Phase 4 자동 계획은 이를 독립 verifier로 호출하며, 부분 재시뮬레이션은 이후 Phase에서 같은 계산 코어를 호출한다.
@@ -535,11 +536,11 @@ Phase 4 자동 계획은 불변 `ProjectSetupBundle` 하나에서 시작하며 �
 
 - ruleset·engine `6.0.0`
 - automatic-plan request·problem fingerprint·checkpoint·model·model certificate `2.0.0`
-- automatic-plan policy·objective `4.0.0`
+- automatic-plan policy·objective `5.0.0`
 - worker protocol `2.0.0`, calendar `1.0.0`
 - 제품 실행 제한 상수 `AUTOMATIC_PLAN_PRODUCT_TIME_LIMIT_MS = 1_800_000`
 
-정규 요청은 canonical date-only 전체 반월 날짜 목록과 skip 집합, 루트부터 LEFT 후 RIGHT로 순회한 canonical 회원 키 목록, 회원별 회사 누적 PVP와 내부 opening 매핑, 문제 fingerprint를 명시한다. Policy `4.0.0`은 고정된 `deterministicSeed`와 전체 영업일을 사용하는 deterministic constructive warm start를 가지되 실행 시간 선택값은 갖지 않는다. Warm start는 빠르게 유효 후보를 찾기 위한 것이며 exact·optimal 주장을 하지 않는다. 구형 8일 후보와 이전 시작값 의미를 재사용하지 않도록 policy·request·fingerprint version을 호환성에 포함한다. 제품 정책에는 `runMode`, 사용자 선택 `timeLimitMs`, 3시간·custom duration을 두지 않는다.
+정규 요청은 canonical date-only 전체 반월 날짜 목록과 skip 집합, 루트부터 LEFT 후 RIGHT로 순회한 canonical 회원 키 목록, 회원별 회사 누적 PVP와 내부 opening 매핑, 문제 fingerprint를 명시한다. Policy `5.0.0`은 고정된 `deterministicSeed`와 전체 영업일을 사용하는 deterministic constructive warm start를 가지되 실행 시간 선택값은 갖지 않는다. Warm start는 빠르게 유효 후보를 찾기 위한 것이며 exact·optimal 주장을 하지 않는다. Policy version은 fingerprint 입력이므로 `4.0.0` checkpoint·candidate·model certificate는 호환되지 않는다. 제품 정책에는 `runMode`, 사용자 선택 `timeLimitMs`, 3시간·custom duration을 두지 않는다.
 
 ### 12.2 결정 변수와 candidate shape
 
@@ -552,6 +553,35 @@ Phase 4 자동 계획은 불변 `ProjectSetupBundle` 하나에서 시작하며 �
 연결 방향은 변수가 아니다. 해당 값은 하위 서브트리 변수의 합으로 계산한다. Candidate는 모든 canonical 날짜·회원 쌍에 정확히 한 셀을 가지며 PVP와 모든 editable SELF 필드를 0까지 포함한다. CHILD 필드는 구조적으로 없어야 한다. 중복, 누락, unknown identity·field, 비정규 순서, 문자열, 소수, `NaN`, 무한대, unsafe integer, overflow, 음수, negative zero와 1~29 직접값은 Phase 1 호출 전에 거부한다. 30 이상 값 중 39 같은 비정형 값은 하드 제약과 더 높은 목적에 필요하면 허용한다.
 
 ### 12.3 하드 제약
+
+Canonical 달력에서 `SKIP_NO_INPUT`이 아닌 실제 입력 가능 영업일 수를 `N`으로 둔다. 맨 위 회원의 총량상 정상 커미션 목표 `U`는 다음 파생값으로 요청마다 계산한다.
+
+```text
+L = recursiveMinimumRawLeftTarget(root)   // opening 제외
+R = recursiveMinimumRawRightTarget(root)  // opening 제외
+P = requiredNewPvp(root)  // cumulative opening, selected target,
+                          // lifetime 2,400 cap과 qualification 매핑 반영
+OL = root.dailyCarryLeft
+OR = root.dailyCarryRight
+
+C0(L, R, P, M) = MAX n, where n is an integer and 0 <= n <= M:
+    floor(L / 300) + floor(R / 300) >= n
+    && MAX(0, 300n - L) + MAX(0, 300n - R) <= P
+```
+
+`OL/OR`은 `L/R`에 합산하지 않는다. 시작 잔액은 첫 full commission 한 번에만 사용할 수 있고 그날 초과분까지 reset되어 여러 날짜로 분할할 수 없기 때문이다. Phase 1의 일일 PVP 작은 쪽 적용, qualification, tier와 reset 의미로 첫 정상 커미션을 만드는 기간 신규 소비 tuple 집합 `F={(p0,l0,r0)}`를 exact bounded enumeration으로 파생한다. 각 tuple은 `0<=p0<=P`, `0<=l0<=L`, `0<=r0<=R`이고 opening을 포함한 첫날 계산이 qualification-valid full commission이어야 한다.
+
+```text
+U = MAX(
+  C0(L, R, P, N),
+  MAX over (p0,l0,r0) in F:
+    1 + C0(L-l0, R-r0, P-p0, N-1)
+)
+```
+
+따라서 `OL=OR=10,000`이어도 opening만으로 늘릴 수 있는 일수는 최대 한 번이다. `U=N`이면 최소 총 신규 PV를 유지하는 계획 안에서 맨 위 회원이 모든 입력 가능 영업일에 정상 커미션을 받는 것이 운영 목표다. 총량 자체가 부족한 극소 조직은 `U<N`인 이론상 최대를 목표로 한다. 이 계산은 첫 reset과 남은 최소 목표 총량을 반영한 상한이며, `U`를 채우기 위한 추가 구매를 허용하지 않는다. 또한 이후 날짜별 carry, 자동 직접값 0 또는 30 이상과 조직 배치까지 만족하는 전체 일정의 존재를 증명하지 않으므로 exact solver의 feasibility proof나 후보 거부 조건으로 사용하지 않는다.
+
+표시 계약은 `businessDayCount=N`, `targetCommissionDays=U`, `actualCommissionDays=qualification-valid root full-commission 일수`, `shortfallDays=max(0,U-actualCommissionDays)`, `capacityLimited=(U<N)`, `met=(shortfallDays===0)`이다.
 
 - 모든 회원의 `fortnightPvpOpeningCredit + newPvpTotal`이 직접 선택한 PVP 목표 이상이어야 한다.
 - 모든 회원의 `fortnightPvpOpeningCredit + newPvpTotal`은 2,400 이하여야 한다. 시작값 2,400 회원의 모든 신규 PVP는 0이다.
@@ -566,9 +596,8 @@ Phase 4 자동 계획은 불변 `ProjectSetupBundle` 하나에서 시작하며 �
 - 모든 입력·중간값·목적함수·bound는 exact safe integer 범위 안이어야 한다.
 - canonical Phase 2 topology와 활성 회원 의미를 보존한다.
 - 기간 말 carry는 Phase 1 closing 결과를 그대로 보존한다.
-- 마지막 영업일의 루트 회원은 qualification-valid full commission을 받아야 한다. 루트 목표가 2,400이면 최소 700 단계, 목표가 700 또는 1,500이면 최소 300 단계다. 자연스럽게 더 높은 단계가 발생하는 것은 허용한다.
 
-현재 규칙에는 safe-integer 범위 외의 일일·회원·셀별 운영 capacity가 없다. 모델 성능을 위해 임의 cap을 만들지 않는다. 실제 운영 최대가 확인되면 먼저 RuleSet과 계산 사례의 하드 규칙으로 추가한다. Phase 4에는 수동 셀 잠금, 실제값, 확정 계획, fixed past boundary와 cross-period fairness가 없다.
+`U` 계산에 사용하는 총량상 capacity 외에는 safe-integer 범위 밖의 일일·회원·셀별 운영 cap이 없다. 모델 성능을 위해 임의 cap을 만들지 않는다. Phase 4에는 수동 셀 잠금, 실제값, 확정 계획, fixed past boundary와 cross-period fairness가 없다.
 
 Opening balance 때문에 qualification 300 미만에서 첫 영업일 정산이 강제될 경우, 같은 날짜 direct PVP로 300을 채우거나 certified infeasibility를 증명해야 한다. 목표를 낮추거나 below-300 reset을 없던 것으로 계산하지 않는다.
 
@@ -577,19 +606,20 @@ Opening balance 때문에 qualification 300 미만에서 첫 영업일 정산이
 목적은 아래 순서로 정확히 하나씩 최적화하고 앞 단계의 증명된 최적값을 고정한 뒤 다음 단계로 간다. 부동소수점 가중합을 사용하지 않는다.
 
 1. **총 직접 신규 PV 최소화.** PVP와 editable SELF LEFT/RIGHT 직접 셀을 각각 한 번만 센다. 전파된 조직 합계를 다시 세지 않는다.
-2. **확인된 실제 수당 총액 최대화.** Qualification-valid full commission에 `300→60,000원`, `700→120,000원`, `1,500→240,000원`, `2,400→480,000원`을 적용해 합산한다. 공식 6,000·20,000·60,000 단계는 계산 엔진이 계속 판정하지만 실제 수당표가 아직 없으므로 자동 순위 계산에서 하나라도 나오면 `AUTOMATIC_PLAN_PAYOUT_TABLE_INCOMPLETE`로 fail-closed한다. 값을 추측하거나 0원으로 비교하지 않는다.
-3. **qualification-valid full commission의 일일 discarded excess 총합 최소화.** `prePvp + preLeft + preRight - 2 × commissionTier`를 합산한다.
-4. **조직 깊이 2·3 회원의 일수 분포 개선.** 실제 부모 연결로 깊이를 계산하고 해당 회원의 qualification-valid full commission 일수를 오름차순 정렬한 `priorityDepthAscendingDayVector`를 사전식 최대화한다. 루트와 화면의 `1·2·3` 표지판은 집단 판정에서 제외하며, 13회는 이상적 분산이지 하드 합격선이 아니다.
-5. **남은 목표 1,500·2,400 회원의 일수 분포 개선.** 루트와 4번 집단을 제외한 회원의 일수를 오름차순 정렬한 전체 vector로 비교한다.
-6. **남은 목표 700 회원의 일수 분포 개선.** 루트와 4번 집단을 제외한 회원의 counted day를 오름차순 정렬한 전체 vector를 비교한다. 따라서 `[7,7,7]`이 `[0,8,8]`보다 이긴다. 이 남은 집단의 8일 이상 회원 수와 총 일수는 표시용 통계일 뿐 비교·증명 단계가 아니다.
-7. **추가 비용 없는 미래 누적 PVP 투자 최대화.** 총 직접 신규 PV를 포함한 1~6번이 모두 같은 상태에서 회원별 `max(0, closingCumulativePvp - max(openingCumulativePvp, selectedPvpTarget))`의 합을 최대화한다. 2,400 headroom 안에서만 가능하며 이 목적을 위해 총 PV를 1이라도 늘릴 수 없다.
-8. **100-PV 배수 가독성.** 0이 아닌 직접 editable 셀 중 100으로 나누어떨어지지 않는 셀 수를 최소화한다.
-9. **PVP 집중 완화.** 단일 direct PVP 셀의 최댓값을 최소화한다. 모든 PVP가 0이면 0이다.
-10. **완전한 결정적 allocation vector.** business date 오름차순, canonical root/LEFT/RIGHT 회원 순서, `PVP`, `SELF_LEFT`, `SELF_RIGHT` 순서로 펼치고 첫 차이에서 앞 coordinate의 값이 큰 계획을 선택한다.
+2. **맨 위 회원 목표 미달 일수 최소화.** 같은 최소 총 PV 후보 안에서 `rootCommissionGoalShortfallDays = max(0, U - rootFullCommissionDays)`를 최소화한다. 목표 일수 개선은 추가 PV의 근거가 아니며 fallback 후보를 유효하지 않다고 버리는 규칙도 아니다.
+3. **확인된 실제 수당 총액 최대화.** Qualification-valid full commission에 `300→60,000원`, `700→120,000원`, `1,500→240,000원`, `2,400→480,000원`을 적용해 합산한다. 공식 6,000·20,000·60,000 단계는 계산 엔진이 계속 판정하지만 실제 수당표가 아직 없으므로 자동 순위 계산에서 하나라도 나오면 `AUTOMATIC_PLAN_PAYOUT_TABLE_INCOMPLETE`로 fail-closed한다. 값을 추측하거나 0원으로 비교하지 않는다.
+4. **qualification-valid full commission의 일일 discarded excess 총합 최소화.** `prePvp + preLeft + preRight - 2 × commissionTier`를 합산한다.
+5. **조직 깊이 2·3 회원의 일수 분포 개선.** 실제 부모 연결로 깊이를 계산하고 해당 회원의 qualification-valid full commission 일수를 오름차순 정렬한 `priorityDepthAscendingDayVector`를 사전식 최대화한다. 루트와 화면의 `1·2·3` 표지판은 집단 판정에서 제외하며 이상적 상한은 요청의 `N`이다.
+6. **남은 목표 1,500·2,400 회원의 일수 분포 개선.** 루트와 5번 집단을 제외한 회원의 일수를 오름차순 정렬한 전체 vector로 비교한다.
+7. **남은 목표 700 회원의 일수 분포 개선.** 루트와 5번 집단을 제외한 회원의 counted day를 오름차순 정렬한 전체 vector를 비교한다. 따라서 `[7,7,7]`이 `[0,8,8]`보다 이긴다. 이 남은 집단의 8일 이상 회원 수와 총 일수는 표시용 통계일 뿐 비교·증명 단계가 아니다.
+8. **추가 비용 없는 미래 누적 PVP 투자 최대화.** 1~7번이 모두 같은 상태에서 회원별 `max(0, closingCumulativePvp - max(openingCumulativePvp, selectedPvpTarget))`의 합을 최대화한다. 2,400 headroom 안에서만 가능하며 이 목적을 위해 총 PV를 1이라도 늘릴 수 없다.
+9. **100-PV 배수 가독성.** 0이 아닌 직접 editable 셀 중 100으로 나누어떨어지지 않는 셀 수를 최소화한다.
+10. **PVP 집중 완화.** 단일 direct PVP 셀의 최댓값을 최소화한다. 모든 PVP가 0이면 0이다.
+11. **완전한 결정적 allocation vector.** business date 오름차순, canonical root/LEFT/RIGHT 회원 순서, `PVP`, `SELF_LEFT`, `SELF_RIGHT` 순서로 펼치고 첫 차이에서 앞 coordinate의 값이 큰 계획을 선택한다.
 
-1번 비용 절감은 절대 우선이다. 구매 실적이 100 PV 적은 계획은 700 단계 수당 한 번이 줄어도 이긴다. 수당은 같은 최소 비용 안에서 더 많이 받는 계획을 고르는 2번 목적이며 추가 구매의 근거가 아니다.
+총 PV 최소화는 모든 선호보다 절대 우선이다. 구매 실적이 100 PV 적은 계획은 맨 위 회원 정상 커미션이나 700 단계 수당이 한 번 줄어도 이긴다. 맨 위 회원 shortfall은 같은 최소 비용 안에서 비교하고, 수당은 같은 최소 비용·shortfall 안에서 더 많이 받는 계획을 고르는 3번 목적이다.
 
-공동 하위 기여는 독립 목적이 아니다. 더 깊은 직접 입력이 소유 회원과 여러 상위 목표를 함께 채워 총 PV를 줄이면 1번 목적에서 자연스럽게 이긴다. Exact PVP 100 자체를 보상하거나 PVP-100 셀 수를 최대화하지 않는다. 자동 계획은 1~29 직접값을 만들지 않지만 수동·실제 엔진은 정확한 1 PV 값을 계속 기록할 수 있다. 30 이상인 39 같은 정확 보정이 총 PV를 줄이면 100 배수 계획보다 우선한다. 어떤 수당·일수·미래 투자·가독성 개선도 총 PV를 늘릴 수 없다.
+공동 하위 기여는 독립 목적이 아니다. 더 깊은 직접 입력이 소유 회원과 여러 상위 목표를 함께 채워 총 PV를 줄이면 1번 목적에서 자연스럽게 이긴다. Exact PVP 100 자체를 보상하거나 PVP-100 셀 수를 최대화하지 않는다. 자동 계획은 1~29 직접값을 만들지 않지만 수동·실제 엔진은 정확한 1 PV 값을 계속 기록할 수 있다. 30 이상인 39 같은 정확 보정이 총 PV를 줄이면 100 배수 계획보다 우선한다. Root shortfall을 포함한 어떤 하위 목적도 총 PV를 늘릴 수 없다.
 
 하나의 pure canonical comparator를 solver stage, incumbent 교체, verifier, tiny oracle, checkpoint 재검증과 테스트에서 공유하거나 그 결과와 정확히 같음을 검증한다.
 
@@ -602,7 +632,7 @@ Solver가 보고한 파생값은 권위가 없다. 모든 raw candidate는 다�
 3. 직접값이 0 또는 30 이상인지, 회원별 신규 PVP가 `2400 - openingCumulativePvp` headroom 안인지 확인한다.
 4. 모든 final `allTargetsMet`과 날짜별 qualification trace를 확인한다.
 5. `BELOW_QUALIFICATION_SETTLEMENT`가 하나라도 있으면 자동 후보를 거부한다.
-6. 마지막 영업일 루트의 최소 700/300 full-commission 규칙을 확인한다.
+6. 요청의 `N/L/R/P/U`를 재계산하고 맨 위 회원의 full-commission 일수와 `rootCommissionGoalShortfallDays`를 계산한다. Shortfall은 후보 거부 사유가 아니라 총 PV 다음 비교값과 사용자 안내다.
 7. known payout table로 모든 발생 단계의 수당을 평가할 수 있는지 확인한다. 미확인 상위 단계가 있으면 후보 유효성과 별개로 자동 순위 계산을 fail-closed한다.
 8. canonical objective와 display metric을 CalculationResult에서 checked integer로 다시 계산한다.
 9. Solver score와 하나라도 다르면 model-consistency failure로 처리하고 raw vector를 노출하지 않는다.
@@ -617,9 +647,11 @@ Phase 1 검증은 제출된 한 후보의 soundness만 확인하며 더 나은 �
 2. **Completeness:** 정규 Phase 1 규칙과 sound bound가 허용하는 모든 allocation을 모델이 표현하며 rounding domain, 날짜 생략, topology 단순화, 고정 PVP 위치나 임의 cap으로 유효 후보를 배제하지 않는다.
 3. **Objective preservation:** 모델의 모든 scalar/vector 목적값과 비교가 canonical verifier 결과와 정확히 같다.
 
-Model certificate `2.0.0`은 모델 구현, ruleset·objective·calendar version, solver adapter·version, 정수 범위와 tolerance 가정, 증거 suite를 결합한다. Bounded exhaustive tiny oracle, seeded randomized 비교, 누적 PVP cap·자동 최소 직접값·마지막 루트·tier·qualification·reset·carry·Sunday·objective 경계 테스트와 명시적인 rule-to-constraint mapping을 제공한다. MILP처럼 tolerance를 쓰는 backend는 어떤 accepted integer 결과·bound·증명도 바뀌지 않음을 입증해야 한다.
+Model certificate `2.0.0`은 모델 구현, ruleset·policy·objective·calendar version, solver adapter·version, 정수 범위와 tolerance 가정, 증거 suite를 결합한다. Bounded exhaustive tiny oracle, seeded randomized 비교, 누적 PVP cap·자동 최소 직접값·동적 `N/U`·root shortfall·qualification·reset·carry·Sunday·objective 경계 테스트와 명시적인 rule-to-constraint mapping을 제공한다. MILP처럼 tolerance를 쓰는 backend는 어떤 accepted integer 결과·bound·증명도 바뀌지 않음을 입증해야 한다.
 
 Constructive algorithm과 heuristic은 verified incumbent와 warm start를 만들 수 있지만 `OPTIMAL/INFEASIBLE`을 주장할 수 없다. 활성 request와 model certificate version이 정확히 일치하고 모든 scalar/vector 및 최종 allocation-vector 단계의 완전한 증명이 끝나야 두 증명 상태를 사용할 수 있다.
+
+Constructive candidate가 `U`일을 채우지 못했더라도 나머지 하드 계산 계약을 통과하면 verified shortfall candidate다. UI는 `맨 위 회원 전체 영업일 목표 미달 X일`을 표시하고 탐색을 계속한다. 총량상 목표를 만족하는 일정을 아직 찾지 못했다는 사실은 `INFEASIBLE` 증명이 아니다.
 
 ### 12.7 실행 상태와 증명 정직성
 
@@ -732,7 +764,7 @@ RuleSet 전체를 종료 기록에 넣거나, 버전별 RuleSet 본문을 절대
 
 ### 14.4 Fingerprint의 역할
 
-Phase 4의 `problemFingerprint 2.0.0`은 자동 계획 checkpoint, candidate identity와 warm-start compatibility의 필수 계약이다. 정규 bundle과 회사 누적 PVP·daily-zero 매핑, canonical member sequence, canonical date/skip 집합, ruleset `6.0.0`, policy·objective `4.0.0`, calendar `1.0.0`과 관련 schema version을 키 정렬된 canonical serialization으로 만든 뒤 고정된 hash 알고리즘을 적용한다.
+Phase 4의 `problemFingerprint 2.0.0`은 자동 계획 checkpoint, candidate identity와 warm-start compatibility의 필수 계약이다. 정규 bundle과 회사 누적 PVP·daily-zero 매핑, canonical member sequence, canonical date/skip 집합, ruleset `6.0.0`, policy·objective `5.0.0`, calendar `1.0.0`과 관련 schema version을 키 정렬된 canonical serialization으로 만든 뒤 고정된 hash 알고리즘을 적용한다.
 
 Policy seed, 제품 deadline, run ID, candidate sequence, elapsed time, warm start, proof progress와 UI 상태는 제외한다. 같은 business problem은 search configuration과 warm start 유무에 무관하게 같은 fingerprint를 가져야 한다. Fingerprint는 입력 복원이나 신뢰의 근거가 아니므로 checkpoint allocations는 전체 호환성 확인 뒤 Phase 1 verifier로 다시 계산한다. Phase 6의 종료·캐시 fingerprint가 추가되면 목적과 입력 범위를 별도 schema로 구분한다.
 
@@ -775,11 +807,11 @@ Policy seed, 제품 deadline, run ID, candidate sequence, elapsed time, warm sta
 - Exact model의 soundness, completeness, objective preservation을 certificate와 tiny oracle로 교차 검증한다.
 - 낮은 우선순위 개선 때문에 높은 우선순위가 악화되지 않는지 확인한다.
 - `[7,7,7]` 대 `[0,8,8]`, 빈 target-700 vector, 8 대 9와 higher-tier-one-day를 검증한다.
-- 총 PV가 100 적으면 700 단계 수당 한 번이 줄어도 이기는지, known payout 합계, 조직 깊이 2·3·남은 high-target·남은 target-700 균형 vector와 cost-neutral 미래 PVP 투자를 검증한다.
+- 총 PV가 100 적으면 root full-commission 일수나 700 단계 수당 한 번이 줄어도 이기는지, 같은 최소 총 PV에서 root shortfall, known payout 합계, 조직 깊이 2·3·남은 high-target·남은 target-700 균형 vector와 cost-neutral 미래 PVP 투자를 검증한다.
 - 자동 직접값 0/30 경계, 39 exact 보정, non-100 셀 수, max direct PVP와 deterministic allocation vector의 엄격한 우선순위를 검증한다.
 - 공동 기여, exact PVP 100과 target-700 total days가 독립 목적 단계가 아님을 검증한다.
 - same-date qualification crossing, one-sided pre-qualification carry와 below-300 후보 거부를 검증한다.
-- 누적 PVP 2,400 cap/headroom, 시작 2,400 회원의 PVP 0, 마지막 영업일 루트의 목표별 최소 tier와 미확인 상위 수당표 fail-closed를 검증한다.
+- 누적 PVP 2,400 cap/headroom, 시작 2,400 회원의 PVP 0, `N=13`, `N=14`, 총량 부족 `U=8`, root shortfall fallback과 미확인 상위 수당표 fail-closed를 검증한다.
 - `OPTIMAL/INFEASIBLE`은 complete certified proof에서만 나오고 time limit·cancel·failure는 verified candidate만 보존하는지 확인한다.
 - proven optimum은 byte-for-byte 같고 wall-clock-limited incumbent에는 동일성 보장을 강요하지 않는다.
 - stale run, 감소 sequence, pinned preview race, checkpoint 재검증과 quota failure를 검증한다.
@@ -852,12 +884,12 @@ Phase 1 계산 질문은 모두 확정되었다. 이후 Phase 질문은 해당 �
 |---|---|---|---|
 | **Q-SIM-01** | 기능 최대는 활성 회원 57명이다. 제품 실행은 Web Worker의 단일 30분 제한이며 3시간·custom·background mode는 없다. Verified candidate를 가능하면 5분 안에 게시하고, 30분 종료 후보는 미증명으로 표시한다. `OPTIMAL/INFEASIBLE`은 일치하는 model certificate와 complete exact proof가 있을 때만 가능하다. | 브라우저 성능 gate, 상태·증명 정직성, worker lifecycle 고정 | 2026-07-17 |
 | **Q-SIM-02** | Qualification-valid full commission의 `discardedExcessPv = prePvp + preLeft + preRight - 2 × commissionTier`를 사용한다. 비커미션·skip·below-300 정산은 0이며 terminal carry에는 만료 사건 없는 한 penalty를 주지 않는다. | Known payout 다음 목적과 period-end carry 의미 고정 | 2026-07-14 |
-| **Q-SIM-03** | 실제 조직 깊이 2·3 회원을 첫 counted-day 오름차순 vector로 비교하고, 해당 회원과 루트를 제외한 목표 1,500·2,400, 목표 700 집단을 차례로 비교한다. 화면 표지판은 쓰지 않으며 13회는 이상이지 하드 조건이 아니다. 목표 700의 8일 이상 회원 수와 총 일수는 표시용이다. | 구조 기반 우선 분배, `[7,7,7] > [0,8,8]`, 중복 보상 제거 | 2026-07-17 |
+| **Q-SIM-03** | 실제 조직 깊이 2·3 회원을 첫 counted-day 오름차순 vector로 비교하고, 해당 회원과 루트를 제외한 목표 1,500·2,400, 목표 700 집단을 차례로 비교한다. 화면 표지판은 쓰지 않으며 이상적 상한은 요청의 실제 입력 가능 영업일 수 `N`이다. 목표 700의 8일 이상 회원 수와 총 일수는 표시용이다. | 구조 기반 우선 분배, `[7,7,7] > [0,8,8]`, 중복 보상 제거 | 2026-07-18 |
 | **Q-SIM-04** | Phase 1 수동·실제 엔진은 Exact 1 PV를 허용하되 자동 후보의 직접값은 0 또는 30 이상이다. 높은 목적이 모두 같을 때 non-100-multiple 직접 셀 수를 최소화하고 완전 동률은 canonical allocation vector로 결정한다. | 실제 기록 정밀도와 자동 계획 운영 가능성 분리 | 2026-07-14 |
 | **Q-SIM-05** | 제품 PVP 시작값은 0~2,400 회사 누적 달성값이다. Qualification과 개인 PVP 목표에 같은 값으로 매핑하고 daily PVP opening은 0이다. 보름 좌·우에는 이번 기간 신규 PVP만 적용한다. 당일 direct PVP를 포함한 qualification은 reset되지 않으며 300 미만 정산은 실제 reset하되 자동 후보에서 거부한다. 목표 행은 루트 고정 하한 없이 순수 재귀 계산한다. | Ruleset·engine `6.0.0`, 누적 cap·inclusive gate·재귀 목표 고정 | 2026-07-17 |
 | **Q-UI-OPEN-01** | 회원 설정은 회사 누적 PVP 하나와 일일 좌·우 시작값을 받는다. 누적값 2,400 회원은 신규 PVP를 금지하고 그 미만 회원도 남은 headroom 안에서만 배정한다. 앱은 이전 프로젝트 종료값을 자동 이월하지 않는다. | 실제 입력 단순화와 영구 누적 의미 보존 | 2026-07-14 |
-| **Q-SIM-06** | 총 PV 최소화 뒤 known payout 최대화, discarded excess, 조직 깊이 2·3 균형 vector, 남은 high-target vector, 남은 target-700 vector, cost-neutral 미래 PVP 투자, 100배수, max PVP, tie-break 순서다. Exact PVP 100과 공동 하위 기여는 독립 보상이 아니다. | 실제 수당·구조 기반 공정성·가독성 objective `4.0.0` 고정 | 2026-07-17 |
-| **Q-SIM-07** | 전체 반월 영업일을 후보 생성에 사용하고 마지막 영업일 루트가 반드시 full commission을 받는다. 루트 목표 2,400은 최소 700 단계, 목표 700·1,500은 최소 300 단계다. | 8일 종료 방지와 상위 팀의 기간 말 실적 연속성 보장 | 2026-07-14 |
+| **Q-SIM-06** | 총 PV 최소화 뒤 root shortfall 최소화, known payout 최대화, discarded excess, 조직 깊이 2·3 균형 vector, 남은 high-target vector, 남은 target-700 vector, cost-neutral 미래 PVP 투자, 100배수, max PVP, tie-break 순서다. Root 일수·exact PVP 100·공동 하위 기여는 추가 구매의 근거가 아니다. | 최소 비용·운영 목표·실제 수당·구조 기반 공정성·가독성 objective `5.0.0` 고정 | 2026-07-18 |
+| **Q-SIM-07** | 실제 입력 가능 영업일 수 `N`과 순수 재귀 최소 목표·필요 신규 PVP 총량으로 no-opening capacity를 구하고, 루트 시작 carry는 첫 full commission의 exact 소비·reset 한 번으로만 별도 반영해 `U`를 계산한다. `U=N`이면 루트가 모든 영업일에, 총량 부족 조직은 이론상 최대 `U`일에 full commission을 받는 것이 운영 목표다. Shortfall 후보는 검증해 경고와 함께 제공하며 exact 증명 없이 `INFEASIBLE`로 표시하지 않는다. 마지막 날 700/300 특례는 없다. | 동적 전 기간 활동과 작은 조직 fallback 계약 고정 | 2026-07-18 |
 
 ### 17.3 이후 Phase 차단 질문
 

@@ -6,6 +6,16 @@ export interface AutomaticPlanPreviewMetrics {
   readonly optimalityProven: boolean;
   readonly runStatusLabel: string;
   readonly discardedExcessPv: number;
+  readonly rootCommissionGoal: {
+    readonly rootMemberKey: string;
+    readonly rootMemberLabel: string;
+    readonly businessDayCount: number;
+    readonly targetCommissionDays: number;
+    readonly actualCommissionDays: number;
+    readonly shortfallDays: number;
+    readonly capacityLimited: boolean;
+    readonly met: boolean;
+  };
   readonly priorityDepthMemberDayCounts: readonly {
     readonly memberKey: string;
     readonly memberLabel: string;
@@ -29,8 +39,6 @@ export interface AutomaticPlanPreviewMetrics {
   readonly nonHundredCellCount: number;
   readonly maxDirectPvp: number;
   readonly terminalCarryTotal: number;
-  readonly allTargetsMet: boolean;
-  readonly allCommissionsQualified: boolean;
 }
 
 export interface AutomaticPlanPreviewProps {
@@ -79,6 +87,17 @@ export function AutomaticPlanPreview({
         <div><dt>총 신규 PV</dt><dd>{metrics.totalNewPv.toLocaleString('ko-KR')}</dd></div>
         <div><dt>확인된 수당 합계</dt><dd>{metrics.confirmedPayoutWon.toLocaleString('ko-KR')}원</dd></div>
         <div><dt>정산 시 소멸 초과분</dt><dd>{metrics.discardedExcessPv.toLocaleString('ko-KR')}</dd></div>
+        <div>
+          <dt>맨 위 회원 수당</dt>
+          <dd>
+            {metrics.rootCommissionGoal.actualCommissionDays} /{' '}
+            {metrics.rootCommissionGoal.targetCommissionDays}영업일
+          </dd>
+        </div>
+        <div>
+          <dt>계획 영업일</dt>
+          <dd>{metrics.rootCommissionGoal.businessDayCount}일</dd>
+        </div>
         <div><dt>그 외 700 목표 중 8일 이상</dt><dd>{metrics.target700MembersAtLeastEight}명</dd></div>
         <div><dt>그 외 700 목표 총 발생일</dt><dd>{metrics.target700TotalCommissionDays}일 (표시용)</dd></div>
         <div><dt>미래 누적 PVP 투자</dt><dd>{metrics.futureCumulativePvpInvestmentPv.toLocaleString('ko-KR')}</dd></div>
@@ -87,11 +106,32 @@ export function AutomaticPlanPreview({
         <div><dt>기간 말 잔액</dt><dd>{metrics.terminalCarryTotal.toLocaleString('ko-KR')} (폐기 아님)</dd></div>
       </dl>
 
+      <p className="automatic-plan-preview__goal-note">
+        전체 영업일을 계획 범위로 사용합니다. 모든 회원이 매일 직접 입력해야 한다는 뜻은 아닙니다.
+      </p>
+
+      {metrics.rootCommissionGoal.capacityLimited ? (
+        <p className="automatic-plan-preview__goal-note">
+          현재 총량 기준 목표 {metrics.rootCommissionGoal.targetCommissionDays}일
+        </p>
+      ) : null}
+
+      {metrics.rootCommissionGoal.met ? null : (
+        <p className="automatic-plan-preview__goal-note" role="status">
+          맨 위 회원 수당 목표가 {metrics.rootCommissionGoal.shortfallDays}일 부족합니다.{' '}
+          보름 목표와 자격은 확인된 계획이지만{' '}
+          {metrics.rootCommissionGoal.capacityLimited
+            ? '현재 총량 기준 목표는 아직 채우지 못했습니다.'
+            : '전체 영업일 목표는 아직 채우지 못했습니다.'}
+        </p>
+      )}
+
       {metrics.priorityDepthMemberDayCounts.length === 0 ? null : (
         <ul className="automatic-plan-preview__days" aria-label="조직 2·3번 우선 회원별 발생일">
           {metrics.priorityDepthMemberDayCounts.map((member) => (
             <li key={member.memberKey}>
-              {member.memberLabel} (조직 {member.organizationDepth}번): {member.days}일
+              {member.memberLabel} (조직 {member.organizationDepth}번):{' '}
+              {member.days}/{metrics.rootCommissionGoal.businessDayCount}일
             </li>
           ))}
         </ul>
@@ -101,7 +141,8 @@ export function AutomaticPlanPreview({
         <ul className="automatic-plan-preview__days" aria-label="고목표 회원별 발생일">
           {metrics.highTargetMemberDayCounts.map((member) => (
             <li key={member.memberKey}>
-              {member.memberLabel} (목표 {member.pvpTarget.toLocaleString('ko-KR')}): {member.days}일
+              {member.memberLabel} (목표 {member.pvpTarget.toLocaleString('ko-KR')}):{' '}
+              {member.days}/{metrics.rootCommissionGoal.businessDayCount}일
             </li>
           ))}
         </ul>
@@ -110,14 +151,16 @@ export function AutomaticPlanPreview({
       {metrics.target700MemberDayCounts.length === 0 ? null : (
         <ul className="automatic-plan-preview__days" aria-label="그 외 700 목표 회원별 발생일">
           {metrics.target700MemberDayCounts.map((member) => (
-            <li key={member.memberKey}>{member.memberLabel}: {member.days}일</li>
+            <li key={member.memberKey}>
+              {member.memberLabel}: {member.days}/{metrics.rootCommissionGoal.businessDayCount}일
+            </li>
           ))}
         </ul>
       )}
 
       <div className="automatic-plan-preview__checks">
-        <span>{metrics.allTargetsMet ? '✓ 모든 회원 목표 충족' : '⚠ 목표 확인 필요'}</span>
-        <span>{metrics.allCommissionsQualified ? '✓ 모든 정산일 자격 300 이상' : '⚠ 자격 확인 필요'}</span>
+        <span>✓ 모든 회원의 보름 목표를 확인했습니다.</span>
+        <span>✓ 모든 정산일의 수당 자격을 확인했습니다.</span>
       </div>
 
       <div className="form-actions">

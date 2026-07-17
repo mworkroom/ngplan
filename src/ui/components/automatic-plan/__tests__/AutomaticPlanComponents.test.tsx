@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApplyAutomaticPlanDialog } from '../ApplyAutomaticPlanDialog';
@@ -17,6 +17,16 @@ const METRICS = {
   optimalityProven: false,
   runStatusLabel: '최적성 확인 중',
   discardedExcessPv: 0,
+  rootCommissionGoal: {
+    rootMemberKey: 'root',
+    rootMemberLabel: '맨 위 회원',
+    businessDayCount: 13,
+    targetCommissionDays: 13,
+    actualCommissionDays: 12,
+    shortfallDays: 1,
+    capacityLimited: false,
+    met: false,
+  },
   priorityDepthMemberDayCounts: [
     {
       memberKey: 'priority',
@@ -31,14 +41,12 @@ const METRICS = {
   target700MembersAtLeastEight: 1,
   target700TotalCommissionDays: 8,
   target700MemberDayCounts: [
-    { memberKey: 'root', memberLabel: '루트 회원', days: 8 },
+    { memberKey: 'other-700', memberLabel: '그 외 700 회원', days: 8 },
   ],
   futureCumulativePvpInvestmentPv: 100,
   nonHundredCellCount: 0,
   maxDirectPvp: 300,
   terminalCarryTotal: 200,
-  allTargetsMet: true,
-  allCommissionsQualified: true,
 } as const;
 
 describe('automatic plan operator components', () => {
@@ -129,6 +137,27 @@ describe('automatic plan operator components', () => {
     expect(screen.getByText('0분 00초 / 최대 0분 00초')).toBeTruthy();
   });
 
+  it('scopes a proof-only failure to minimum checking while retaining the plan', () => {
+    render(
+      <AutomaticPlanProgress
+        status="FAILED"
+        elapsedMs={1_000}
+        maximumMs={1_800_000}
+        hasCandidate
+        bestTotalNewPv={5_000}
+        phaseLabel="최소값 확인만 중단됨"
+        errorMessage="기술적인 증명 도구 오류"
+        proofOnlyFailure
+      />,
+    );
+
+    expect(screen.getByRole('status').textContent).toContain(
+      '정확한 최소값 확인만 중단됐습니다. 찾은 검증 계획은 사용할 수 있습니다.',
+    );
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByText('기술적인 증명 도구 오류')).toBeNull();
+  });
+
   it('exposes start, stop, preview, and fresh restart without an extended mode', async () => {
     const user = userEvent.setup();
     const onStart = vi.fn();
@@ -205,13 +234,23 @@ describe('automatic plan operator components', () => {
     expect(screen.getByText('200 (폐기 아님)')).toBeTruthy();
     expect(screen.getByText('그 외 700 목표 중 8일 이상')).toBeTruthy();
     expect(screen.getByRole('list', { name: '그 외 700 목표 회원별 발생일' })).toBeTruthy();
+    const rootGoalMetric = screen.getByText('맨 위 회원 수당').closest('div');
+    expect(rootGoalMetric).not.toBeNull();
+    expect(within(rootGoalMetric!).getByText('12 / 13영업일')).toBeTruthy();
+    expect(screen.getByText('계획 영업일').nextElementSibling?.textContent).toBe('13일');
+    expect(
+      screen.getByText(/맨 위 회원 수당 목표가 1일 부족합니다/),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/모든 회원이 매일 직접 입력해야 한다는 뜻은 아닙니다/),
+    ).toBeTruthy();
     await user.click(screen.getByRole('button', { name: '새 계획 보기' }));
     await user.click(screen.getByRole('button', { name: '이 계획을 계획표에 적용' }));
     expect(onSwitch).toHaveBeenCalledOnce();
     expect(onApply).toHaveBeenCalledOnce();
   });
 
-  it('renders a proven empty-fairness preview and warning checks without a newer plan', async () => {
+  it('renders a proven empty-fairness preview and confirmed checks without a newer plan', async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
     render(
@@ -223,8 +262,12 @@ describe('automatic plan operator components', () => {
           priorityDepthMemberDayCounts: [],
           highTargetMemberDayCounts: [],
           target700MemberDayCounts: [],
-          allTargetsMet: false,
-          allCommissionsQualified: false,
+          rootCommissionGoal: {
+            ...METRICS.rootCommissionGoal,
+            actualCommissionDays: 13,
+            shortfallDays: 0,
+            met: true,
+          },
         }}
         newerCandidateAvailable={false}
         onSwitchToLatest={vi.fn()}
@@ -233,11 +276,70 @@ describe('automatic plan operator components', () => {
       />,
     );
     expect(screen.getByText(/최소값 확인 완료/)).toBeTruthy();
-    expect(screen.getByText('⚠ 목표 확인 필요')).toBeTruthy();
-    expect(screen.getByText('⚠ 자격 확인 필요')).toBeTruthy();
+    expect(screen.getByText('✓ 모든 회원의 보름 목표를 확인했습니다.')).toBeTruthy();
+    expect(screen.getByText('✓ 모든 정산일의 수당 자격을 확인했습니다.')).toBeTruthy();
+    expect(screen.queryByText(/수당 목표가 .* 부족합니다/)).toBeNull();
     expect(screen.queryByRole('list', { name: '그 외 700 목표 회원별 발생일' })).toBeNull();
     await user.click(screen.getByRole('button', { name: '닫기' }));
     expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('uses a dynamic business-day denominator and explains a capacity-limited goal', () => {
+    render(
+      <AutomaticPlanPreview
+        metrics={{
+          ...METRICS,
+          rootCommissionGoal: {
+            ...METRICS.rootCommissionGoal,
+            businessDayCount: 14,
+            targetCommissionDays: 10,
+            actualCommissionDays: 10,
+            shortfallDays: 0,
+            capacityLimited: true,
+            met: true,
+          },
+        }}
+        newerCandidateAvailable={false}
+        onSwitchToLatest={vi.fn()}
+        onApply={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const rootGoalMetric = screen.getByText('맨 위 회원 수당').closest('div');
+    expect(rootGoalMetric).not.toBeNull();
+    expect(within(rootGoalMetric!).getByText('10 / 10영업일')).toBeTruthy();
+    expect(screen.getByText('계획 영업일').nextElementSibling?.textContent).toBe('14일');
+    expect(screen.getByText('현재 총량 기준 목표 10일')).toBeTruthy();
+    expect(screen.getByText('조직 우선 회원 (조직 2번): 12/14일')).toBeTruthy();
+  });
+
+  it('describes a capacity-limited shortfall against the aggregate goal', () => {
+    render(
+      <AutomaticPlanPreview
+        metrics={{
+          ...METRICS,
+          rootCommissionGoal: {
+            ...METRICS.rootCommissionGoal,
+            businessDayCount: 14,
+            targetCommissionDays: 10,
+            actualCommissionDays: 9,
+            shortfallDays: 1,
+            capacityLimited: true,
+            met: false,
+          },
+        }}
+        newerCandidateAvailable={false}
+        onSwitchToLatest={vi.fn()}
+        onApply={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByText(/현재 총량 기준 목표는 아직 채우지 못했습니다/),
+    ).toBeTruthy();
+    expect(screen.queryByText(/전체 영업일 목표는 아직 채우지 못했습니다/)).toBeNull();
   });
 
   it('wires a running panel to its pinned preview actions', async () => {

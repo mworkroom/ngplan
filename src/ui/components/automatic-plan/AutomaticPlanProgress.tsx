@@ -15,6 +15,7 @@ export interface AutomaticPlanProgressProps {
   readonly bestTotalNewPv: number | null;
   readonly phaseLabel: string;
   readonly errorMessage?: string | null;
+  readonly proofOnlyFailure?: boolean;
 }
 
 function formatElapsed(milliseconds: number): string {
@@ -54,6 +55,7 @@ export function AutomaticPlanProgress({
   bestTotalNewPv,
   phaseLabel,
   errorMessage = null,
+  proofOnlyFailure = false,
 }: AutomaticPlanProgressProps) {
   const progress = maximumMs <= 0 ? 0 : Math.min(1, Math.max(0, elapsedMs / maximumMs));
   return (
@@ -74,7 +76,13 @@ export function AutomaticPlanProgress({
         )}
         <span className="visually-hidden">진행률 {Math.round(progress * 100)}%</span>
       </div>
-      {errorMessage === null ? null : <p role="alert">{errorMessage}</p>}
+      {errorMessage === null ? null : proofOnlyFailure && hasCandidate ? (
+        <p role="status">
+          정확한 최소값 확인만 중단됐습니다. 찾은 검증 계획은 사용할 수 있습니다.
+        </p>
+      ) : (
+        <p role="alert">{errorMessage}</p>
+      )}
     </div>
   );
 }

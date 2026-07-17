@@ -4,6 +4,7 @@ import type { NormalizedAllocationCell } from '../../engine';
 import {
   AUTOMATIC_PLAN_RULESET_VERSION,
   buildConstructiveCandidate,
+  buildConstructiveCandidateVariants,
   buildVerifiedConstructiveCandidate,
   deriveNormalizedAutomaticPlanCalendar,
   deriveCanonicalAutomaticPlanMemberKeys,
@@ -663,7 +664,7 @@ describe('Phase 4 request and candidate boundary', () => {
     }
   });
 
-  it('uses every business date and preserves a final-business-date root commission', () => {
+  it('uses every business date without requiring a final-business-date root commission', () => {
     const request = createOptimizerRequest();
     const built = buildConstructiveCandidate(request);
     if (built.status !== 'SUCCESS') throw new Error('constructive fixture failed');
@@ -690,13 +691,18 @@ describe('Phase 4 request and candidate boundary', () => {
         businessDates.at(-1)!
       ]?.root,
     ).toMatchObject({
-      settlementKind: 'FULL_COMMISSION',
+      settlementKind: 'NO_COMMISSION',
       qualificationThresholdMet: true,
-      commissionTier: 300,
+      commissionTier: null,
+    });
+    expect(verified.candidate.display.rootCommissionGoal).toMatchObject({
+      rootMemberKey: 'root',
+      businessDayCount: businessDates.length,
+      targetCommissionDays: 8,
     });
   });
 
-  it('rejects a target-700 root without a commission on the final business date', () => {
+  it('accepts a target-700 root without a commission on the final business date', () => {
     const request = createOptimizerRequest();
     const built = buildConstructiveCandidate(request);
     if (built.status !== 'SUCCESS') throw new Error('constructive fixture failed');
@@ -719,28 +725,17 @@ describe('Phase 4 request and candidate boundary', () => {
       selfRight: 0,
     });
 
-    expect(
-      verifyAutomaticPlanCandidate(
+    const verified = verifyAutomaticPlanCandidate(
         request,
         { problemFingerprint: request.problemFingerprint, allocations },
         { candidateId: 'missing-final-root-commission', sequence: 1, foundAtElapsedMs: 0 },
-      ),
-    ).toMatchObject({
-      status: 'FAILURE',
-      error: {
-        code: 'AUTOMATIC_PLAN_TARGET_UNMET',
-        message: expect.stringContaining('300단계'),
-        location: {
-          date: request.calendar.dates.filter(
-            (date) => !request.calendar.skipDateSet.includes(date),
-          ).at(-1),
-          memberKey: 'root',
-        },
-      },
-    });
+      );
+    expect(verified.status).toBe('SUCCESS');
+    if (verified.status !== 'SUCCESS') return;
+    expect(verified.candidate.display.rootCommissionGoal.targetCommissionDays).toBe(8);
   });
 
-  it('P4-CAP/PERIOD keeps opening 2,400 PVP at zero and reserves root tier 700', () => {
+  it('P4-CAP/PERIOD keeps opening 2,400 PVP at zero without a final tier rule', () => {
     const opening = optimizerOpening({
       openingQualificationPvp: 2_400,
       fortnightPvpOpeningCredit: 2_400,
@@ -765,12 +760,16 @@ describe('Phase 4 request and candidate boundary', () => {
         finalBusinessDate
       ]?.root,
     ).toMatchObject({
-      settlementKind: 'FULL_COMMISSION',
-      commissionTier: 700,
+      settlementKind: 'NO_COMMISSION',
+      commissionTier: null,
+    });
+    expect(verified.candidate.display.rootCommissionGoal).toMatchObject({
+      targetCommissionDays: 8,
+      capacityLimited: true,
     });
   });
 
-  it('rejects a target-2,400 root whose final business day reaches only tier 300', () => {
+  it('accepts a target-2,400 root whose final business day reaches tier 300', () => {
     const opening = optimizerOpening({
       openingQualificationPvp: 2_400,
       fortnightPvpOpeningCredit: 2_400,
@@ -779,42 +778,21 @@ describe('Phase 4 request and candidate boundary', () => {
       [optimizerMember('root', null, null, 2_400)],
       Object.freeze({ root: opening }),
     );
-    const built = buildConstructiveCandidate(request);
-    if (built.status !== 'SUCCESS') throw new Error('constructive fixture failed');
-    const businessIndexes = built.candidate.allocations
-      .map((cell, index) => ({ cell, index }))
-      .filter(({ cell }) => !request.calendar.skipDateSet.includes(cell.date))
-      .map(({ index }) => index);
-    const previousIndex = businessIndexes.at(-2)!;
-    const finalIndex = businessIndexes.at(-1)!;
-    const previous = built.candidate.allocations[previousIndex]!;
-    const final = built.candidate.allocations[finalIndex]!;
-    const retainedFinalSide = 300;
-    expect(final.selfLeft).toBeGreaterThanOrEqual(700);
-    expect(final.selfRight).toBeGreaterThanOrEqual(700);
-    let allocations = replaceCell(built.candidate.allocations, previousIndex, {
-      selfLeft: previous.selfLeft! + final.selfLeft! - retainedFinalSide,
-      selfRight: previous.selfRight! + final.selfRight! - retainedFinalSide,
-    });
-    allocations = replaceCell(allocations, finalIndex, {
-      selfLeft: retainedFinalSide,
-      selfRight: retainedFinalSide,
-    });
-
+    const aligned = buildConstructiveCandidateVariants(request)[1];
+    if (aligned?.status !== 'SUCCESS') throw new Error('aligned fixture failed');
+    const verified = verifyAutomaticPlanCandidate(
+      request,
+      aligned.candidate,
+      { candidateId: 'final-root-tier-300', sequence: 1, foundAtElapsedMs: 0 },
+    );
+    expect(verified.status).toBe('SUCCESS');
+    if (verified.status !== 'SUCCESS') return;
+    const finalBusinessDate = request.calendar.dates
+      .filter((date) => !request.calendar.skipDateSet.includes(date))
+      .at(-1)!;
     expect(
-      verifyAutomaticPlanCandidate(
-        request,
-        { problemFingerprint: request.problemFingerprint, allocations },
-        { candidateId: 'final-root-tier-too-low', sequence: 1, foundAtElapsedMs: 0 },
-      ),
-    ).toMatchObject({
-      status: 'FAILURE',
-      error: {
-        code: 'AUTOMATIC_PLAN_TARGET_UNMET',
-        message: expect.stringContaining('700단계'),
-        location: { memberKey: 'root' },
-      },
-    });
+      verified.candidate.calculation.dailySettlementByDateAndMember[finalBusinessDate]?.root,
+    ).toMatchObject({ settlementKind: 'FULL_COMMISSION', commissionTier: 300 });
   });
 
   it('fails construction when a target-2,400 deficit is smaller than the 30-PV minimum', () => {
@@ -939,6 +917,7 @@ describe('Phase 4 request and candidate boundary', () => {
         {
           ...built.candidate,
           claimedObjective: {
+            rootCommissionGoalShortfallDays: 0,
             totalNewPv: 1,
             confirmedPayoutWon: 0,
             discardedExcessPv: 0,
@@ -963,6 +942,7 @@ describe('Phase 4 request and candidate boundary', () => {
         {
           ...built.candidate,
           claimedObjective: {
+            rootCommissionGoalShortfallDays: 0,
             totalNewPv: 5_700,
             confirmedPayoutWon: 0,
             discardedExcessPv: 0,

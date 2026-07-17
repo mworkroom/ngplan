@@ -1,4 +1,5 @@
 import {
+  AUTOMATIC_PLAN_OBJECTIVE_STAGE_ORDER,
   compareAutomaticPlanObjectives,
   verifyAutomaticPlanCandidate,
   type AutomaticPlanProofProgress,
@@ -32,7 +33,7 @@ export interface AutomaticPlanRunControllerOptions {
 }
 
 const INITIAL_PROOF: AutomaticPlanProofProgress = Object.freeze({
-  stage: 'TOTAL_NEW_PV',
+  stage: AUTOMATIC_PLAN_OBJECTIVE_STAGE_ORDER[0],
   provenScalarObjectiveCount: 0,
   provenVectorPrefix: null,
   primaryLowerBound: null,

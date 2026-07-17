@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { AUTOMATIC_PLAN_PROVEN_SCALAR_OBJECTIVE_COUNT } from '../../../optimizer';
+import {
+  AUTOMATIC_PLAN_OBJECTIVE_STAGE_ORDER,
+  AUTOMATIC_PLAN_PROVEN_SCALAR_OBJECTIVE_COUNT,
+} from '../../../optimizer';
 import {
   AUTOMATIC_PLAN_WORKER_PROTOCOL_VERSION,
   isAutomaticPlanWorkerResponse,
 } from '../worker-protocol';
 
 const PROOF = Object.freeze({
-  stage: 'TOTAL_NEW_PV',
+  stage: AUTOMATIC_PLAN_OBJECTIVE_STAGE_ORDER[0],
   provenScalarObjectiveCount: 0,
   provenVectorPrefix: null,
   primaryLowerBound: null,

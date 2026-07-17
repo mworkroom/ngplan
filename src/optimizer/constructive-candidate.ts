@@ -6,6 +6,7 @@ import {
 } from './candidate-shape';
 import { automaticPlanError } from './errors';
 import { verifyAutomaticPlanCandidate } from './candidate-verifier';
+import { deriveRootCommissionGoalCapacity } from './root-commission-goal';
 import type {
   AutomaticPlanCandidateIdentity,
   AutomaticPlanConstructionOutcome,
@@ -123,32 +124,6 @@ function deriveChildSlots(request: AutomaticPlanRequest): ReadonlyMap<string, Ch
   return slots;
 }
 
-function findBoundarySide(
-  memberKey: string,
-  slots: ReadonlyMap<string, ChildSlots>,
-): SideFieldRef {
-  const children = slots.get(memberKey)!;
-  if (children.left === undefined) {
-    return { memberKey, field: 'SELF_LEFT' };
-  }
-  if (children.right === undefined) {
-    return { memberKey, field: 'SELF_RIGHT' };
-  }
-  return findBoundarySide(children.left, slots);
-}
-
-function rootSideAnchor(
-  rootKey: string,
-  side: 'LEFT' | 'RIGHT',
-  slots: ReadonlyMap<string, ChildSlots>,
-): SideFieldRef {
-  const rootSlots = slots.get(rootKey)!;
-  const childKey = side === 'LEFT' ? rootSlots.left : rootSlots.right;
-  return childKey === undefined
-    ? { memberKey: rootKey, field: side === 'LEFT' ? 'SELF_LEFT' : 'SELF_RIGHT' }
-    : findBoundarySide(childKey, slots);
-}
-
 function directValue(cell: MutableCell, field: DirectField): number {
   if (field === 'PVP') return cell.pvp;
   if (field === 'SELF_LEFT') return cell.selfLeft ?? 0;
@@ -198,37 +173,114 @@ function rootSideForField(
   return null;
 }
 
-function payoutProfile(
+function evenlySpacedIndexes(totalCount: number, selectedCount: number): readonly number[] {
+  if (selectedCount <= 0 || totalCount <= 0) return Object.freeze([]);
+  if (selectedCount === 1) return Object.freeze([0]);
+  return Object.freeze(Array.from({ length: selectedCount }, (_, index) =>
+    Math.round(index * (totalCount - 1) / (selectedCount - 1))));
+}
+
+function addProfileRemainder(
+  profile: number[],
   total: number,
-  earlierDateCount: number,
-  finalFixed: number,
-): readonly number[] {
-  const profile = Array.from({ length: earlierDateCount + 1 }, () => 0);
-  profile[earlierDateCount] = finalFixed;
-  if (earlierDateCount === 0) return Object.freeze(profile);
-
-  let remaining = total - finalFixed;
-  const base = remaining >= earlierDateCount * PREFERRED_DIRECT_PV_BLOCK
-    ? PREFERRED_DIRECT_PV_BLOCK
-    : Math.floor(remaining / earlierDateCount);
-  for (let index = 0; index < earlierDateCount; index += 1) {
-    profile[index] = base;
+  targetIndexes: readonly number[],
+): void {
+  if (total <= 0 || targetIndexes.length === 0) return;
+  const quotient = Math.floor(total / targetIndexes.length);
+  const remainder = total % targetIndexes.length;
+  for (let index = 0; index < targetIndexes.length; index += 1) {
+    profile[targetIndexes[index]!] = profile[targetIndexes[index]!]! +
+      quotient + (index < remainder ? 1 : 0);
   }
-  remaining -= base * earlierDateCount;
+}
 
-  for (let index = 0; index < earlierDateCount && remaining > 0; index += 1) {
-    const added = Math.min(2_400 - profile[index]!, remaining);
-    profile[index] = profile[index]! + added;
-    remaining -= added;
+function addPvpProfileRemainder(
+  profile: number[],
+  total: number,
+  targetIndexes: readonly number[],
+): void {
+  if (total <= 0 || targetIndexes.length === 0) return;
+  const preferredIndexes = [
+    ...targetIndexes.filter((index) => profile[index]! > 0),
+    ...targetIndexes.filter((index) => profile[index] === 0),
+  ];
+  const chunks = preferredPvpChunks(total);
+  for (let index = 0; index < chunks.length; index += 1) {
+    const targetIndex = preferredIndexes[index % preferredIndexes.length]!;
+    profile[targetIndex] = profile[targetIndex]! + chunks[index]!;
   }
-  if (remaining > 0) {
-    const quotient = Math.floor(remaining / earlierDateCount);
-    const remainder = remaining % earlierDateCount;
-    for (let index = 0; index < earlierDateCount; index += 1) {
-      profile[index] = profile[index]! + quotient + (index < remainder ? 1 : 0);
+}
+
+function rootCommissionProfiles(
+  request: AutomaticPlanRequest,
+): Readonly<Record<RootSide | 'PVP', readonly number[]>> {
+  const goal = deriveRootCommissionGoalCapacity(request);
+  const left = Array.from({ length: goal.businessDayCount }, () => 0);
+  const right = Array.from({ length: goal.businessDayCount }, () => 0);
+  const pvp = Array.from({ length: goal.businessDayCount }, () => 0);
+  const targetIndexes = evenlySpacedIndexes(
+    goal.businessDayCount,
+    goal.targetCommissionDays,
+  );
+  const first = goal.firstCommissionConsumption;
+  if (first === null || targetIndexes.length === 0) {
+    addProfileRemainder(left, goal.minimumRawLeftPv, [0]);
+    addProfileRemainder(right, goal.minimumRawRightPv, [0]);
+    addPvpProfileRemainder(pvp, goal.requiredRootPvp, [0]);
+    return Object.freeze({ LEFT: left, RIGHT: right, PVP: pvp });
+  }
+
+  const firstIndex = targetIndexes[0]!;
+  left[firstIndex] = first.rawLeftPv;
+  right[firstIndex] = first.rawRightPv;
+  pvp[firstIndex] = first.pvp;
+  let remainingLeft = goal.minimumRawLeftPv - first.rawLeftPv;
+  let remainingRight = goal.minimumRawRightPv - first.rawRightPv;
+  let remainingPvp = goal.requiredRootPvp - first.pvp;
+  const remainingTargetIndexes = targetIndexes.slice(1);
+  const remainingDayCount = remainingTargetIndexes.length;
+  if (remainingDayCount > 0) {
+    const leftFullCount = Math.max(
+      0,
+      remainingDayCount - Math.min(
+        remainingDayCount,
+        Math.floor(remainingRight / 300),
+      ),
+    );
+    for (let index = 0; index < remainingDayCount; index += 1) {
+      const targetIndex = remainingTargetIndexes[index]!;
+      if (index < leftFullCount) {
+        left[targetIndex] = 300;
+        remainingLeft -= 300;
+      } else {
+        right[targetIndex] = 300;
+        remainingRight -= 300;
+      }
+    }
+    for (const targetIndex of remainingTargetIndexes) {
+      const leftNeeded = 300 - left[targetIndex]!;
+      const addedLeft = Math.min(leftNeeded, remainingLeft);
+      left[targetIndex] = left[targetIndex]! + addedLeft;
+      remainingLeft -= addedLeft;
+      const rightNeeded = 300 - right[targetIndex]!;
+      const addedRight = Math.min(rightNeeded, remainingRight);
+      right[targetIndex] = right[targetIndex]! + addedRight;
+      remainingRight -= addedRight;
+      const pvpNeeded =
+        Math.max(0, 300 - left[targetIndex]!) +
+        Math.max(0, 300 - right[targetIndex]!);
+      pvp[targetIndex] = pvpNeeded;
+      remainingPvp -= pvpNeeded;
     }
   }
-  return Object.freeze(profile);
+  addProfileRemainder(left, remainingLeft, targetIndexes);
+  addProfileRemainder(right, remainingRight, targetIndexes);
+  addPvpProfileRemainder(pvp, remainingPvp, targetIndexes);
+  return Object.freeze({
+    LEFT: Object.freeze(left),
+    RIGHT: Object.freeze(right),
+    PVP: Object.freeze(pvp),
+  });
 }
 
 /**
@@ -238,7 +290,17 @@ function payoutProfile(
  * heuristic candidate; the canonical verifier and objective comparator decide
  * whether it is usable and better than the staggered feasibility candidate.
  */
-function buildRootPayoutAlignedCandidate(
+function checkedSum(values: readonly number[]): number | null {
+  let total = 0;
+  for (const value of values) {
+    const next = total + value;
+    if (!Number.isSafeInteger(next)) return null;
+    total = next;
+  }
+  return total;
+}
+
+function buildRootPayoutAlignedCandidateUnchecked(
   request: AutomaticPlanRequest,
   baseline: RawAutomaticPlanCandidate,
 ): RawAutomaticPlanCandidate {
@@ -247,14 +309,17 @@ function buildRootPayoutAlignedCandidate(
   if (businessDates.length <= 1) return baseline;
 
   const rootKey = request.canonicalMemberKeys[0]!;
-  const childSlots = deriveChildSlots(request);
   const rootSideByMember = deriveRootSideByMember(request, rootKey);
-  const finalBusinessDate = businessDates.at(-1)!;
-  const earlierBusinessDates = businessDates.slice(0, -1);
-  const finalAnchors = new Set([
-    sideFieldKey(rootSideAnchor(rootKey, 'LEFT', childSlots)),
-    sideFieldKey(rootSideAnchor(rootKey, 'RIGHT', childSlots)),
-  ]);
+  const profiles = rootCommissionProfiles(request);
+  const profileRootPvpTotal = checkedSum(profiles.PVP);
+  const baselineRootPvpTotal = checkedSum(baseline.allocations
+    .filter((cell) => cell.memberKey === rootKey)
+    .map((cell) => cell.pvp));
+  if (
+    profileRootPvpTotal === null ||
+    baselineRootPvpTotal === null ||
+    profileRootPvpTotal !== baselineRootPvpTotal
+  ) return baseline;
   const baselineCells = new Map(
     baseline.allocations.map((cell) => [cellKey(cell.date, cell.memberKey), cell] as const),
   );
@@ -293,6 +358,13 @@ function buildRootPayoutAlignedCandidate(
       );
       const rootSide = rootSideForField(memberKey, field, rootKey, rootSideByMember);
       if (rootSide === null) {
+        if (memberKey === rootKey && field === 'PVP') {
+          for (let index = 0; index < businessDates.length; index += 1) {
+            alignedCells.get(cellKey(businessDates[index]!, memberKey))!.pvp =
+              profiles.PVP[index]!;
+          }
+          continue;
+        }
         for (const date of request.calendar.dates) {
           const source = baselineCells.get(cellKey(date, memberKey))!;
           const target = alignedCells.get(cellKey(date, memberKey))!;
@@ -322,17 +394,6 @@ function buildRootPayoutAlignedCandidate(
             groupFixed[rootSide][qualificationIndex]! + qualification;
           remaining -= qualification;
         }
-      } else {
-        const fieldKey = sideFieldKey({ memberKey, field });
-        if (finalAnchors.has(fieldKey)) {
-          const source = baselineCells.get(cellKey(finalBusinessDate, memberKey))!;
-          const finalAllocation = directValue(source, field);
-          const target = alignedCells.get(cellKey(finalBusinessDate, memberKey))!;
-          addDirectValue(target, field, finalAllocation);
-          groupFixed[rootSide][businessDates.length - 1] =
-            groupFixed[rootSide][businessDates.length - 1]! + finalAllocation;
-          remaining -= finalAllocation;
-        }
       }
       plans.push({
         memberKey,
@@ -345,11 +406,10 @@ function buildRootPayoutAlignedCandidate(
   }
 
   for (const rootSide of ['LEFT', 'RIGHT'] as const) {
-    const profile = payoutProfile(
-      groupTotal[rootSide],
-      earlierBusinessDates.length,
-      groupFixed[rootSide].at(-1)!,
-    );
+    const profile = profiles[rootSide];
+    if (profile.reduce((sum, value) => sum + value, 0) !== groupTotal[rootSide]) {
+      return baseline;
+    }
     const remainingCapacity = profile.map(
       (value, index) => value - groupFixed[rootSide][index]!,
     );
@@ -358,11 +418,11 @@ function buildRootPayoutAlignedCandidate(
       for (const chunk of plan.chunks) {
         let bestIndex = Math.min(
           plan.earliestBusinessDateIndex,
-          earlierBusinessDates.length - 1,
+          businessDates.length - 1,
         );
         for (
           let index = bestIndex + 1;
-          index < earlierBusinessDates.length;
+          index < businessDates.length;
           index += 1
         ) {
           if (remainingCapacity[index]! > remainingCapacity[bestIndex]!) {
@@ -370,7 +430,7 @@ function buildRootPayoutAlignedCandidate(
           }
         }
         const target = alignedCells.get(
-          cellKey(earlierBusinessDates[bestIndex]!, plan.memberKey),
+          cellKey(businessDates[bestIndex]!, plan.memberKey),
         )!;
         addDirectValue(target, plan.field, chunk);
         remainingCapacity[bestIndex] = remainingCapacity[bestIndex]! - chunk;
@@ -392,6 +452,38 @@ function buildRootPayoutAlignedCandidate(
     problemFingerprint: request.problemFingerprint,
     allocations: Object.freeze(allocations),
   });
+}
+
+function buildRootPayoutAlignedCandidate(
+  request: AutomaticPlanRequest,
+  baseline: RawAutomaticPlanCandidate,
+): RawAutomaticPlanCandidate {
+  try {
+    const aligned = buildRootPayoutAlignedCandidateUnchecked(request, baseline);
+    const rootKey = request.canonicalMemberKeys[0]!;
+    const baselineRootPvpTotal = checkedSum(baseline.allocations
+      .filter((cell) => cell.memberKey === rootKey)
+      .map((cell) => cell.pvp));
+    const alignedRootPvpTotal = checkedSum(aligned.allocations
+      .filter((cell) => cell.memberKey === rootKey)
+      .map((cell) => cell.pvp));
+    const containsTooSmallDirectValue = aligned.allocations.some((cell) =>
+      [cell.pvp, cell.selfLeft, cell.selfRight].some(
+        (value) => value !== undefined && value > 0 && value < MINIMUM_AUTOMATIC_DIRECT_PV,
+      ));
+    if (
+      baselineRootPvpTotal === null ||
+      alignedRootPvpTotal === null ||
+      baselineRootPvpTotal !== alignedRootPvpTotal ||
+      containsTooSmallDirectValue
+    ) return baseline;
+    return aligned;
+  } catch {
+    // The aligned profile is only a heuristic. If an aggregate witness cannot
+    // be represented by legal direct cells, retain the verified-feasibility
+    // baseline instead of aborting all constructive variants.
+    return baseline;
+  }
 }
 
 function deriveOrganizationDepthByMember(
@@ -522,12 +614,12 @@ function buildPriorityBranchShiftCandidate(
 
 function buildComposedPriorityBranchShiftCandidate(
   request: AutomaticPlanRequest,
-  baseline: RawAutomaticPlanCandidate,
+  source: RawAutomaticPlanCandidate,
   memberKeys: readonly string[],
   branchSide: PriorityBranchSide,
   shift: number,
 ): RawAutomaticPlanCandidate {
-  let candidate = baseline;
+  let candidate = source;
   for (const memberKey of memberKeys) {
     candidate = buildPriorityBranchShiftCandidate(
       request,
@@ -583,9 +675,7 @@ export function buildConstructiveCandidate(
     }
     setCoordinate(cell, coordinate, 0);
   }
-  const pvpDates = settlementDates.length > 1
-    ? settlementDates.slice(0, -1)
-    : settlementDates;
+  const pvpDates = settlementDates;
   const childSlots = deriveChildSlots(request);
   const leafOrdinalByMember = new Map<string, number>();
   for (const memberKey of request.canonicalMemberKeys) {
@@ -665,12 +755,7 @@ export function buildConstructiveCandidate(
   }
 
   const rootKey = request.canonicalMemberKeys[0]!;
-  const rootMember = request.organization.members.find(
-    (member) => member.memberKey === rootKey,
-  )!;
-  const requiredFinalRootTier = rootMember.pvpTarget === 2_400 ? 700 : 300;
-  const finalBusinessDate = settlementDates.at(-1)!;
-  const earlierBusinessDates = settlementDates.slice(0, -1);
+  const allocationBusinessDates = settlementDates;
   const sideTotalByField = new Map<string, number>();
   const sideStartIndexByField = new Map<string, number>();
   const subtreeTotalByMember = new Map<string, number>();
@@ -731,48 +816,29 @@ export function buildConstructiveCandidate(
     }
     subtreeTotalByMember.set(memberKey, plannedPvp + leftTotal + rightTotal);
   }
-  const finalAnchors = new Set([
-    sideFieldKey(rootSideAnchor(rootKey, 'LEFT', childSlots)),
-    sideFieldKey(rootSideAnchor(rootKey, 'RIGHT', childSlots)),
-  ]);
   let sideFieldIndex = 0;
   for (const memberKey of request.canonicalMemberKeys) {
-    const finalCell = cells.get(cellKey(finalBusinessDate, memberKey))!;
     for (const field of ['SELF_LEFT', 'SELF_RIGHT'] as const) {
+      const firstCell = cells.get(cellKey(allocationBusinessDates[0]!, memberKey))!;
       const property = field === 'SELF_LEFT' ? 'selfLeft' : 'selfRight';
-      if (!Object.hasOwn(finalCell, property)) continue;
+      if (!Object.hasOwn(firstCell, property)) continue;
       const fieldKey = sideFieldKey({ memberKey, field });
-      const isFinalAnchor = finalAnchors.has(fieldKey);
-      let sideTotal = sideTotalByField.get(fieldKey)!;
-      if (isFinalAnchor) sideTotal = Math.max(sideTotal, requiredFinalRootTier);
+      const sideTotal = sideTotalByField.get(fieldKey)!;
       const startIndex = Math.min(
         sideStartIndexByField.get(fieldKey)!,
-        Math.max(0, earlierBusinessDates.length - 1),
+        Math.max(0, allocationBusinessDates.length - 1),
       );
-      const eligibleEarlierDates = earlierBusinessDates.slice(startIndex);
-      let finalAllocation = eligibleEarlierDates.length === 0
-        ? sideTotal
-        : isFinalAnchor
-          ? requiredFinalRootTier
-          : 0;
-      if (
-        sideTotal - finalAllocation > 0 &&
-        sideTotal - finalAllocation < MINIMUM_AUTOMATIC_DIRECT_PV
-      ) {
-        finalAllocation += sideTotal - finalAllocation;
-      }
-      const earlierAllocation = distributePreferredTotal(
-        sideTotal - finalAllocation,
-        eligibleEarlierDates.length,
+      const eligibleDates = allocationBusinessDates.slice(startIndex);
+      const distributed = distributePreferredTotal(
+        sideTotal,
+        eligibleDates.length,
         sideFieldIndex,
       );
-      for (let index = 0; index < eligibleEarlierDates.length; index += 1) {
-        const cell = cells.get(cellKey(eligibleEarlierDates[index]!, memberKey))!;
-        if (field === 'SELF_LEFT') cell.selfLeft = earlierAllocation[index]!;
-        else cell.selfRight = earlierAllocation[index]!;
+      for (let index = 0; index < eligibleDates.length; index += 1) {
+        const cell = cells.get(cellKey(eligibleDates[index]!, memberKey))!;
+        if (field === 'SELF_LEFT') cell.selfLeft = distributed[index]!;
+        else cell.selfRight = distributed[index]!;
       }
-      if (field === 'SELF_LEFT') finalCell.selfLeft = finalAllocation;
-      else finalCell.selfRight = finalAllocation;
       sideFieldIndex += 1;
     }
   }
@@ -853,7 +919,7 @@ export function buildConstructiveCandidateVariants(
           status: 'SUCCESS',
           candidate: buildPriorityBranchShiftCandidate(
             request,
-            baseline.candidate,
+            payoutAligned,
             memberKey,
             branchSide,
             shift,
@@ -869,7 +935,7 @@ export function buildConstructiveCandidateVariants(
           status: 'SUCCESS',
           candidate: buildComposedPriorityBranchShiftCandidate(
             request,
-            baseline.candidate,
+            payoutAligned,
             composedMemberKeys,
             branchSide,
             shift,

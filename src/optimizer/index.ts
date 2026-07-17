@@ -5,6 +5,7 @@ export * from './checked-integer';
 export * from './calendar-contract';
 export * from './candidate-shape';
 export * from './discarded-excess';
+export * from './root-commission-goal';
 export * from './objective';
 export * from './candidate-verifier';
 export * from './constructive-candidate';
