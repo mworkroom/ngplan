@@ -192,7 +192,7 @@ describe('WP1 manual-plan draft and worksheet schema', () => {
     ]);
   });
 
-  it('uses the same recursive inorder on both sides of the root', () => {
+  it('keeps numbered sheet anchors in their actual left and right positions', () => {
     const setup = bundle([
       member('root', null, null, { sheetMarker: 'PINK_1' }),
       member('left-near', 'root', 'LEFT', { sheetMarker: 'GREEN_2' }),
@@ -219,6 +219,32 @@ describe('WP1 manual-plan draft and worksheet schema', () => {
       'BLUE_3',
       'GREEN_2',
       'BLUE_3',
+    ]);
+  });
+
+  it('keeps right-side sheet anchors in place while expanding their unmarked right branches outward', () => {
+    const setup = bundle([
+      member('root', null, null, { sheetMarker: 'PINK_1' }),
+      member('kelly', 'root', 'RIGHT', { sheetMarker: 'GREEN_2' }),
+      member('yuri', 'kelly', 'LEFT', { sheetMarker: 'BLUE_3' }),
+      member('nam', 'yuri', 'LEFT'),
+      member('park', 'nam', 'LEFT'),
+      member('han', 'yuri', 'RIGHT'),
+      member('yona', 'han', 'LEFT'),
+      member('simone', 'kelly', 'RIGHT'),
+      member('raniton', 'simone', 'LEFT'),
+    ]);
+
+    expect(deriveManualPlanSchema(setup).members.map((item) => item.memberKey)).toEqual([
+      'root',
+      'park',
+      'nam',
+      'yuri',
+      'han',
+      'yona',
+      'kelly',
+      'simone',
+      'raniton',
     ]);
   });
 

@@ -125,7 +125,7 @@ These defaults are part of the implementation contract and do not require anothe
 | Arrow keys | Preserve native input behavior | Do not hijack cursor movement without a complete spreadsheet interaction model. |
 | Bulk operations | No multi-cell paste, fill handle, undo stack, import, or export | These are useful future enhancements but are not Phase 3 exit requirements. |
 | Result layout | Compact grid plus selected-cell audit panel plus member summary | Putting every result in every cell would make the worksheet unreadable. |
-| Member display order | Recursively use the same inorder traversal across the whole organization: `LEFT` subtree, current member, then `RIGHT` subtree | This preserves every member's actual left/right placement. It is a presentation choice only; Phase 4 business identity uses a separate root-first, `LEFT`-before-`RIGHT` canonical order. |
+| Member display order | Use standard inorder for the root's left organization. In the right organization, keep numbered sheet-marker members as left/right anchors, use inorder for each anchor's unmarked left branch, and mirrored inorder for its unmarked right branch. | This preserves the numbered `2 → 3 → 4` placement while expanding lower unmarked members outward as in the operational SRM worksheet. It is presentation-only; Phase 4 uses a separate root-first canonical order. |
 | Return to setup | Retain the manual draft in the current-tab workspace and reconcile matching member/date/field cells after setup is validated again | Operators must be able to correct setup without losing manual work; Phase 5 revision semantics are still not introduced. |
 | Storage | Store one versioned current-work snapshot in `sessionStorage` | Same-tab screen changes and refresh are protected, while durable records, cross-tab/device recovery, and export remain Phase 6 work. |
 | Routing and global state | Keep the current top-level React screen state; add no router or global state library | Two in-memory screens do not justify new infrastructure. |
@@ -177,7 +177,7 @@ Phase 3 does not implement optimization, but its bundle, manual draft, result se
 - Only the current smaller-side PVP rule is authoritative for daily and half-month calculation.
 - The exact automatic objective order is total new PV, discarded excess, target-700 at-least-eight count plus complete ascending day vector, non-100-multiple direct-cell count, maximum direct PVP, then the canonical allocation tie-break.
 - Target-700 total commission days are display-only. Exact PVP value 100 has no standalone preference.
-- The canonical business member order is root-first and recursively `LEFT` before `RIGHT`; it is independent of this worksheet's inorder display.
+- The canonical business member order is root-first and recursively `LEFT` before `RIGHT`; it is independent of this worksheet's marker-anchored display order.
 - Period-end carry is preserved according to Phase 1 and receives no invented terminal penalty.
 - The current-tab workspace may add only a minimal verified-incumbent checkpoint. It does not persist solver frontier/proof progress or become durable/cross-device storage.
 
@@ -254,9 +254,9 @@ Rules:
 Derive one immutable schema from the setup bundle:
 
 - `period.dates` from `derivePeriod` supplies row order.
-- Worksheet member order is deterministic standard inorder across the entire organization: recursively render `LEFT subtree → member → RIGHT subtree` for every member, including every member under the root's right branch. The root separates its left and right organizations but is not forced to the geometric center when their sizes differ.
-- The worksheet inorder is UI-only. Phase 4 separately derives the canonical business sequence as root-first preorder with every `LEFT` subtree before `RIGHT`; optimizer fingerprints, objectives, checkpoints, and tie-breaks must never reuse the worksheet order.
-- The current engine `orderedMemberKeys` is a stable member-key sort used by calculation output; it is neither the worksheet inorder nor the Phase 4 canonical business preorder. Derive both topology orders explicitly from the root and child relationships and lock their separation with application tests.
+- Worksheet member order is deterministic but asymmetric. Render the root's left organization with standard inorder. In the root's right organization, a member with a numbered sheet marker is an anchor: render its unmarked left branch with standard inorder, the anchor, then its unmarked right branch with mirrored inorder. If a nested marked member is encountered, restart the same anchor rule there. If the root's right child has no marker, fall back to standard inorder. The root separates its left and right organizations but is not forced to the geometric center when their sizes differ.
+- The worksheet display order is UI-only. Phase 4 separately derives the canonical business sequence as root-first preorder with every `LEFT` subtree before `RIGHT`; optimizer fingerprints, objectives, checkpoints, and tie-breaks must never reuse the worksheet order.
+- The current engine `orderedMemberKeys` is a stable member-key sort used by calculation output; it is neither the worksheet marker-anchored order nor the Phase 4 canonical business preorder. Derive both topology orders explicitly from the root and child relationships and lock their separation with application tests.
 - Each member descriptor contains its stable key, display label, selected PVP target, optional sheet marker, optional company ID, all five opening values, and left/right `SELF | CHILD` modes.
 - Each date descriptor contains its ISO date, Korean display label, and settlement mode.
 - Re-export or consume the existing `settlementModeForDate`/`isSunday` domain helper. Do not duplicate Sunday detection in the application or UI.
@@ -383,7 +383,7 @@ Use one semantic `<table>` inside one dedicated scroll container.
 - First column: date and weekday.
 - Two sticky header rows: member group, then `PVP / 좌 / 우`.
 - Sticky first date column.
-- Member groups follow the deterministic worksheet inorder. This display order is not the Phase 4 canonical business order.
+- Member groups follow the deterministic marker-anchored worksheet order. This display order is not the Phase 4 canonical business order.
 - Each member header shows the optional numbered color marker, display label, selected PVP target, optional company ID, and relevant opening PVP/left/right values above the corresponding columns. Qualification, half-month, and daily opening PVP remain distinct in data and audit views even when the compact header cannot show all three at once.
 - Editable cells use a compact text input with `inputMode="numeric"` and an exact accessible name containing date, member display label, and field.
 - Read-only connected directions show the current organization aggregate and a concise `조직 합계` cue or tooltip.
@@ -724,7 +724,7 @@ Do not reduce a threshold to make Phase 3 pass.
 | P3-QUAL-002 | Manual below-300 mechanical settlement | Actual reset trace preserved; result blocked with warning; occurrence not counted as usable commission |
 | P3-CARRY-001 | Carry remains after the final plan date | Engine closing carry is preserved and no terminal waste is invented |
 | P3-GRID-001 | Headers and order | Dates and member groups are deterministic and semantically associated |
-| P3-ORDER-001 | Worksheet order versus business order | Worksheet uses organization inorder; canonical optimizer order is root-first and `LEFT` before `RIGHT` |
+| P3-ORDER-001 | Worksheet order versus business order | Worksheet uses the marker-anchored left-standard/right-hybrid display rule; canonical optimizer order is root-first and `LEFT` before `RIGHT` |
 | P3-GRID-002 | Editability | PVP/SELF enabled; CHILD/Sunday unavailable |
 | P3-GRID-003 | Keyboard flow | Tab and Enter navigation skip noneditable cells correctly |
 | P3-GRID-004 | Member jump | Correct group scrolls into view and receives focus |
@@ -804,7 +804,7 @@ Read the cases themselves before writing tests. Do not copy expected values from
 ### F — Worksheet Usability
 
 - Dates are rows and member PVP/left/right values are grouped columns.
-- Worksheet member columns use inorder for display; optimizer identity uses a separate root-first, `LEFT`-before-`RIGHT` order.
+- Worksheet member columns use the marker-anchored display rule; optimizer identity uses a separate root-first, `LEFT`-before-`RIGHT` order.
 - Sticky headers/date column and horizontal scrolling work together.
 - Keyboard entry, member jump, error focus, and density settings work.
 - Technical topology terms do not leak into Korean UI copy.
@@ -828,7 +828,7 @@ Read the cases themselves before writing tests. Do not copy expected values from
 | Too much result data in the grid | Entry becomes unreadable | Keep grid focused on three fields; move audit detail and summaries to panels |
 | Duplicate names with empty IDs | Operator edits the wrong member | Deterministic plain-language disambiguation without exposing member keys |
 | Member ordering differs across views | Inputs and results appear under the wrong person | One authoritative worksheet schema and centralized lookups |
-| Worksheet inorder leaks into the optimizer | A visual layout change alters the problem fingerprint or optimum | Keep UI inorder and canonical root-first, `LEFT`-before-`RIGHT` business order as named, separately tested contracts |
+| Worksheet display order leaks into the optimizer | A visual layout change alters the problem fingerprint or optimum | Keep the marker-anchored UI order and canonical root-first, `LEFT`-before-`RIGHT` business order as named, separately tested contracts |
 | Setup draft changes after manual input | Result uses mixed organization versions | Never mutate the open bundle; on validated reopen reconcile only matching member/date/editable-field strings into the new schema |
 | `App.tsx` absorbs all Phase 3 logic | Fragile state coupling and low testability | Dedicated application module and manual-plan components |
 | CSS density breaks sticky positioning | Headers scroll away or overlap | Avoid nested transforms; test both density modes and real preview |
@@ -856,7 +856,7 @@ Phase 3 is complete only when:
 - The worksheet works with keyboard-only entry, member jump, sticky navigation, and both display-density modes.
 - Duplicate names and optional IDs cannot cause identity confusion.
 - Returning to setup preserves the manual working draft, and reopening after setup correction safely reconciles matching cells.
-- Worksheet inorder remains presentation-only and is never reused as Phase 4's root-first, `LEFT`-before-`RIGHT` canonical business order.
+- The marker-anchored worksheet order remains presentation-only and is never reused as Phase 4's root-first, `LEFT`-before-`RIGHT` canonical business order.
 - Qualification-aware manual calculation preserves below-300 mechanical reset traces while blocking their use as valid plans; final carry remains unpenalized unless the engine records an explicit erasure.
 - No automatic optimizer, revision, actual-value, persistence, closure, import, or export feature is included.
 - All Phase 1–3 tests pass without reducing coverage thresholds.

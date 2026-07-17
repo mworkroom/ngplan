@@ -74,18 +74,52 @@ function findRoot(members: readonly MemberSnapshot[]): MemberSnapshot {
   return roots[0]!;
 }
 
-function inorderMembers(members: readonly MemberSnapshot[]): readonly MemberSnapshot[] {
+function worksheetMembers(members: readonly MemberSnapshot[]): readonly MemberSnapshot[] {
   const root = findRoot(members);
   const organization = buildOrganizationIndex(members);
   const ordered: MemberSnapshot[] = [];
-  const appendInorder = (memberKey: string): void => {
+
+  const memberFor = (memberKey: string): MemberSnapshot =>
+    organization.membersByKey.get(memberKey)!;
+  const isSheetAnchor = (memberKey: string): boolean =>
+    memberFor(memberKey).sheetMarker !== 'NONE';
+
+  const appendStandardInorder = (memberKey: string): void => {
     const children = organization.childrenByMemberKey.get(memberKey)!;
-    if (children.left !== null) appendInorder(children.left);
-    ordered.push(organization.membersByKey.get(memberKey)!);
-    if (children.right !== null) appendInorder(children.right);
+    if (children.left !== null) appendStandardInorder(children.left);
+    ordered.push(memberFor(memberKey));
+    if (children.right !== null) appendStandardInorder(children.right);
   };
 
-  appendInorder(root.memberKey);
+  const appendRightOrganization = (memberKey: string): void => {
+    const children = organization.childrenByMemberKey.get(memberKey)!;
+
+    const appendUnmarkedBranch = (branchKey: string, mirrored: boolean): void => {
+      if (isSheetAnchor(branchKey)) {
+        appendRightOrganization(branchKey);
+        return;
+      }
+
+      const branchChildren = organization.childrenByMemberKey.get(branchKey)!;
+      const firstChild = mirrored ? branchChildren.right : branchChildren.left;
+      const secondChild = mirrored ? branchChildren.left : branchChildren.right;
+      if (firstChild !== null) appendUnmarkedBranch(firstChild, mirrored);
+      ordered.push(memberFor(branchKey));
+      if (secondChild !== null) appendUnmarkedBranch(secondChild, mirrored);
+    };
+
+    if (children.left !== null) appendUnmarkedBranch(children.left, false);
+    ordered.push(memberFor(memberKey));
+    if (children.right !== null) appendUnmarkedBranch(children.right, true);
+  };
+
+  const rootChildren = organization.childrenByMemberKey.get(root.memberKey)!;
+  if (rootChildren.left !== null) appendStandardInorder(rootChildren.left);
+  ordered.push(root);
+  if (rootChildren.right !== null) {
+    if (isSheetAnchor(rootChildren.right)) appendRightOrganization(rootChildren.right);
+    else appendStandardInorder(rootChildren.right);
+  }
 
   if (ordered.length !== members.length) {
     throw new Error('모든 회원을 맨 위 회원부터 이어지는 조직 그림에 연결해 주세요.');
@@ -176,7 +210,7 @@ export function deriveManualPlanSchema(bundle: ProjectSetupBundle): ManualPlanSc
     ...derivedPeriod,
     dates: Object.freeze([...derivedPeriod.dates]),
   });
-  const orderedMembers = inorderMembers(bundle.organization.members);
+  const orderedMembers = worksheetMembers(bundle.organization.members);
   const rootMemberKey = findRoot(bundle.organization.members).memberKey;
   const members = Object.freeze(createMemberDescriptors(bundle, orderedMembers));
   const dates = Object.freeze(period.dates.map(createDateDescriptor));
