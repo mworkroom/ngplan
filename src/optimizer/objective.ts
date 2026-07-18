@@ -12,13 +12,13 @@ import { validateAutomaticPlanCandidateShape } from './candidate-shape';
 import { AUTOMATIC_PLAN_TARGET_700_RECOMMENDED_EQUIVALENT_UNITS } from './constants';
 import { discardedExcessForSettlement } from './discarded-excess';
 import { automaticPlanError, errorFromUnknown } from './errors';
+import { deriveMemberCommissionCapacities } from './member-commission-capacity';
 import { deriveRootCommissionGoalCapacity } from './root-commission-goal';
 import type {
   AutomaticPlanDisplayMetrics,
   AutomaticPlanObjectiveVector,
   AutomaticPlanRequest,
   HighTargetMemberEquivalentUnitCount,
-  PriorityDepthMemberEquivalentUnitCount,
   SafeAutomaticPlanError,
   Target700MemberEquivalentUnitCount,
   TerminalCarryMemberSummary,
@@ -103,48 +103,32 @@ function compareMaxVector(
   return compareMax(left.length, right.length);
 }
 
-function assertAscendingEquivalentUnitVector(
+function compareMinVector(
+  left: readonly number[],
+  right: readonly number[],
+): -1 | 0 | 1 {
+  const sharedLength = Math.min(left.length, right.length);
+  for (let index = 0; index < sharedLength; index += 1) {
+    const compared = compareMin(left[index]!, right[index]!);
+    if (compared !== 0) return compared;
+  }
+  return compareMin(left.length, right.length);
+}
+
+function assertDescendingEquivalentUnitShortfallVector(
   values: readonly number[],
   label: string,
 ): void {
   for (const value of values) {
-    assertCanonicalNonNegativeSafeInteger(value, `${label} equivalent unit count`);
+    assertCanonicalNonNegativeSafeInteger(value, `${label} equivalent unit shortfall`);
   }
   for (let index = 1; index < values.length; index += 1) {
-    if (values[index - 1]! > values[index]!) {
-      throw new TypeError(`${label} equivalent unit vector must be sorted ascending`);
+    if (values[index - 1]! < values[index]!) {
+      throw new TypeError(
+        `${label} equivalent unit shortfall vector must be sorted descending`,
+      );
     }
   }
-}
-
-function organizationDepths(
-  request: AutomaticPlanRequest,
-): ReadonlyMap<string, number> {
-  const memberByKey = new Map(
-    request.organization.members.map((member) => [member.memberKey, member] as const),
-  );
-  const depthByMember = new Map<string, number>();
-  const visiting = new Set<string>();
-  const derive = (memberKey: string): number => {
-    const cached = depthByMember.get(memberKey);
-    if (cached !== undefined) return cached;
-    if (visiting.has(memberKey)) {
-      throw new TypeError('organization depth contains a cycle');
-    }
-    const member = memberByKey.get(memberKey);
-    if (member === undefined) {
-      throw new TypeError(`missing member ${memberKey}`);
-    }
-    visiting.add(memberKey);
-    const depth = member.parentMemberKey === null
-      ? 1
-      : derive(member.parentMemberKey) + 1;
-    visiting.delete(memberKey);
-    depthByMember.set(memberKey, depth);
-    return depth;
-  };
-  for (const memberKey of request.canonicalMemberKeys) derive(memberKey);
-  return depthByMember;
 }
 
 export function assertValidAutomaticPlanObjective(
@@ -167,16 +151,12 @@ export function assertValidAutomaticPlanObjective(
   ] as const) {
     assertCanonicalNonNegativeSafeInteger(value, label);
   }
-  assertAscendingEquivalentUnitVector(
-    objective.priorityDepthAscendingEquivalentUnitVector,
-    'priorityDepth',
-  );
-  assertAscendingEquivalentUnitVector(
-    objective.highTargetAscendingEquivalentUnitVector,
+  assertDescendingEquivalentUnitShortfallVector(
+    objective.highTargetDescendingEquivalentUnitShortfallVector,
     'highTarget',
   );
-  assertAscendingEquivalentUnitVector(
-    objective.target700AscendingEquivalentUnitVector,
+  assertDescendingEquivalentUnitShortfallVector(
+    objective.target700DescendingEquivalentUnitShortfallVector,
     'target700',
   );
   for (const value of objective.deterministicAllocationVector) {
@@ -199,17 +179,13 @@ export function compareAutomaticPlanObjectives(
     ) ||
     compareMax(left.confirmedPayoutWon, right.confirmedPayoutWon) ||
     compareMin(left.discardedExcessPv, right.discardedExcessPv) ||
-    compareMaxVector(
-      left.priorityDepthAscendingEquivalentUnitVector,
-      right.priorityDepthAscendingEquivalentUnitVector,
+    compareMinVector(
+      left.highTargetDescendingEquivalentUnitShortfallVector,
+      right.highTargetDescendingEquivalentUnitShortfallVector,
     ) ||
-    compareMaxVector(
-      left.highTargetAscendingEquivalentUnitVector,
-      right.highTargetAscendingEquivalentUnitVector,
-    ) ||
-    compareMaxVector(
-      left.target700AscendingEquivalentUnitVector,
-      right.target700AscendingEquivalentUnitVector,
+    compareMinVector(
+      left.target700DescendingEquivalentUnitShortfallVector,
+      right.target700DescendingEquivalentUnitShortfallVector,
     ) ||
     compareMax(
       left.futureCumulativePvpInvestmentPv,
@@ -260,10 +236,8 @@ export function evaluateAutomaticPlanObjective(
     let discardedExcessPv = 0;
     let futureCumulativePvpInvestmentPv = 0;
     const rootGoalCapacity = deriveRootCommissionGoalCapacity(request);
+    const memberCapacities = deriveMemberCommissionCapacities(request);
     let rootActualCommissionDays = 0;
-    const depthByMember = organizationDepths(request);
-    const priorityDepthMemberEquivalentUnitCounts:
-      PriorityDepthMemberEquivalentUnitCount[] = [];
     const highTargetMemberEquivalentUnitCounts:
       HighTargetMemberEquivalentUnitCount[] = [];
     const target700MemberEquivalentUnitCounts:
@@ -314,20 +288,19 @@ export function evaluateAutomaticPlanObjective(
           discardedExcessForSettlement(settlement),
         );
       }
-      const organizationDepth = depthByMember.get(memberKey);
-      if (organizationDepth === undefined) {
-        throw new TypeError(`missing organization depth for ${memberKey}`);
+      const isRoot = memberKey === rootGoalCapacity.rootMemberKey;
+      const attainableEquivalentUnits = memberCapacities.byMember.get(
+        memberKey,
+      )?.attainableEquivalentUnitsUpperBound;
+      if (attainableEquivalentUnits === undefined) {
+        throw new TypeError(`missing commission capacity for ${memberKey}`);
       }
-      if (organizationDepth === 2 || organizationDepth === 3) {
-        priorityDepthMemberEquivalentUnitCounts.push(
-          Object.freeze({
-            memberKey,
-            organizationDepth,
-            commissionEquivalentUnits,
-          }),
-        );
-      } else if (
-        organizationDepth > 1 &&
+      const equivalentUnitShortfall = Math.max(
+        0,
+        attainableEquivalentUnits - commissionEquivalentUnits,
+      );
+      if (
+        !isRoot &&
         (member.pvpTarget === 1500 || member.pvpTarget === 2400)
       ) {
         highTargetMemberEquivalentUnitCounts.push(
@@ -335,11 +308,18 @@ export function evaluateAutomaticPlanObjective(
             memberKey,
             pvpTarget: member.pvpTarget,
             commissionEquivalentUnits,
+            attainableEquivalentUnits,
+            equivalentUnitShortfall,
           }),
         );
-      } else if (organizationDepth > 1 && member.pvpTarget === 700) {
+      } else if (!isRoot && member.pvpTarget === 700) {
         target700MemberEquivalentUnitCounts.push(
-          Object.freeze({ memberKey, commissionEquivalentUnits }),
+          Object.freeze({
+            memberKey,
+            commissionEquivalentUnits,
+            attainableEquivalentUnits,
+            equivalentUnitShortfall,
+          }),
         );
         target700TotalCommissionEquivalentUnits = checkedAddScore(
           target700TotalCommissionEquivalentUnits,
@@ -365,22 +345,19 @@ export function evaluateAutomaticPlanObjective(
         futureInvestment,
       );
     }
-    const priorityDepthAscendingEquivalentUnitVector =
-      priorityDepthMemberEquivalentUnitCounts
-      .map((item) => item.commissionEquivalentUnits)
-      .sort((left, right) => left - right);
-    const highTargetAscendingEquivalentUnitVector =
+    const highTargetDescendingEquivalentUnitShortfallVector =
       highTargetMemberEquivalentUnitCounts
-      .map((item) => item.commissionEquivalentUnits)
-      .sort((left, right) => left - right);
-    const target700AscendingEquivalentUnitVector =
+      .map((item) => item.equivalentUnitShortfall)
+      .sort((left, right) => right - left);
+    const target700DescendingEquivalentUnitShortfallVector =
       target700MemberEquivalentUnitCounts
-      .map((item) => item.commissionEquivalentUnits)
-      .sort((left, right) => left - right);
+      .map((item) => item.equivalentUnitShortfall)
+      .sort((left, right) => right - left);
     const target700MembersAtLeastEightEquivalentUnits =
-      target700AscendingEquivalentUnitVector.filter(
-      (units) => units >= AUTOMATIC_PLAN_TARGET_700_RECOMMENDED_EQUIVALENT_UNITS,
-    ).length;
+      target700MemberEquivalentUnitCounts.filter(
+        (item) => item.commissionEquivalentUnits >=
+          AUTOMATIC_PLAN_TARGET_700_RECOMMENDED_EQUIVALENT_UNITS,
+      ).length;
 
     const finalDate = request.calendar.dates.at(-1);
     if (finalDate === undefined) {
@@ -417,14 +394,11 @@ export function evaluateAutomaticPlanObjective(
       totalNewPv,
       confirmedPayoutWon,
       discardedExcessPv,
-      priorityDepthAscendingEquivalentUnitVector: Object.freeze(
-        priorityDepthAscendingEquivalentUnitVector,
+      highTargetDescendingEquivalentUnitShortfallVector: Object.freeze(
+        highTargetDescendingEquivalentUnitShortfallVector,
       ),
-      highTargetAscendingEquivalentUnitVector: Object.freeze(
-        highTargetAscendingEquivalentUnitVector,
-      ),
-      target700AscendingEquivalentUnitVector: Object.freeze(
-        target700AscendingEquivalentUnitVector,
+      target700DescendingEquivalentUnitShortfallVector: Object.freeze(
+        target700DescendingEquivalentUnitShortfallVector,
       ),
       futureCumulativePvpInvestmentPv,
       nonHundredCellCount,
@@ -441,9 +415,6 @@ export function evaluateAutomaticPlanObjective(
         capacityLimited: rootGoalCapacity.capacityLimited,
         met: rootCommissionGoalShortfallDays === 0,
       }),
-      priorityDepthMemberEquivalentUnitCounts: Object.freeze(
-        priorityDepthMemberEquivalentUnitCounts,
-      ),
       highTargetMemberEquivalentUnitCounts: Object.freeze(
         highTargetMemberEquivalentUnitCounts,
       ),

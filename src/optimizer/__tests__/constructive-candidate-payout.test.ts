@@ -120,7 +120,7 @@ describe('constructive payout-aligned candidate', () => {
     expect(goalPreservingObjectives.length).toBeGreaterThan(0);
     expect(
       new Set([payoutAligned!.objective, ...goalPreservingObjectives].map((objective) =>
-        JSON.stringify(objective.priorityDepthAscendingEquivalentUnitVector))).size,
+        JSON.stringify(objective.target700DescendingEquivalentUnitShortfallVector))).size,
     ).toBeGreaterThan(1);
     expect(
       new Set(shiftedObjectives.map((objective) =>
@@ -132,7 +132,7 @@ describe('constructive payout-aligned candidate', () => {
     ).toBe(true);
   });
 
-  it('explores a priority member left branch without moving its right branch', () => {
+  it('explores one member branch without moving its sibling branch', () => {
     const members = memberSpecs.slice(0, 7).map(
       ([memberKey, parentMemberKey, sideAtParent]) => optimizerMember(
         memberKey,
@@ -169,13 +169,13 @@ describe('constructive payout-aligned candidate', () => {
     expect(independentLeftShift).toBeDefined();
     if (independentLeftShift?.status !== 'SUCCESS') return;
     expect(verifyAutomaticPlanCandidate(request, independentLeftShift.candidate, {
-      candidateId: 'priority-left-branch',
+      candidateId: 'member-left-branch',
       sequence: 1,
       foundAtElapsedMs: 0,
     }).status).toBe('SUCCESS');
   });
 
-  it('offers a bounded composed shift that adjusts multiple priority branches together', () => {
+  it('offers a bounded composed shift that adjusts multiple branches together', () => {
     const members = memberSpecs.slice(0, 7).map(
       ([memberKey, parentMemberKey, sideAtParent]) => optimizerMember(
         memberKey,
@@ -235,7 +235,7 @@ describe('constructive payout-aligned candidate', () => {
     expect(composed.candidate.allocations.filter((cell) => cell.date === finalBusinessDate))
       .toEqual(aligned.candidate.allocations.filter((cell) => cell.date === finalBusinessDate));
     expect(verifyAutomaticPlanCandidate(request, composed.candidate, {
-      candidateId: 'priority-composed-branch',
+      candidateId: 'member-composed-branch',
       sequence: 1,
       foundAtElapsedMs: 0,
     }).status).toBe('SUCCESS');

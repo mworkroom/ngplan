@@ -55,9 +55,8 @@ export interface AutomaticPlanObjectiveVector {
   readonly totalNewPv: number;
   readonly confirmedPayoutWon: number;
   readonly discardedExcessPv: number;
-  readonly priorityDepthAscendingEquivalentUnitVector: readonly number[];
-  readonly highTargetAscendingEquivalentUnitVector: readonly number[];
-  readonly target700AscendingEquivalentUnitVector: readonly number[];
+  readonly highTargetDescendingEquivalentUnitShortfallVector: readonly number[];
+  readonly target700DescendingEquivalentUnitShortfallVector: readonly number[];
   readonly futureCumulativePvpInvestmentPv: number;
   readonly nonHundredCellCount: number;
   readonly maxDirectPvp: number;
@@ -74,21 +73,19 @@ export interface RootCommissionGoalMetric {
   readonly met: boolean;
 }
 
-export interface PriorityDepthMemberEquivalentUnitCount {
-  readonly memberKey: string;
-  readonly organizationDepth: 2 | 3;
-  readonly commissionEquivalentUnits: number;
-}
-
 export interface HighTargetMemberEquivalentUnitCount {
   readonly memberKey: string;
   readonly pvpTarget: 1500 | 2400;
   readonly commissionEquivalentUnits: number;
+  readonly attainableEquivalentUnits: number;
+  readonly equivalentUnitShortfall: number;
 }
 
 export interface Target700MemberEquivalentUnitCount {
   readonly memberKey: string;
   readonly commissionEquivalentUnits: number;
+  readonly attainableEquivalentUnits: number;
+  readonly equivalentUnitShortfall: number;
 }
 
 export interface TerminalCarryMemberSummary {
@@ -108,8 +105,6 @@ export interface TerminalCarrySummary {
 
 export interface AutomaticPlanDisplayMetrics {
   readonly rootCommissionGoal: RootCommissionGoalMetric;
-  readonly priorityDepthMemberEquivalentUnitCounts:
-    readonly PriorityDepthMemberEquivalentUnitCount[];
   readonly highTargetMemberEquivalentUnitCounts:
     readonly HighTargetMemberEquivalentUnitCount[];
   readonly target700MembersAtLeastEightEquivalentUnits: number;
@@ -150,9 +145,8 @@ export interface AutomaticPlanProofProgress {
   readonly provenVectorPrefix:
     | {
         readonly objective:
-          | 'PRIORITY_DEPTH_ASCENDING_EQUIVALENT_UNIT_VECTOR'
-          | 'HIGH_TARGET_ASCENDING_EQUIVALENT_UNIT_VECTOR'
-          | 'TARGET_700_ASCENDING_EQUIVALENT_UNIT_VECTOR'
+          | 'HIGH_TARGET_DESCENDING_EQUIVALENT_UNIT_SHORTFALL_VECTOR'
+          | 'TARGET_700_DESCENDING_EQUIVALENT_UNIT_SHORTFALL_VECTOR'
           | 'DETERMINISTIC_ALLOCATION_VECTOR';
         readonly length: number;
       }

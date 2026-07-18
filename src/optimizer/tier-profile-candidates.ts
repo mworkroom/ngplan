@@ -85,28 +85,6 @@ function deriveChildSlots(
   ]));
 }
 
-function deriveOrganizationDepthByMember(
-  request: AutomaticPlanRequest,
-): ReadonlyMap<string, number> {
-  const memberByKey = new Map(
-    request.organization.members.map((member) => [member.memberKey, member] as const),
-  );
-  const depthByMember = new Map<string, number>();
-  const derive = (memberKey: string): number => {
-    const cached = depthByMember.get(memberKey);
-    if (cached !== undefined) return cached;
-    const member = memberByKey.get(memberKey);
-    if (member === undefined) return 1;
-    const depth = member.parentMemberKey === null
-      ? 1
-      : derive(member.parentMemberKey) + 1;
-    depthByMember.set(memberKey, depth);
-    return depth;
-  };
-  for (const memberKey of request.canonicalMemberKeys) derive(memberKey);
-  return depthByMember;
-}
-
 function collectSubtreeMemberKeys(
   rootMemberKey: string,
   childSlots: ReadonlyMap<string, ChildSlots>,
@@ -414,16 +392,13 @@ export function buildTierProfileCandidateVariants(
     source.allocations.map((cell) => [cellKey(cell.date, cell.memberKey), cell] as const),
   );
   const childSlots = deriveChildSlots(request);
-  const depthByMember = deriveOrganizationDepthByMember(request);
   const memberByKey = new Map(
     request.organization.members.map((member) => [member.memberKey, member] as const),
   );
   const focusMemberKeys = request.canonicalMemberKeys.filter((memberKey) => {
-    const depth = depthByMember.get(memberKey) ?? 1;
     const member = memberByKey.get(memberKey);
-    return depth === 2 || depth === 3 || (
-      depth > 1 && (member?.pvpTarget === 1_500 || member?.pvpTarget === 2_400)
-    );
+    if (member?.parentMemberKey === null || member === undefined) return false;
+    return member.pvpTarget === 1_500 || member.pvpTarget === 2_400;
   });
   const variants: RawAutomaticPlanCandidate[] = [];
 

@@ -1,19 +1,18 @@
 import { DEFAULT_RULE_SET } from '../engine';
 import {
-  assertCanonicalNonNegativeSafeInteger,
   checkedAddScore,
   checkedMultiplyScore,
   checkedSubtractScore,
 } from './checked-integer';
+import {
+  deriveMemberCommissionCapacities,
+} from './member-commission-capacity';
 import type { AutomaticPlanRequest } from './types';
+
+export { requiredAutomaticPvpForMember } from './member-commission-capacity';
 
 const MINIMUM_AUTOMATIC_DIRECT_PV = 30;
 const MINIMUM_COMMISSION_TIER = 300;
-
-interface ChildSlots {
-  left?: string;
-  right?: string;
-}
 
 export interface RootCommissionGoalCapacity {
   readonly rootMemberKey: string;
@@ -32,98 +31,18 @@ export interface RootCommissionGoalCapacity {
   } | null;
 }
 
-export function requiredAutomaticPvpForMember(
-  pvpTarget: number,
-  cumulativePvpOpening: number,
-): number {
-  assertCanonicalNonNegativeSafeInteger(pvpTarget, 'PVP 목표');
-  assertCanonicalNonNegativeSafeInteger(cumulativePvpOpening, 'PVP 시작값');
-  const personalDeficit = Math.max(0, pvpTarget - cumulativePvpOpening);
-  const qualificationDeficit = Math.max(
-    0,
-    DEFAULT_RULE_SET.qualificationPolicy.threshold - cumulativePvpOpening,
-  );
-  const headroom = DEFAULT_RULE_SET.cumulativePvpCap - cumulativePvpOpening;
-  let requiredPvp = Math.max(personalDeficit, qualificationDeficit);
-  if (requiredPvp > 0 && requiredPvp < MINIMUM_AUTOMATIC_DIRECT_PV) {
-    requiredPvp = MINIMUM_AUTOMATIC_DIRECT_PV;
-  }
-  requiredPvp = Math.max(
-    requiredPvp,
-    qualificationDeficit === 0
-      ? 0
-      : Math.max(qualificationDeficit, MINIMUM_AUTOMATIC_DIRECT_PV),
-  );
-  if (requiredPvp > headroom) {
-    throw new RangeError('required automatic PVP exceeds cumulative PVP headroom');
-  }
-  return requiredPvp;
-}
-
 export function deriveRootCommissionGoalCapacity(
   request: AutomaticPlanRequest,
 ): RootCommissionGoalCapacity {
-  const memberByKey = new Map(
-    request.organization.members.map((member) => [member.memberKey, member] as const),
-  );
-  const childSlots = new Map<string, ChildSlots>(
-    request.organization.members.map((member) => [member.memberKey, {}]),
-  );
-  for (const member of request.organization.members) {
-    if (member.parentMemberKey === null || member.sideAtParent === null) continue;
-    const slots = childSlots.get(member.parentMemberKey)!;
-    if (member.sideAtParent === 'LEFT') slots.left = member.memberKey;
-    else slots.right = member.memberKey;
-  }
-
-  const requiredPvpByMember = new Map<string, number>();
-  for (const memberKey of request.canonicalMemberKeys) {
-    const member = memberByKey.get(memberKey)!;
-    const opening = request.openingPvpByMember[memberKey]!;
-    requiredPvpByMember.set(
-      memberKey,
-      requiredAutomaticPvpForMember(member.pvpTarget, opening.cumulativePvpOpening),
-    );
-  }
-
-  const subtreeTotalByMember = new Map<string, number>();
-  let rootRawLeft = 0;
-  let rootRawRight = 0;
-  const rootMemberKey = request.organization.members.find(
-    (member) => member.parentMemberKey === null,
-  )!.memberKey;
-  for (const memberKey of [...request.canonicalMemberKeys].reverse()) {
-    const plannedPvp = requiredPvpByMember.get(memberKey)!;
-    const smallerSideRequirement = Math.max(
-      0,
-      DEFAULT_RULE_SET.fortnightSideTarget - plannedPvp,
-    );
-    const children = childSlots.get(memberKey)!;
-    const leftTotal = children.left === undefined
-      ? children.right === undefined
-        ? DEFAULT_RULE_SET.fortnightSideTarget
-        : smallerSideRequirement
-      : subtreeTotalByMember.get(children.left)!;
-    const rightTotal = children.right === undefined
-      ? smallerSideRequirement
-      : subtreeTotalByMember.get(children.right)!;
-    if (memberKey === rootMemberKey) {
-      rootRawLeft = leftTotal;
-      rootRawRight = rightTotal;
-    }
-    subtreeTotalByMember.set(
-      memberKey,
-      checkedAddScore(checkedAddScore(plannedPvp, leftTotal), rightTotal),
-    );
-  }
-
-  const rootOpening = request.organization.openingStateByMember[rootMemberKey]!;
-  const openingCarryLeftPv = rootOpening.dailyCarryLeft;
-  const openingCarryRightPv = rootOpening.dailyCarryRight;
-  const requiredRootPvp = requiredPvpByMember.get(rootMemberKey)!;
-  const businessDayCount = request.calendar.dates.filter(
-    (date) => !request.calendar.skipDateSet.includes(date),
-  ).length;
+  const capacities = deriveMemberCommissionCapacities(request);
+  const rootMemberKey = capacities.rootMemberKey;
+  const rootCapacity = capacities.byMember.get(rootMemberKey)!;
+  const rootRawLeft = rootCapacity.minimumRawLeftPv;
+  const rootRawRight = rootCapacity.minimumRawRightPv;
+  const openingCarryLeftPv = rootCapacity.openingCarryLeftPv;
+  const openingCarryRightPv = rootCapacity.openingCarryRightPv;
+  const requiredRootPvp = rootCapacity.requiredPvp;
+  const businessDayCount = capacities.businessDayCount;
   const noOpeningCapacity = (
     left: number,
     right: number,

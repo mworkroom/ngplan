@@ -152,16 +152,6 @@ function automaticPlanPreviewMetrics(
         memberByKey.get(candidate.display.rootCommissionGoal.rootMemberKey)?.name ??
         candidate.display.rootCommissionGoal.rootMemberKey,
     }),
-    priorityDepthMemberEquivalentUnitCounts: Object.freeze(
-      candidate.display.priorityDepthMemberEquivalentUnitCounts.map((item) =>
-        Object.freeze({
-          memberKey: item.memberKey,
-          memberLabel: memberByKey.get(item.memberKey)?.name ?? item.memberKey,
-          organizationDepth: item.organizationDepth,
-          equivalentUnits: item.commissionEquivalentUnits,
-        }),
-      ),
-    ),
     highTargetMemberEquivalentUnitCounts: Object.freeze(
       candidate.display.highTargetMemberEquivalentUnitCounts.map((item) =>
         Object.freeze({
@@ -169,6 +159,8 @@ function automaticPlanPreviewMetrics(
           memberLabel: memberByKey.get(item.memberKey)?.name ?? item.memberKey,
           pvpTarget: item.pvpTarget,
           equivalentUnits: item.commissionEquivalentUnits,
+          attainableEquivalentUnits: item.attainableEquivalentUnits,
+          equivalentUnitShortfall: item.equivalentUnitShortfall,
         }),
       ),
     ),
@@ -182,6 +174,8 @@ function automaticPlanPreviewMetrics(
           memberKey: item.memberKey,
           memberLabel: memberByKey.get(item.memberKey)?.name ?? item.memberKey,
           equivalentUnits: item.commissionEquivalentUnits,
+          attainableEquivalentUnits: item.attainableEquivalentUnits,
+          equivalentUnitShortfall: item.equivalentUnitShortfall,
         }),
       ),
     ),

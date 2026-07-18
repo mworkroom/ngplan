@@ -30,9 +30,8 @@ function objective(
     totalNewPv: 100,
     confirmedPayoutWon: 0,
     discardedExcessPv: 0,
-    priorityDepthAscendingEquivalentUnitVector: [],
-    highTargetAscendingEquivalentUnitVector: [],
-    target700AscendingEquivalentUnitVector: [],
+    highTargetDescendingEquivalentUnitShortfallVector: [],
+    target700DescendingEquivalentUnitShortfallVector: [],
     futureCumulativePvpInvestmentPv: 0,
     nonHundredCellCount: 0,
     maxDirectPvp: 100,
@@ -148,7 +147,7 @@ describe('Phase 4 canonical objective comparator', () => {
     const clean = objective({ discardedExcessPv: 0 });
     const waste = objective({
       discardedExcessPv: 1,
-      highTargetAscendingEquivalentUnitVector: [14],
+      highTargetDescendingEquivalentUnitShortfallVector: [0],
     });
     expect(compareAutomaticPlanObjectives(clean, waste)).toBe(-1);
     expect(discardedExcessForSettlement(settlement('FULL_COMMISSION'))).toBe(200);
@@ -156,62 +155,48 @@ describe('Phase 4 canonical objective comparator', () => {
     expect(discardedExcessForSettlement(settlement('SKIPPED'))).toBe(0);
   });
 
-  it('compares organization-depth priority before both target-group vectors', () => {
-    const strongerPriority = objective({
-      priorityDepthAscendingEquivalentUnitVector: [10, 10],
-      highTargetAscendingEquivalentUnitVector: [0, 0],
-      target700AscendingEquivalentUnitVector: [0, 0],
-    });
-    const strongerTargetGroups = objective({
-      priorityDepthAscendingEquivalentUnitVector: [9, 13],
-      highTargetAscendingEquivalentUnitVector: [14, 14],
-      target700AscendingEquivalentUnitVector: [14, 14],
-    });
-    expect(
-      compareAutomaticPlanObjectives(strongerPriority, strongerTargetGroups),
-    ).toBe(-1);
-
+  it('compares high-target shortfall before target-700 shortfall', () => {
     const strongerHighTarget = objective({
-      highTargetAscendingEquivalentUnitVector: [8, 9],
-      target700AscendingEquivalentUnitVector: [0, 0],
+      highTargetDescendingEquivalentUnitShortfallVector: [1, 1],
+      target700DescendingEquivalentUnitShortfallVector: [8, 8],
     });
     const strongerTarget700 = objective({
-      highTargetAscendingEquivalentUnitVector: [7, 14],
-      target700AscendingEquivalentUnitVector: [14, 14],
+      highTargetDescendingEquivalentUnitShortfallVector: [2, 0],
+      target700DescendingEquivalentUnitShortfallVector: [0, 0],
     });
     expect(
       compareAutomaticPlanObjectives(strongerHighTarget, strongerTarget700),
     ).toBe(-1);
   });
 
-  it('prefers the complete balanced target-700 vector without a hard eight-unit threshold', () => {
+  it('prefers the smaller worst target-700 shortfall without a hard threshold', () => {
     const balanced = objective({
-      target700AscendingEquivalentUnitVector: [7, 7, 7],
+      target700DescendingEquivalentUnitShortfallVector: [1, 1, 1],
     });
     const thresholdCount = objective({
-      target700AscendingEquivalentUnitVector: [0, 8, 8],
+      target700DescendingEquivalentUnitShortfallVector: [8, 0, 0],
     });
     expect(compareAutomaticPlanObjectives(balanced, thresholdCount)).toBe(-1);
     expect(
       compareAutomaticPlanObjectives(
-        objective({ target700AscendingEquivalentUnitVector: [9] }),
-        objective({ target700AscendingEquivalentUnitVector: [8] }),
+        objective({ target700DescendingEquivalentUnitShortfallVector: [0] }),
+        objective({ target700DescendingEquivalentUnitShortfallVector: [1] }),
       ),
     ).toBe(-1);
     expect(automaticPlanObjectivesEqual(objective(), objective())).toBe(true);
   });
 
-  it('maximizes cost-neutral future cumulative PVP after both fairness vectors', () => {
+  it('maximizes cost-neutral future cumulative PVP after both shortfall vectors', () => {
     const investment = objective({ futureCumulativePvpInvestmentPv: 100 });
     const noInvestment = objective({ futureCumulativePvpInvestmentPv: 0 });
     expect(compareAutomaticPlanObjectives(investment, noInvestment)).toBe(-1);
 
     const fairer = objective({
-      target700AscendingEquivalentUnitVector: [7],
+      target700DescendingEquivalentUnitShortfallVector: [1],
       futureCumulativePvpInvestmentPv: 0,
     });
     const invested = objective({
-      target700AscendingEquivalentUnitVector: [6],
+      target700DescendingEquivalentUnitShortfallVector: [2],
       futureCumulativePvpInvestmentPv: 1_000,
     });
     expect(compareAutomaticPlanObjectives(fairer, invested)).toBe(-1);
@@ -258,19 +243,14 @@ describe('Phase 4 canonical objective comparator', () => {
       ['confirmed payout', { confirmedPayoutWon: 0 }, { confirmedPayoutWon: 1 }],
       ['discarded excess', { discardedExcessPv: 1 }, { discardedExcessPv: 0 }],
       [
-        'priority-depth vector',
-        { priorityDepthAscendingEquivalentUnitVector: [9, 13] },
-        { priorityDepthAscendingEquivalentUnitVector: [10, 10] },
+        'high-target shortfall vector',
+        { highTargetDescendingEquivalentUnitShortfallVector: [3, 0] },
+        { highTargetDescendingEquivalentUnitShortfallVector: [2, 2] },
       ],
       [
-        'high-target vector',
-        { highTargetAscendingEquivalentUnitVector: [7, 14] },
-        { highTargetAscendingEquivalentUnitVector: [8, 8] },
-      ],
-      [
-        'target-700 vector',
-        { target700AscendingEquivalentUnitVector: [7, 14] },
-        { target700AscendingEquivalentUnitVector: [8, 8] },
+        'target-700 shortfall vector',
+        { target700DescendingEquivalentUnitShortfallVector: [3, 0] },
+        { target700DescendingEquivalentUnitShortfallVector: [2, 2] },
       ],
       [
         'future cumulative PVP investment',
@@ -305,19 +285,14 @@ describe('Phase 4 canonical objective comparator', () => {
       Partial<AutomaticPlanObjectiveVector>,
     ][] = [
       [
-        'priority-depth vector',
-        { priorityDepthAscendingEquivalentUnitVector: [8] },
-        { priorityDepthAscendingEquivalentUnitVector: [8, 9] },
+        'high-target shortfall vector',
+        { highTargetDescendingEquivalentUnitShortfallVector: [8] },
+        { highTargetDescendingEquivalentUnitShortfallVector: [8, 7] },
       ],
       [
-        'high-target vector',
-        { highTargetAscendingEquivalentUnitVector: [8] },
-        { highTargetAscendingEquivalentUnitVector: [8, 9] },
-      ],
-      [
-        'target-700 vector',
-        { target700AscendingEquivalentUnitVector: [8] },
-        { target700AscendingEquivalentUnitVector: [8, 9] },
+        'target-700 shortfall vector',
+        { target700DescendingEquivalentUnitShortfallVector: [8] },
+        { target700DescendingEquivalentUnitShortfallVector: [8, 7] },
       ],
       [
         'deterministic allocation vector',
@@ -327,33 +302,34 @@ describe('Phase 4 canonical objective comparator', () => {
     ];
 
     for (const [label, shorter, longer] of cases) {
+      const vectorIsAllocation = label === 'deterministic allocation vector';
       expect(
-        compareAutomaticPlanObjectives(objective(longer), objective(shorter)),
+        compareAutomaticPlanObjectives(
+          objective(vectorIsAllocation ? longer : shorter),
+          objective(vectorIsAllocation ? shorter : longer),
+        ),
         label,
       ).toBe(-1);
       expect(
-        compareAutomaticPlanObjectives(objective(shorter), objective(longer)),
+        compareAutomaticPlanObjectives(
+          objective(vectorIsAllocation ? shorter : longer),
+          objective(vectorIsAllocation ? longer : shorter),
+        ),
         `${label} reverse`,
       ).toBe(1);
     }
   });
 
-  it('rejects fairness vectors that are not sorted ascending', () => {
+  it('rejects shortfall vectors that are not sorted descending', () => {
     expect(() =>
       compareAutomaticPlanObjectives(
-        objective({ priorityDepthAscendingEquivalentUnitVector: [2, 1] }),
+        objective({ highTargetDescendingEquivalentUnitShortfallVector: [1, 2] }),
         objective(),
       ),
     ).toThrow(TypeError);
     expect(() =>
       compareAutomaticPlanObjectives(
-        objective({ highTargetAscendingEquivalentUnitVector: [2, 1] }),
-        objective(),
-      ),
-    ).toThrow(TypeError);
-    expect(() =>
-      compareAutomaticPlanObjectives(
-        objective({ target700AscendingEquivalentUnitVector: [2, 1] }),
+        objective({ target700DescendingEquivalentUnitShortfallVector: [1, 2] }),
         objective(),
       ),
     ).toThrow(TypeError);
@@ -366,18 +342,16 @@ describe('Phase 4 canonical objective comparator', () => {
       return seed % 20;
     };
     const values = Array.from({ length: 40 }, () => {
-      const priorityUnits = [next() % 10, next() % 10].sort((a, b) => a - b);
-      const highUnits = [next() % 10, next() % 10].sort((a, b) => a - b);
-      const target700Units = [next() % 10, next() % 10].sort(
-        (a, b) => a - b,
+      const highShortfall = [next() % 10, next() % 10].sort((a, b) => b - a);
+      const target700Shortfall = [next() % 10, next() % 10].sort(
+        (a, b) => b - a,
       );
       return objective({
         totalNewPv: next(),
         confirmedPayoutWon: next() * 60_000,
         discardedExcessPv: next(),
-        priorityDepthAscendingEquivalentUnitVector: priorityUnits,
-        highTargetAscendingEquivalentUnitVector: highUnits,
-        target700AscendingEquivalentUnitVector: target700Units,
+        highTargetDescendingEquivalentUnitShortfallVector: highShortfall,
+        target700DescendingEquivalentUnitShortfallVector: target700Shortfall,
         futureCumulativePvpInvestmentPv: next(),
         nonHundredCellCount: next(),
         maxDirectPvp: next(),
@@ -441,15 +415,16 @@ describe('Phase 4 canonical objective comparator', () => {
       }, 0);
     expect(evaluated.objective.confirmedPayoutWon).toBe(expectedPayout);
     expect(evaluated.display.target700MembersAtLeastEightEquivalentUnits).toBe(
-      evaluated.objective.target700AscendingEquivalentUnitVector.filter((units) => units >= 8)
-        .length,
+      evaluated.display.target700MemberEquivalentUnitCounts.filter(
+        (item) => item.commissionEquivalentUnits >= 8,
+      ).length,
     );
     expect(evaluated.objective).not.toHaveProperty(
       'target700MembersAtLeastEightEquivalentUnits',
     );
   });
 
-  it('uses 1·2·4·8 equivalent units rather than occurrence days in fairness vectors', () => {
+  it('uses 1·2·4·8 equivalent units rather than occurrence days in shortfall metrics', () => {
     const members = [
       optimizerMember('root', null, null, 2400),
       optimizerMember('priority', 'root', 'LEFT', 700),
@@ -520,17 +495,19 @@ describe('Phase 4 canonical objective comparator', () => {
 
     expect(evaluated.status).toBe('SUCCESS');
     if (evaluated.status !== 'SUCCESS') return;
-    expect(evaluated.objective.priorityDepthAscendingEquivalentUnitVector).toEqual([15]);
-    expect(evaluated.display.priorityDepthMemberEquivalentUnitCounts).toEqual([
-      {
+    expect(evaluated.objective.target700DescendingEquivalentUnitShortfallVector)
+      .toEqual([0]);
+    expect(evaluated.display.target700MemberEquivalentUnitCounts).toEqual([
+      expect.objectContaining({
         memberKey: 'priority',
-        organizationDepth: 2,
         commissionEquivalentUnits: 15,
-      },
+        attainableEquivalentUnits: 8,
+        equivalentUnitShortfall: 0,
+      }),
     ]);
   });
 
-  it('derives priority members from organization depth rather than sheet markers or targets', () => {
+  it('derives fairness groups from targets and ignores sheet markers and topology depth', () => {
     const members = [
       { ...optimizerMember('root', null, null, 2400), sheetMarker: 'BLUE_3' as const },
       { ...optimizerMember('depth-2', 'root', 'LEFT', 700), sheetMarker: 'PURPLE_4' as const },
@@ -565,18 +542,14 @@ describe('Phase 4 canonical objective comparator', () => {
     expect(evaluated.status).toBe('SUCCESS');
     if (evaluated.status !== 'SUCCESS') return;
 
-    expect(evaluated.display.priorityDepthMemberEquivalentUnitCounts.map((item) => [
-      item.memberKey,
-      item.organizationDepth,
-    ])).toEqual([
-      ['depth-2', 2],
-      ['depth-3', 3],
-    ]);
-    expect(evaluated.objective.priorityDepthAscendingEquivalentUnitVector).toHaveLength(2);
     expect(evaluated.display.highTargetMemberEquivalentUnitCounts.map((item) => item.memberKey))
-      .toEqual(['depth-4']);
-    expect(evaluated.objective.highTargetAscendingEquivalentUnitVector).toHaveLength(1);
-    expect(evaluated.display.target700MemberEquivalentUnitCounts).toEqual([]);
+      .toEqual(['depth-3', 'depth-4']);
+    expect(evaluated.objective.highTargetDescendingEquivalentUnitShortfallVector)
+      .toHaveLength(2);
+    expect(evaluated.display.target700MemberEquivalentUnitCounts.map((item) => item.memberKey))
+      .toEqual(['depth-2']);
+    expect(evaluated.objective.target700DescendingEquivalentUnitShortfallVector)
+      .toHaveLength(1);
   });
 
   it('fails closed when a full commission uses an unconfirmed payout tier', () => {

@@ -46,24 +46,20 @@ describe('verified automatic-plan workspace checkpoint', () => {
     const serialized = JSON.stringify(snapshot);
     expect(serialized).not.toContain('dailySettlementByDateAndMember');
     expect(serialized).not.toContain('proof');
-    expect(snapshot.checkpointVersion).toBe('3.0.0');
+    expect(snapshot.checkpointVersion).toBe('4.0.0');
     expect(snapshot.checkpointVersion).toBe(AUTOMATIC_PLAN_CHECKPOINT_VERSION);
     expect(snapshot.objective).toMatchObject({
       confirmedPayoutWon: expect.any(Number),
       futureCumulativePvpInvestmentPv: expect.any(Number),
     });
-    expect(snapshot.objective.highTargetAscendingEquivalentUnitVector).toEqual(
-      fixture.candidate.objective.highTargetAscendingEquivalentUnitVector,
-    );
-    expect(snapshot.objective.priorityDepthAscendingEquivalentUnitVector).toEqual(
-      fixture.candidate.objective.priorityDepthAscendingEquivalentUnitVector,
+    expect(snapshot.objective.highTargetDescendingEquivalentUnitShortfallVector).toEqual(
+      fixture.candidate.objective.highTargetDescendingEquivalentUnitShortfallVector,
     );
     expect(snapshot.objective).not.toHaveProperty(
       'target700MembersAtLeastEightEquivalentUnits',
     );
     expect(snapshot.display).toMatchObject({
       target700MembersAtLeastEightEquivalentUnits: expect.any(Number),
-      priorityDepthMemberEquivalentUnitCounts: expect.any(Array),
       highTargetMemberEquivalentUnitCounts: expect.any(Array),
     });
     expect(snapshot.savedAtIso).toBe('1970-01-01T00:00:00.000Z');
@@ -135,7 +131,7 @@ describe('verified automatic-plan workspace checkpoint', () => {
       target700MembersAtLeastEight:
         snapshot.display.target700MembersAtLeastEightEquivalentUnits,
       target700AscendingDayVector:
-        snapshot.objective.target700AscendingEquivalentUnitVector,
+        snapshot.objective.target700DescendingEquivalentUnitShortfallVector,
       nonHundredCellCount: snapshot.objective.nonHundredCellCount,
       maxDirectPvp: snapshot.objective.maxDirectPvp,
       deterministicAllocationVector:

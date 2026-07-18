@@ -16,17 +16,13 @@ export interface AutomaticPlanPreviewMetrics {
     readonly capacityLimited: boolean;
     readonly met: boolean;
   };
-  readonly priorityDepthMemberEquivalentUnitCounts: readonly {
-    readonly memberKey: string;
-    readonly memberLabel: string;
-    readonly organizationDepth: 2 | 3;
-    readonly equivalentUnits: number;
-  }[];
   readonly highTargetMemberEquivalentUnitCounts: readonly {
     readonly memberKey: string;
     readonly memberLabel: string;
     readonly pvpTarget: 1500 | 2400;
     readonly equivalentUnits: number;
+    readonly attainableEquivalentUnits: number;
+    readonly equivalentUnitShortfall: number;
   }[];
   readonly target700MembersAtLeastEightEquivalentUnits: number;
   readonly target700TotalCommissionEquivalentUnits: number;
@@ -34,6 +30,8 @@ export interface AutomaticPlanPreviewMetrics {
     readonly memberKey: string;
     readonly memberLabel: string;
     readonly equivalentUnits: number;
+    readonly attainableEquivalentUnits: number;
+    readonly equivalentUnitShortfall: number;
   }[];
   readonly futureCumulativePvpInvestmentPv: number;
   readonly nonHundredCellCount: number;
@@ -115,6 +113,9 @@ export function AutomaticPlanPreview({
       <p className="automatic-plan-preview__goal-note">
         전체 영업일을 계획 범위로 사용합니다. 모든 회원이 매일 직접 입력해야 한다는 뜻은 아닙니다.
       </p>
+      <p className="automatic-plan-preview__goal-note">
+        기준 상한은 현재 목표 총량으로 계산한 이론상 최대치이며, 추가 구매 기준이 아닙니다.
+      </p>
 
       {metrics.rootCommissionGoal.capacityLimited ? (
         <p className="automatic-plan-preview__goal-note">
@@ -132,23 +133,12 @@ export function AutomaticPlanPreview({
         </p>
       )}
 
-      {metrics.priorityDepthMemberEquivalentUnitCounts.length === 0 ? null : (
-        <ul className="automatic-plan-preview__days" aria-label="조직 2·3번 우선 회원별 수당 환산 횟수">
-          {metrics.priorityDepthMemberEquivalentUnitCounts.map((member) => (
-            <li key={member.memberKey}>
-              {member.memberLabel} (조직 {member.organizationDepth}번):{' '}
-              {member.equivalentUnits}회 (300단계 기준)
-            </li>
-          ))}
-        </ul>
-      )}
-
       {metrics.highTargetMemberEquivalentUnitCounts.length === 0 ? null : (
-        <ul className="automatic-plan-preview__days" aria-label="고목표 회원별 수당 환산 횟수">
+        <ul className="automatic-plan-preview__days" aria-label="목표 1500·2400 회원별 수당 환산 횟수">
           {metrics.highTargetMemberEquivalentUnitCounts.map((member) => (
             <li key={member.memberKey}>
               {member.memberLabel} (목표 {member.pvpTarget.toLocaleString('ko-KR')}):{' '}
-              {member.equivalentUnits}회 (300단계 기준)
+              {member.equivalentUnits}회 / 기준 상한 {member.attainableEquivalentUnits}회
             </li>
           ))}
         </ul>
@@ -158,7 +148,8 @@ export function AutomaticPlanPreview({
         <ul className="automatic-plan-preview__days" aria-label="그 외 700 목표 회원별 수당 환산 횟수">
           {metrics.target700MemberEquivalentUnitCounts.map((member) => (
             <li key={member.memberKey}>
-              {member.memberLabel}: {member.equivalentUnits}회 (300단계 기준)
+              {member.memberLabel}: {member.equivalentUnits}회 / 기준 상한{' '}
+              {member.attainableEquivalentUnits}회
             </li>
           ))}
         </ul>
