@@ -1050,12 +1050,42 @@ fieldset {
   font-weight: 800;
 }
 
-.automatic-plan-preview__days {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 16px;
-  padding: 0;
-  list-style: none;
+.automatic-plan-preview__member-results {
+  margin: 16px 0;
+}
+
+.automatic-plan-preview__member-results h3 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+
+.automatic-plan-preview__member-table-scroll {
+  overflow-x: auto;
+}
+
+.automatic-plan-preview__member-results table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.automatic-plan-preview__member-results th,
+.automatic-plan-preview__member-results td {
+  padding: 8px 10px;
+  border: 1px solid var(--color-line);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.automatic-plan-preview__member-results thead th {
+  background: var(--color-background);
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}
+
+.automatic-plan-preview__member-results th:first-child {
+  text-align: left;
 }
 
 .automatic-plan-preview__checks {

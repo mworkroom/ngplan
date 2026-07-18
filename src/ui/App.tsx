@@ -158,6 +158,9 @@ function automaticPlanPreviewMetrics(
           memberKey: item.memberKey,
           memberLabel: memberByKey.get(item.memberKey)?.name ?? item.memberKey,
           pvpTarget: item.pvpTarget,
+          commissionDays:
+            candidate.calculation.finalAssessmentByMember[item.memberKey]
+              ?.commissionDays ?? 0,
           equivalentUnits: item.commissionEquivalentUnits,
           attainableEquivalentUnits: item.attainableEquivalentUnits,
           equivalentUnitShortfall: item.equivalentUnitShortfall,
@@ -173,6 +176,9 @@ function automaticPlanPreviewMetrics(
         Object.freeze({
           memberKey: item.memberKey,
           memberLabel: memberByKey.get(item.memberKey)?.name ?? item.memberKey,
+          commissionDays:
+            candidate.calculation.finalAssessmentByMember[item.memberKey]
+              ?.commissionDays ?? 0,
           equivalentUnits: item.commissionEquivalentUnits,
           attainableEquivalentUnits: item.attainableEquivalentUnits,
           equivalentUnitShortfall: item.equivalentUnitShortfall,

@@ -20,6 +20,7 @@ export interface AutomaticPlanPreviewMetrics {
     readonly memberKey: string;
     readonly memberLabel: string;
     readonly pvpTarget: 1500 | 2400;
+    readonly commissionDays: number;
     readonly equivalentUnits: number;
     readonly attainableEquivalentUnits: number;
     readonly equivalentUnitShortfall: number;
@@ -29,6 +30,7 @@ export interface AutomaticPlanPreviewMetrics {
   readonly target700MemberEquivalentUnitCounts: readonly {
     readonly memberKey: string;
     readonly memberLabel: string;
+    readonly commissionDays: number;
     readonly equivalentUnits: number;
     readonly attainableEquivalentUnits: number;
     readonly equivalentUnitShortfall: number;
@@ -59,6 +61,16 @@ export function AutomaticPlanPreview({
   onApply,
   onClose,
 }: AutomaticPlanPreviewProps) {
+  const memberCommissionRows = [
+    ...metrics.highTargetMemberEquivalentUnitCounts.map((member) => ({
+      ...member,
+      pvpTargetLabel: member.pvpTarget.toLocaleString('ko-KR'),
+    })),
+    ...metrics.target700MemberEquivalentUnitCounts.map((member) => ({
+      ...member,
+      pvpTargetLabel: '700',
+    })),
+  ];
   return (
     <section className="automatic-plan-preview" aria-labelledby="automatic-plan-preview-title">
       <div className="panel__header">
@@ -133,26 +145,40 @@ export function AutomaticPlanPreview({
         </p>
       )}
 
-      {metrics.highTargetMemberEquivalentUnitCounts.length === 0 ? null : (
-        <ul className="automatic-plan-preview__days" aria-label="목표 1500·2400 회원별 수당 환산 횟수">
-          {metrics.highTargetMemberEquivalentUnitCounts.map((member) => (
-            <li key={member.memberKey}>
-              {member.memberLabel} (목표 {member.pvpTarget.toLocaleString('ko-KR')}):{' '}
-              {member.equivalentUnits}회 / 기준 상한 {member.attainableEquivalentUnits}회
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {metrics.target700MemberEquivalentUnitCounts.length === 0 ? null : (
-        <ul className="automatic-plan-preview__days" aria-label="그 외 700 목표 회원별 수당 환산 횟수">
-          {metrics.target700MemberEquivalentUnitCounts.map((member) => (
-            <li key={member.memberKey}>
-              {member.memberLabel}: {member.equivalentUnits}회 / 기준 상한{' '}
-              {member.attainableEquivalentUnits}회
-            </li>
-          ))}
-        </ul>
+      {memberCommissionRows.length === 0 ? null : (
+        <div className="automatic-plan-preview__member-results">
+          <h3>회원별 수당 결과</h3>
+          <div className="automatic-plan-preview__member-table-scroll">
+            <table aria-label="회원별 수당 발생일과 환산 횟수">
+              <thead>
+                <tr>
+                  <th scope="col">회원</th>
+                  <th scope="col">PVP 목표</th>
+                  <th scope="col">수당 발생일</th>
+                  <th scope="col">환산 횟수</th>
+                  <th scope="col">기준 상한</th>
+                  <th scope="col">상한까지</th>
+                </tr>
+              </thead>
+              <tbody>
+                {memberCommissionRows.map((member) => (
+                  <tr key={member.memberKey}>
+                    <th scope="row">{member.memberLabel}</th>
+                    <td>{member.pvpTargetLabel}</td>
+                    <td>{member.commissionDays}일</td>
+                    <td>{member.equivalentUnits}회</td>
+                    <td>{member.attainableEquivalentUnits}회</td>
+                    <td>
+                      {member.equivalentUnitShortfall === 0
+                        ? '달성'
+                        : `-${member.equivalentUnitShortfall}회`}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
 
       <div className="automatic-plan-preview__checks">

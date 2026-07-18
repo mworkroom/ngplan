@@ -1,4 +1,6 @@
 import {
+  buildBranchRotationCandidateVariants,
+  buildBranchSynchronizedCandidateVariants,
   compareAutomaticPlanObjectives,
   verifyAutomaticPlanCandidate,
   type AutomaticPlanConstructionOutcome,
@@ -6,7 +8,13 @@ import {
   type AutomaticPlanRequest,
   type RawAutomaticPlanCandidate,
   type SafeAutomaticPlanError,
+  type VerifiedAutomaticPlanCandidate,
 } from '../../optimizer';
+
+const BRANCH_REFINEMENT_FOCUS_LIMIT = 8;
+const SMALL_ORGANIZATION_REFINEMENT_PASSES = 4;
+const LARGE_ORGANIZATION_REFINEMENT_PASSES = 2;
+const SMALL_ORGANIZATION_DIVERSE_SEED_LIMIT = 2;
 
 export interface WorkerCandidateAssessment {
   readonly publishableCandidates: readonly RawAutomaticPlanCandidate[];
@@ -43,6 +51,74 @@ export function assessWorkerCandidateSources(
   const publishableCandidates: RawAutomaticPlanCandidate[] = [];
   let firstFailure: SafeAutomaticPlanError | null = null;
   let bestObjective: AutomaticPlanObjectiveVector | null = null;
+  const searchState: { bestCandidate: VerifiedAutomaticPlanCandidate | null } = {
+    bestCandidate: null,
+  };
+  let verificationSequence = 0;
+  const verifiedByAllocation = new Map<
+    string,
+    VerifiedAutomaticPlanCandidate | null
+  >();
+  const bestUnitSeedByMember = new Map<string, VerifiedAutomaticPlanCandidate>();
+
+  const verifyCandidate = (
+    candidate: RawAutomaticPlanCandidate,
+  ): VerifiedAutomaticPlanCandidate | null => {
+    const signature = JSON.stringify(candidate.allocations);
+    const cached = verifiedByAllocation.get(signature);
+    if (cached !== undefined || verifiedByAllocation.has(signature)) {
+      return cached ?? null;
+    }
+    verificationSequence += 1;
+    const verified = verifyAutomaticPlanCandidate(request, candidate, {
+      candidateId: `worker-preflight-${verificationSequence}`,
+      sequence: verificationSequence,
+      foundAtElapsedMs: 0,
+    });
+    if (verified.status === 'FAILURE') {
+      firstFailure ??= verified.error;
+      verifiedByAllocation.set(signature, null);
+      return null;
+    }
+    verifiedByAllocation.set(signature, verified.candidate);
+    return verified.candidate;
+  };
+
+  const rememberDiverseSeeds = (
+    candidate: VerifiedAutomaticPlanCandidate,
+  ): void => {
+    for (const item of candidate.display.highTargetMemberEquivalentUnitCounts) {
+      const existing = bestUnitSeedByMember.get(item.memberKey);
+      const existingItem = existing?.display.highTargetMemberEquivalentUnitCounts.find(
+        (candidateItem) => candidateItem.memberKey === item.memberKey,
+      );
+      if (
+        existing === undefined ||
+        existingItem === undefined ||
+        item.commissionEquivalentUnits > existingItem.commissionEquivalentUnits ||
+        (
+          item.commissionEquivalentUnits === existingItem.commissionEquivalentUnits &&
+          compareAutomaticPlanObjectives(candidate.objective, existing.objective) < 0
+        )
+      ) {
+        bestUnitSeedByMember.set(item.memberKey, candidate);
+      }
+    }
+  };
+
+  const publishIfBetter = (
+    raw: RawAutomaticPlanCandidate,
+    verified: VerifiedAutomaticPlanCandidate,
+  ): boolean => {
+    if (
+      bestObjective !== null &&
+      compareAutomaticPlanObjectives(verified.objective, bestObjective) >= 0
+    ) return false;
+    bestObjective = verified.objective;
+    searchState.bestCandidate = verified;
+    publishableCandidates.push(raw);
+    return true;
+  };
 
   for (let index = 0; index < sources.length; index += 1) {
     const source = sources[index]!;
@@ -50,21 +126,80 @@ export function assessWorkerCandidateSources(
       firstFailure ??= source.error;
       continue;
     }
-    const verified = verifyAutomaticPlanCandidate(request, source.candidate, {
-      candidateId: `worker-preflight-${index + 1}`,
-      sequence: index + 1,
-      foundAtElapsedMs: 0,
-    });
-    if (verified.status === 'FAILURE') {
-      firstFailure ??= verified.error;
-      continue;
+    const verified = verifyCandidate(source.candidate);
+    if (verified === null) continue;
+    rememberDiverseSeeds(verified);
+    publishIfBetter(source.candidate, verified);
+  }
+
+  const initialBest = searchState.bestCandidate;
+  if (initialBest !== null) {
+    const canonicalIndex = new Map(request.canonicalMemberKeys.map(
+      (memberKey, index) => [memberKey, index] as const,
+    ));
+    const worstMemberKeys = [...initialBest.display.highTargetMemberEquivalentUnitCounts]
+      .sort((left, right) =>
+        right.equivalentUnitShortfall - left.equivalentUnitShortfall ||
+        canonicalIndex.get(left.memberKey)! -
+          canonicalIndex.get(right.memberKey)!)
+      .map((item) => item.memberKey);
+    const diverseSeedLimit = request.canonicalMemberKeys.length <= 20
+      ? SMALL_ORGANIZATION_DIVERSE_SEED_LIMIT
+      : 0;
+    const seeds: VerifiedAutomaticPlanCandidate[] = [initialBest];
+    const seedSignatures = new Set([JSON.stringify(initialBest.allocations)]);
+    for (const memberKey of worstMemberKeys) {
+      if (seeds.length >= 1 + diverseSeedLimit) break;
+      const seed = bestUnitSeedByMember.get(memberKey)!;
+      const signature = JSON.stringify(seed.allocations);
+      if (seedSignatures.has(signature)) continue;
+      seedSignatures.add(signature);
+      seeds.push(seed);
     }
-    if (
-      bestObjective !== null &&
-      compareAutomaticPlanObjectives(verified.candidate.objective, bestObjective) >= 0
-    ) continue;
-    bestObjective = verified.candidate.objective;
-    publishableCandidates.push(source.candidate);
+    const refinementPasses = request.canonicalMemberKeys.length <= 20
+      ? SMALL_ORGANIZATION_REFINEMENT_PASSES
+      : LARGE_ORGANIZATION_REFINEMENT_PASSES;
+
+    for (const seed of seeds) {
+      let currentSeed = seed;
+      for (let pass = 0; pass < refinementPasses; pass += 1) {
+        const focusMemberKeys = [
+          ...currentSeed.display.highTargetMemberEquivalentUnitCounts,
+        ]
+          .sort((left, right) =>
+            right.equivalentUnitShortfall - left.equivalentUnitShortfall ||
+            canonicalIndex.get(left.memberKey)! -
+              canonicalIndex.get(right.memberKey)!)
+          .slice(0, BRANCH_REFINEMENT_FOCUS_LIMIT)
+          .map((item) => item.memberKey);
+        const branchCandidates = [
+          ...buildBranchSynchronizedCandidateVariants(
+            request,
+            currentSeed,
+            focusMemberKeys,
+          ),
+          ...buildBranchRotationCandidateVariants(
+            request,
+            currentSeed,
+            focusMemberKeys,
+          ),
+        ];
+        let nextSeed = currentSeed;
+        for (const raw of branchCandidates) {
+          const verified = verifyCandidate(raw);
+          if (verified === null) continue;
+          publishIfBetter(raw, verified);
+          if (
+            compareAutomaticPlanObjectives(
+              verified.objective,
+              nextSeed.objective,
+            ) < 0
+          ) nextSeed = verified;
+        }
+        if (nextSeed === currentSeed) break;
+        currentSeed = nextSeed;
+      }
+    }
   }
 
   return Object.freeze({

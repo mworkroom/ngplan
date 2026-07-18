@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { assessWorkerCandidateSources } from '../../application/automatic-plan/select-worker-candidates';
 import {
+  buildBranchRotationCandidateVariants,
+  buildBranchSynchronizedCandidateVariants,
   buildConstructiveCandidateVariants,
   buildTierProfileCandidateVariants,
   compareAutomaticPlanObjectives,
@@ -39,36 +42,33 @@ const memberSpecs = [
   ['raniton', 'simone', 'LEFT', 700, 300, 5, 0],
 ] as const;
 
+function create202407Request() {
+  const members = memberSpecs.map(([
+    memberKey,
+    parentMemberKey,
+    sideAtParent,
+    pvpTarget,
+  ]) => optimizerMember(memberKey, parentMemberKey, sideAtParent, pvpTarget));
+  const openings = Object.freeze(Object.fromEntries(memberSpecs.map(([
+    memberKey,
+    ,
+    ,
+    ,
+    openingPvp,
+    dailyCarryLeft,
+    dailyCarryRight,
+  ]) => [memberKey, optimizerOpening({
+    openingQualificationPvp: openingPvp,
+    fortnightPvpOpeningCredit: openingPvp,
+    dailyCarryLeft,
+    dailyCarryRight,
+  })])));
+  return createOptimizerRequest(members, openings);
+}
+
 describe('total-preserving tier profile candidates', () => {
   it('PAY-202407-PATTERN explores verified tier layouts without changing field totals', () => {
-    const members = memberSpecs.map(([
-      memberKey,
-      parentMemberKey,
-      sideAtParent,
-      pvpTarget,
-    ]) =>
-      optimizerMember(
-        memberKey,
-        parentMemberKey,
-        sideAtParent,
-        pvpTarget,
-      ),
-    );
-    const openings = Object.freeze(Object.fromEntries(memberSpecs.map(([
-      memberKey,
-      ,
-      ,
-      ,
-      openingPvp,
-      dailyCarryLeft,
-      dailyCarryRight,
-    ]) => [memberKey, optimizerOpening({
-        openingQualificationPvp: openingPvp,
-        fortnightPvpOpeningCredit: openingPvp,
-        dailyCarryLeft,
-        dailyCarryRight,
-      })])));
-    const request = createOptimizerRequest(members, openings);
+    const request = create202407Request();
     const baseVariants = buildConstructiveCandidateVariants(request);
     const aligned = baseVariants[1];
     if (aligned?.status !== 'SUCCESS') throw new Error('aligned construction failed');
@@ -143,6 +143,107 @@ describe('total-preserving tier profile candidates', () => {
       alignedVerified.candidate.objective,
     )).toBeLessThan(0);
   });
+
+  it('PAY-202407-BRANCH preserves direct totals across synchronized and rigid branch variants', () => {
+    const request = create202407Request();
+    const aligned = alignedCandidate(request);
+    const variants = [
+      ...buildBranchSynchronizedCandidateVariants(request, aligned),
+      ...buildBranchRotationCandidateVariants(request, aligned),
+    ];
+    const totals = (candidate: typeof aligned) => Object.fromEntries(
+      request.canonicalMemberKeys.flatMap((memberKey) => [
+        ['PVP', candidate.allocations.reduce(
+          (sum, cell) => sum + (cell.memberKey === memberKey ? cell.pvp : 0),
+          0,
+        )],
+        ['SELF_LEFT', candidate.allocations.reduce(
+          (sum, cell) => sum + (
+            cell.memberKey === memberKey ? cell.selfLeft ?? 0 : 0
+          ),
+          0,
+        )],
+        ['SELF_RIGHT', candidate.allocations.reduce(
+          (sum, cell) => sum + (
+            cell.memberKey === memberKey ? cell.selfRight ?? 0 : 0
+          ),
+          0,
+        )],
+      ].map(([field, total]) => [`${memberKey}:${field}`, total])),
+    );
+
+    expect(variants.length).toBeGreaterThan(100);
+    expect(variants.every((candidate) =>
+      JSON.stringify(totals(candidate)) === JSON.stringify(totals(aligned))))
+      .toBe(true);
+    expect(variants.every((candidate) => candidate.allocations.every((cell) =>
+      [cell.pvp, cell.selfLeft, cell.selfRight].every((value) =>
+        value === undefined || value === 0 || value >= 30))))
+      .toBe(true);
+  });
+
+  it('PAY-202407-WORKER automatically compares the historical workbook benchmark', () => {
+    const request = create202407Request();
+    const assessment = assessWorkerCandidateSources(
+      request,
+      buildConstructiveCandidateVariants(request),
+    );
+    const workerRaw = assessment.publishableCandidates.at(-1);
+    if (workerRaw === undefined) throw new Error('worker refinement failed');
+    const workerOutcome = verifyAutomaticPlanCandidate(request, workerRaw, {
+      candidateId: 'branch-worker-final',
+      sequence: 1,
+      foundAtElapsedMs: 0,
+    });
+    if (workerOutcome.status === 'FAILURE') throw new Error(workerOutcome.error.code);
+    const workerBest = workerOutcome.candidate;
+    const appUnits = Object.fromEntries(
+      workerBest.display.highTargetMemberEquivalentUnitCounts.map((item) => [
+        item.memberKey,
+        item.commissionEquivalentUnits,
+      ]),
+    );
+    const comparison = [
+      ['Mirelle', 'mirelle', 18],
+      ['Sandra', 'sandra', 20],
+      ['Kelly', 'kelly', 17],
+    ].map(([member, memberKey, workbookUnits]) => {
+      const appEquivalentUnits = appUnits[String(memberKey)]!;
+      return {
+        member,
+        workbookEquivalentUnits: Number(workbookUnits),
+        appEquivalentUnits,
+        difference: appEquivalentUnits - Number(workbookUnits),
+      };
+    });
+
+    expect(workerBest.objective.totalNewPv).toBe(45_350);
+    expect(workerBest.objective.confirmedPayoutWon).toBe(12_060_000);
+    expect(workerBest.display.rootCommissionGoal).toMatchObject({
+      actualCommissionDays: 13,
+      shortfallDays: 0,
+    });
+    expect(comparison).toEqual([
+      {
+        member: 'Mirelle',
+        workbookEquivalentUnits: 18,
+        appEquivalentUnits: 20,
+        difference: 2,
+      },
+      {
+        member: 'Sandra',
+        workbookEquivalentUnits: 20,
+        appEquivalentUnits: 20,
+        difference: 0,
+      },
+      {
+        member: 'Kelly',
+        workbookEquivalentUnits: 17,
+        appEquivalentUnits: 20,
+        difference: 3,
+      },
+    ]);
+  }, 60_000);
 
   it('returns no profiles for a single member or at most two business dates', () => {
     const singleRequest = createOptimizerRequest();

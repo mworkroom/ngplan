@@ -32,6 +32,7 @@ const METRICS = {
       memberKey: 'high',
       memberLabel: '고목표 회원',
       pvpTarget: 2400,
+      commissionDays: 6,
       equivalentUnits: 10,
       attainableEquivalentUnits: 12,
       equivalentUnitShortfall: 2,
@@ -43,6 +44,7 @@ const METRICS = {
     {
       memberKey: 'other-700',
       memberLabel: '그 외 700 회원',
+      commissionDays: 4,
       equivalentUnits: 8,
       attainableEquivalentUnits: 8,
       equivalentUnitShortfall: 0,
@@ -238,7 +240,11 @@ describe('automatic plan operator components', () => {
     expect(screen.getByText(/지금 보는 계획은 바뀌지 않았습니다/)).toBeTruthy();
     expect(screen.getByText('200 (폐기 아님)')).toBeTruthy();
     expect(screen.getByText('그 외 700 목표 중 환산 8회 이상')).toBeTruthy();
-    expect(screen.getByRole('list', { name: '그 외 700 목표 회원별 수당 환산 횟수' })).toBeTruthy();
+    const memberResults = screen.getByRole('table', {
+      name: '회원별 수당 발생일과 환산 횟수',
+    });
+    expect(within(memberResults).getByRole('row', { name: /고목표 회원 2,400 6일 10회 12회 -2회/ })).toBeTruthy();
+    expect(within(memberResults).getByRole('row', { name: /그 외 700 회원 700 4일 8회 8회 달성/ })).toBeTruthy();
     const rootGoalMetric = screen.getByText('맨 위 회원 수당').closest('div');
     expect(rootGoalMetric).not.toBeNull();
     expect(within(rootGoalMetric!).getByText('12 / 13영업일')).toBeTruthy();
@@ -286,7 +292,9 @@ describe('automatic plan operator components', () => {
     expect(screen.getByText('✓ 모든 회원의 보름 목표를 확인했습니다.')).toBeTruthy();
     expect(screen.getByText('✓ 모든 정산일의 수당 자격을 확인했습니다.')).toBeTruthy();
     expect(screen.queryByText(/수당 목표가 .* 부족합니다/)).toBeNull();
-    expect(screen.queryByRole('list', { name: '그 외 700 목표 회원별 수당 환산 횟수' })).toBeNull();
+    expect(screen.queryByRole('table', {
+      name: '회원별 수당 발생일과 환산 횟수',
+    })).toBeNull();
     await user.click(screen.getByRole('button', { name: '닫기' }));
     expect(onClose).toHaveBeenCalledOnce();
   });
@@ -318,7 +326,11 @@ describe('automatic plan operator components', () => {
     expect(within(rootGoalMetric!).getByText('10 / 10영업일')).toBeTruthy();
     expect(screen.getByText('계획 영업일').nextElementSibling?.textContent).toBe('14일');
     expect(screen.getByText('현재 총량 기준 목표 10일')).toBeTruthy();
-    expect(screen.getByText('고목표 회원 (목표 2,400): 10회 / 기준 상한 12회')).toBeTruthy();
+    expect(
+      screen.getByRole('row', {
+        name: '고목표 회원 2,400 6일 10회 12회 -2회',
+      }),
+    ).toBeTruthy();
   });
 
   it('describes a capacity-limited shortfall against the aggregate goal', () => {

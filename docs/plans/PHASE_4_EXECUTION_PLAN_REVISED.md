@@ -594,7 +594,7 @@ interface AutomaticPlanDisplayMetrics {
 }
 ```
 
-Each high-target and target-700 member display row includes actual equivalent units, the fixed-target aggregate theoretical cap, and the resulting shortfall. The cap is informational and never authorizes additional PV. `target700MembersAtLeastEightEquivalentUnits` and `target700TotalCommissionEquivalentUnits` are display-only and must never be compared as separate optimization stages.
+Each high-target and target-700 member display row includes commission days, actual equivalent units, the fixed-target aggregate theoretical cap, and the resulting shortfall. Present these rows as one scan-friendly member table in the pinned preview. Historical workbook expected values remain developer regression fixtures rather than production input, so the operator table compares the current plan only with its structural cap. The cap is informational and never authorizes additional PV. `target700MembersAtLeastEightEquivalentUnits` and `target700TotalCommissionEquivalentUnits` are display-only and must never be compared as separate optimization stages.
 
 For `rootCommissionGoal`, `businessDayCount=N`, `targetCommissionDays=U`, `shortfallDays=max(0,U-actualCommissionDays)`, `capacityLimited=(U<N)`, and `met=(shortfallDays===0)`.
 
@@ -1039,6 +1039,8 @@ Tasks:
 
 - Build a deterministic constructive candidate that searches the complete business-date range, first avoids pre-qualification commissions, obeys PVP headroom/minimum-30, covers bottom-up `SELF` deficits, and distributes root commission opportunities toward `U` without adding PV.
 - Expand each verified constructive seed with deterministic, total-preserving date profiles for direct `SELF` values. At minimum include threshold-oriented `300`, repeating `300·200·400`, and aligned `700`, `1,500`, and `2,400` profiles, with aligned/staggered branch variants for priority members. These profiles may change only the dates of existing direct PV, must preserve every member/field total, and remain heuristic candidates subject to the canonical verifier and objective comparator.
+- For each non-root target-1,500/2,400 member, also treat the complete editable contribution pool below its LEFT and RIGHT branches as two coordinated groups. Generate shared-date `300`, `300·200·400`, `700`, `1,500`, and `2,400` aggregate profiles, plus rigid whole-branch date rotations that preserve an already useful descendant schedule while changing its alignment at the parent.
+- Refine from the current canonical incumbent and a bounded set of member-diverse verified seeds. A small organization may explore more refinement passes; larger organizations use a bounded focus/member/pass limit so the 57-member first-candidate gate remains enforceable. Every refinement is still total-preserving and unproven, and only strict canonical objective improvements may be published.
 - Verify the constructive result through Phase 1.
 - If construction reaches fewer than `U` root days but all hard calculation and fortnight rules pass, publish the verified shortfall candidate with the exact warning and continue search; do not convert that outcome to `INFEASIBLE`.
 - Define the solver-neutral model/adapter and versioned model certificate.
@@ -1268,7 +1270,8 @@ Do not lower a threshold to make Phase 4 pass. Add optimizer paths to the covera
 | P4-FAIR-008 | Root target is 1,500 or 2,400 | Root is excluded from every equivalent-unit fairness vector |
 | P4-FAIR-009 | A verified fixed-total candidate does not attain an aggregate theoretical cap | Candidate remains feasible; the cap is not schedule proof and cannot authorize extra PV |
 | P4-PERIOD-001 | Constructive candidate over the canonical business calendar | Searches and may allocate across every input-eligible date; it does not stop at the earliest feasible prefix by construction |
-| P4-PERIOD-004 | 2024-07-style 17-member seed with identical direct-PV totals | Tier-profile variants preserve every member/field total and root `U`, and the canonical comparator selects a verified candidate with greater confirmed payout when one exists |
+| P4-PERIOD-004 | 2024-07-style 17-member seed with identical direct-PV totals | Tier-profile, grouped-branch, and rigid-rotation variants preserve every member/field total and root `U`, and the canonical comparator selects a verified candidate with greater confirmed payout when one exists |
+| P4-PERIOD-005 | Historical 2024-07 workbook benchmark for Mirelle/Sandra/Kelly | The test report derives workbook/app/difference rows automatically. With the fixed fixture the verified worker result keeps total direct PV 45,350 and root 13/13 days, pays 12,060,000 won, and yields app equivalent units 20/20/20 versus workbook 18/20/17. Workbook figures are regression evidence, not extra hard constraints. |
 | P4-PERIOD-002 | Root aggregate target is capacity-limited to `U<N` | No 1-PV token or invented final-date commission is added merely to fill unused dates |
 | P4-PERIOD-003 | Aggregate formula yields `U`, but date-by-date construction finds only `U-1` | Verified shortfall fallback is exposed and search may continue; aggregate `U` is not treated as a schedule-existence proof |
 | P4-COMP-001 | Comparator randomized valid vectors | Antisymmetry, transitivity, totality, equality consistency hold |

@@ -19,6 +19,18 @@ function fixture() {
 }
 
 describe('automatic-plan worker candidate preflight', () => {
+  it('uses the safe construction failure when no candidate and no prior error exist', () => {
+    const terminal = workerTerminalFailure(Object.freeze({
+      publishableCandidates: Object.freeze([]),
+      firstFailure: null,
+    }));
+
+    expect(terminal).toMatchObject({
+      messageCode: 'CONSTRUCTIVE_PLAN_FAILED',
+      error: { code: 'AUTOMATIC_PLAN_CONSTRUCTION_FAILED' },
+    });
+  });
+
   it('keeps the first verification failure and never claims an absent plan is usable', () => {
     const { request, valid } = fixture();
     const invalid: AutomaticPlanConstructionOutcome = Object.freeze({

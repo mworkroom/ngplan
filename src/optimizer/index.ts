@@ -11,6 +11,7 @@ export * from './objective';
 export * from './candidate-verifier';
 export * from './constructive-candidate';
 export * from './tier-profile-candidates';
+export * from './branch-synchronized-candidates';
 export * from './model';
 export * from './model-certificate';
 export * from './proof-stages';
