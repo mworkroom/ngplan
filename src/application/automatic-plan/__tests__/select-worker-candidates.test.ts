@@ -45,7 +45,7 @@ describe('automatic-plan worker candidate preflight', () => {
     expect(terminal.error.message).not.toContain('계획은 사용할 수 있습니다');
   });
 
-  it('publishes only verified sources and limits proof wording to a surviving plan', () => {
+  it('publishes only verified objective improvements and limits proof wording to a surviving plan', () => {
     const { request, valid } = fixture();
     const constructionFailure: AutomaticPlanConstructionOutcome = Object.freeze({
       status: 'FAILURE',
@@ -56,6 +56,7 @@ describe('automatic-plan worker candidate preflight', () => {
     });
     const assessment = assessWorkerCandidateSources(request, [
       constructionFailure,
+      valid,
       valid,
     ]);
 

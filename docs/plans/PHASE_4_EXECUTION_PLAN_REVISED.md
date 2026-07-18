@@ -1040,12 +1040,14 @@ Exit gate:
 Tasks:
 
 - Build a deterministic constructive candidate that searches the complete business-date range, first avoids pre-qualification commissions, obeys PVP headroom/minimum-30, covers bottom-up `SELF` deficits, and distributes root commission opportunities toward `U` without adding PV.
+- Expand each verified constructive seed with deterministic, total-preserving date profiles for direct `SELF` values. At minimum include threshold-oriented `300`, repeating `300·200·400`, and aligned `700`, `1,500`, and `2,400` profiles, with aligned/staggered branch variants for priority members. These profiles may change only the dates of existing direct PV, must preserve every member/field total, and remain heuristic candidates subject to the canonical verifier and objective comparator.
 - Verify the constructive result through Phase 1.
 - If construction reaches fewer than `U` root days but all hard calculation and fortnight rules pass, publish the verified shortfall candidate with the exact warning and continue search; do not convert that outcome to `INFEASIBLE`.
 - Define the solver-neutral model/adapter and versioned model certificate.
 - Write the explicit soundness, completeness, and objective-preservation mapping before accepting a backend.
 - Spike candidate exact solver approaches in a Web Worker.
 - Measure model build, first feasible candidate, improvement, proof, memory, bundle size, cancellation, repeated-run cleanup, and wall-clock variability on 1/10/20/57-member fixtures.
+- After canonical worker preflight, publish only the deterministic sequence of strict objective improvements. Verified candidates that tie or lose against the current worker incumbent must not be cloned to the UI thread.
 - Test on a documented typical office laptop as well as development hardware.
 - Record dependency license, maintenance, browser/WASM/CSP compatibility, exact-integer/tolerance range, worker behavior, and single-thread/determinism configuration where relevant.
 - Select one backend or stop with a server-job architecture decision if no browser backend is safe.
@@ -1267,6 +1269,7 @@ Do not lower a threshold to make Phase 4 pass. Add optimizer paths to the covera
 | P4-FAIR-007 | A depth-2/3 member has fewer than the recommended equivalent units | Candidate remains feasible; fairness is not a hard condition |
 | P4-FAIR-008 | Root target is 1,500 or 2,400 | Root is excluded from every equivalent-unit fairness vector |
 | P4-PERIOD-001 | Constructive candidate over the canonical business calendar | Searches and may allocate across every input-eligible date; it does not stop at the earliest feasible prefix by construction |
+| P4-PERIOD-004 | 2024-07-style 17-member seed with identical direct-PV totals | Tier-profile variants preserve every member/field total and root `U`, and the canonical comparator selects a verified candidate with greater confirmed payout when one exists |
 | P4-PERIOD-002 | Root aggregate target is capacity-limited to `U<N` | No 1-PV token or invented final-date commission is added merely to fill unused dates |
 | P4-PERIOD-003 | Aggregate formula yields `U`, but date-by-date construction finds only `U-1` | Verified shortfall fallback is exposed and search may continue; aggregate `U` is not treated as a schedule-existence proof |
 | P4-COMP-001 | Comparator randomized valid vectors | Antisymmetry, transitivity, totality, equality consistency hold |

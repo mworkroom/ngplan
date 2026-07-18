@@ -1,6 +1,8 @@
 import {
+  compareAutomaticPlanObjectives,
   verifyAutomaticPlanCandidate,
   type AutomaticPlanConstructionOutcome,
+  type AutomaticPlanObjectiveVector,
   type AutomaticPlanRequest,
   type RawAutomaticPlanCandidate,
   type SafeAutomaticPlanError,
@@ -40,6 +42,7 @@ export function assessWorkerCandidateSources(
 ): WorkerCandidateAssessment {
   const publishableCandidates: RawAutomaticPlanCandidate[] = [];
   let firstFailure: SafeAutomaticPlanError | null = null;
+  let bestObjective: AutomaticPlanObjectiveVector | null = null;
 
   for (let index = 0; index < sources.length; index += 1) {
     const source = sources[index]!;
@@ -56,6 +59,11 @@ export function assessWorkerCandidateSources(
       firstFailure ??= verified.error;
       continue;
     }
+    if (
+      bestObjective !== null &&
+      compareAutomaticPlanObjectives(verified.candidate.objective, bestObjective) >= 0
+    ) continue;
+    bestObjective = verified.candidate.objective;
     publishableCandidates.push(source.candidate);
   }
 

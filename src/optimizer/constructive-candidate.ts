@@ -7,6 +7,7 @@ import {
 import { automaticPlanError } from './errors';
 import { verifyAutomaticPlanCandidate } from './candidate-verifier';
 import { deriveRootCommissionGoalCapacity } from './root-commission-goal';
+import { buildTierProfileCandidateVariants } from './tier-profile-candidates';
 import type {
   AutomaticPlanCandidateIdentity,
   AutomaticPlanConstructionOutcome,
@@ -943,6 +944,20 @@ export function buildConstructiveCandidateVariants(
         }));
       }
     }
+  }
+  const seenCandidates = new Set(
+    variants.flatMap((variant) => variant.status === 'SUCCESS'
+      ? [JSON.stringify(variant.candidate.allocations)]
+      : []),
+  );
+  for (const candidate of buildTierProfileCandidateVariants(
+    request,
+    payoutAligned,
+  )) {
+    const signature = JSON.stringify(candidate.allocations);
+    if (seenCandidates.has(signature)) continue;
+    seenCandidates.add(signature);
+    variants.push(Object.freeze({ status: 'SUCCESS', candidate }));
   }
   return Object.freeze(variants);
 }

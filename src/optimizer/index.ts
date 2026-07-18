@@ -9,6 +9,7 @@ export * from './root-commission-goal';
 export * from './objective';
 export * from './candidate-verifier';
 export * from './constructive-candidate';
+export * from './tier-profile-candidates';
 export * from './model';
 export * from './model-certificate';
 export * from './proof-stages';
