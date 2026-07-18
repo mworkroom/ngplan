@@ -1,4 +1,5 @@
 import type { ManualPlanMemberSummaryView } from '../../../application/manual-plan';
+import { commissionEquivalentUnitsForTier } from '../../../engine';
 
 export interface MemberFortnightSummaryProps {
   readonly selected: ManualPlanMemberSummaryView | null;
@@ -12,6 +13,10 @@ const pv = (value: number): string => `${PV_FORMATTER.format(value)} PV`;
 function occurrenceDateLabel(date: string): string {
   const [, month, day] = date.split('-').map(Number);
   return month === undefined || day === undefined ? date : `${month}월 ${day}일`;
+}
+
+function equivalentUnitsLabel(value: number | null): string {
+  return value === null ? '환산 횟수 미확정' : `${value}회`;
 }
 
 function SummaryValue({ label, value }: { readonly label: string; readonly value: string }) {
@@ -68,6 +73,10 @@ export function MemberFortnightSummary({
         <SummaryValue label="판정 좌" value={`${pv(selected.assessedLeft)} · ${selected.leftTargetLabel}`} />
         <SummaryValue label="판정 우" value={`${pv(selected.assessedRight)} · ${selected.rightTargetLabel}`} />
         <SummaryValue label="커미션 발생일" value={`${selected.commissionDays}일`} />
+        <SummaryValue
+          label="수당 환산 횟수"
+          value={`${equivalentUnitsLabel(selected.commissionEquivalentUnits)} (300단계 기준)`}
+        />
         <SummaryValue label="자격 미달 정산" value={`${selected.belowQualificationSettlementDays}일`} />
         <SummaryValue label="분산 권장" value={selected.recommendationLabel} />
       </dl>
@@ -84,6 +93,11 @@ export function MemberFortnightSummary({
                   {occurrenceDateLabel(occurrence.date)}
                 </time>
                 <span>{PV_FORMATTER.format(occurrence.tier)} PV 단계</span>
+                <span>
+                  {equivalentUnitsLabel(
+                    commissionEquivalentUnitsForTier(occurrence.tier),
+                  )}
+                </span>
               </li>
             ))}
           </ol>
@@ -100,7 +114,7 @@ export function MemberFortnightSummary({
               <th scope="col">추가 필요</th>
               <th scope="col">누적 좌 / 우</th>
               <th scope="col">목표 상태</th>
-              <th scope="col">커미션</th>
+              <th scope="col">수당 발생일 / 환산</th>
               <th scope="col">권장 상태</th>
             </tr>
           </thead>
@@ -112,7 +126,9 @@ export function MemberFortnightSummary({
                 <td>{pv(row.remainingPvp)}</td>
                 <td>{pv(row.rawLeftTotal)} / {pv(row.rawRightTotal)}</td>
                 <td>{row.allTargetsLabel}</td>
-                <td>{row.commissionDays}일</td>
+                <td>
+                  {row.commissionDays}일 / {equivalentUnitsLabel(row.commissionEquivalentUnits)}
+                </td>
                 <td>{row.recommendationLabel}</td>
               </tr>
             ))}

@@ -1,4 +1,4 @@
-export const PROBLEM_FINGERPRINT_VERSION = '2.0.0' as const;
+export const PROBLEM_FINGERPRINT_VERSION = '3.0.0' as const;
 export const PROBLEM_FINGERPRINT_ALGORITHM = 'fnv1a64-canonical-json-v1' as const;
 
 type CanonicalJsonValue =

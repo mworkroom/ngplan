@@ -152,36 +152,36 @@ function automaticPlanPreviewMetrics(
         memberByKey.get(candidate.display.rootCommissionGoal.rootMemberKey)?.name ??
         candidate.display.rootCommissionGoal.rootMemberKey,
     }),
-    priorityDepthMemberDayCounts: Object.freeze(
-      candidate.display.priorityDepthMemberDayCounts.map((item) =>
+    priorityDepthMemberEquivalentUnitCounts: Object.freeze(
+      candidate.display.priorityDepthMemberEquivalentUnitCounts.map((item) =>
         Object.freeze({
           memberKey: item.memberKey,
           memberLabel: memberByKey.get(item.memberKey)?.name ?? item.memberKey,
           organizationDepth: item.organizationDepth,
-          days: item.commissionDays,
+          equivalentUnits: item.commissionEquivalentUnits,
         }),
       ),
     ),
-    highTargetMemberDayCounts: Object.freeze(
-      candidate.display.highTargetMemberDayCounts.map((item) =>
+    highTargetMemberEquivalentUnitCounts: Object.freeze(
+      candidate.display.highTargetMemberEquivalentUnitCounts.map((item) =>
         Object.freeze({
           memberKey: item.memberKey,
           memberLabel: memberByKey.get(item.memberKey)?.name ?? item.memberKey,
           pvpTarget: item.pvpTarget,
-          days: item.commissionDays,
+          equivalentUnits: item.commissionEquivalentUnits,
         }),
       ),
     ),
-    target700MembersAtLeastEight:
-      candidate.display.target700MembersAtLeastEight,
-    target700TotalCommissionDays:
-      candidate.display.target700TotalCommissionDays,
-    target700MemberDayCounts: Object.freeze(
-      candidate.display.target700MemberDayCounts.map((item) =>
+    target700MembersAtLeastEightEquivalentUnits:
+      candidate.display.target700MembersAtLeastEightEquivalentUnits,
+    target700TotalCommissionEquivalentUnits:
+      candidate.display.target700TotalCommissionEquivalentUnits,
+    target700MemberEquivalentUnitCounts: Object.freeze(
+      candidate.display.target700MemberEquivalentUnitCounts.map((item) =>
         Object.freeze({
           memberKey: item.memberKey,
           memberLabel: memberByKey.get(item.memberKey)?.name ?? item.memberKey,
-          days: item.commissionDays,
+          equivalentUnits: item.commissionEquivalentUnits,
         }),
       ),
     ),

@@ -1,12 +1,18 @@
-import type { CommissionTier, PvpTarget, Pv, RuleSet } from './types';
+import type {
+  CommissionEquivalentUnits,
+  CommissionTier,
+  PvpTarget,
+  Pv,
+  RuleSet,
+} from './types';
 
 const pvLiteral = (value: number): Pv => value as Pv;
 
-export const ENGINE_VERSION = '6.0.0';
+export const ENGINE_VERSION = '7.0.0';
 export const CALENDAR_VERSION = '1.0.0';
 
-export const RULE_SET_6_0_0: RuleSet = Object.freeze({
-  rulesetVersion: '6.0.0',
+export const RULE_SET_7_0_0: RuleSet = Object.freeze({
+  rulesetVersion: '7.0.0',
   commissionTiers: Object.freeze([
     300,
     700,
@@ -24,7 +30,7 @@ export const RULE_SET_6_0_0: RuleSet = Object.freeze({
   fortnightPvpSourcePolicy: 'NEW_ONLY_EXCLUDING_OPENING_AND_DAILY_CARRY',
   target700CommissionPreference: Object.freeze({
     eligiblePvpTarget: 700,
-    recommendedDays: 8,
+    recommendedEquivalentUnits: 8,
   }),
   qualificationPolicy: Object.freeze({
     threshold: 300,
@@ -33,7 +39,25 @@ export const RULE_SET_6_0_0: RuleSet = Object.freeze({
   }),
 });
 
-export const DEFAULT_RULE_SET = RULE_SET_6_0_0;
+export const DEFAULT_RULE_SET = RULE_SET_7_0_0;
+
+/** 엄마식 수당 횟수: 300단계 수당을 1회로 본 금액 환산 단위. */
+export function commissionEquivalentUnitsForTier(
+  tier: CommissionTier,
+): CommissionEquivalentUnits | null {
+  switch (tier) {
+    case 300:
+      return 1;
+    case 700:
+      return 2;
+    case 1500:
+      return 4;
+    case 2400:
+      return 8;
+    default:
+      return null;
+  }
+}
 
 export function isAllowedPvpTarget(
   value: number,

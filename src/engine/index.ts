@@ -9,7 +9,8 @@ export {
   CALENDAR_VERSION,
   DEFAULT_RULE_SET,
   ENGINE_VERSION,
-  RULE_SET_6_0_0,
+  RULE_SET_7_0_0,
+  commissionEquivalentUnitsForTier,
 } from '../domain/constants';
 export {
   validateOrganizationSnapshot,
@@ -33,6 +34,7 @@ export type {
   CalculationOutcome,
   CalculationResult,
   CommissionOccurrence,
+  CommissionEquivalentUnits,
   DailySettlement,
   DerivedPeriod,
   FortnightAssessment,

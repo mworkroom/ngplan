@@ -1,4 +1,8 @@
-import type { CalculationResult, FortnightAssessment } from '../../engine';
+import {
+  commissionEquivalentUnitsForTier,
+  type CalculationResult,
+  type FortnightAssessment,
+} from '../../engine';
 import { manualPlanMemberGroupDomId } from './derive-manual-plan-schema';
 import { manualPlanIssueTargetId } from './map-manual-plan-issues';
 import type {
@@ -59,13 +63,15 @@ function recommendationLabel(assessment: FortnightAssessment): string {
     case 'NOT_APPLICABLE':
       return '권장 대상 아님';
     case 'BELOW_RECOMMENDED':
-      return assessment.recommendedCommissionDays === null
+      return assessment.recommendedCommissionEquivalentUnits === null
         ? '권장 기준 확인 필요'
-        : `${assessment.recommendedCommissionDays}회 권장 미달`;
+        : `300단계 환산 ${assessment.recommendedCommissionEquivalentUnits}회 권장 미달`;
     case 'MET_OR_EXCEEDED':
-      return assessment.recommendedCommissionDays === null
+      return assessment.recommendedCommissionEquivalentUnits === null
         ? '권장 기준 확인 필요'
-        : `${assessment.recommendedCommissionDays}회 권장 달성`;
+        : `300단계 환산 ${assessment.recommendedCommissionEquivalentUnits}회 권장 달성`;
+    case 'UNCONFIRMED':
+      return '환산표가 없는 상위 단계 포함 · 권장 확인 필요';
   }
 }
 
@@ -110,12 +116,17 @@ export function deriveManualPlanDailyAuditView(
     return null;
   }
 
+  const commissionEquivalentUnits = !settlement.commissionOccurred || settlement.commissionTier === null
+    ? null
+    : commissionEquivalentUnitsForTier(settlement.commissionTier);
   const commissionLabel = settlement.settlementStatus === 'SKIPPED'
     ? '정산 제외 · 커미션 없음'
     : settlement.settlementKind === 'BELOW_QUALIFICATION_SETTLEMENT'
       ? '자격 PVP 300 미만 정산 · 정상 커미션 제외'
     : settlement.commissionOccurred
-      ? `${settlement.commissionTier} 단계 · 커미션 발생`
+      ? `${settlement.commissionTier} 단계 · ${commissionEquivalentUnits === null
+          ? '환산 횟수 미확정'
+          : `300단계 환산 ${commissionEquivalentUnits}회`}`
       : '커미션 없음';
   return Object.freeze({
     date,
@@ -142,6 +153,7 @@ export function deriveManualPlanDailyAuditView(
     assessedRight: settlement.assessedRight,
     commissionTier: settlement.commissionTier,
     commissionOccurred: settlement.commissionOccurred,
+    commissionEquivalentUnits,
     commissionLabel,
     carryOut: settlement.carryOut,
     running,
@@ -194,12 +206,14 @@ export function deriveManualPlanMemberSummaryView(
     allTargetsMet: assessment.allTargetsMet,
     allTargetsLabel: assessment.allTargetsMet ? '전체 목표 달성' : '추가 계획 필요',
     commissionDays: assessment.commissionDays,
+    commissionEquivalentUnits: assessment.commissionEquivalentUnits,
     commissionOccurrences: assessment.commissionOccurrences,
     belowQualificationSettlementOccurrences:
       assessment.belowQualificationSettlementOccurrences,
     belowQualificationSettlementDays: assessment.belowQualificationSettlementDays,
     recommendationStatus: assessment.recommendationStatus,
-    recommendedCommissionDays: assessment.recommendedCommissionDays,
+    recommendedCommissionEquivalentUnits:
+      assessment.recommendedCommissionEquivalentUnits,
     recommendationLabel: recommendationLabel(assessment),
   });
 }

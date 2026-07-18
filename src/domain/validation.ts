@@ -840,8 +840,8 @@ function hasCanonicalRuleSetBody(rules: RuleSet): boolean {
       rules.fortnightPvpSourcePolicy === expected.fortnightPvpSourcePolicy &&
       rules.target700CommissionPreference.eligiblePvpTarget ===
         expected.target700CommissionPreference.eligiblePvpTarget &&
-      rules.target700CommissionPreference.recommendedDays ===
-        expected.target700CommissionPreference.recommendedDays &&
+      rules.target700CommissionPreference.recommendedEquivalentUnits ===
+        expected.target700CommissionPreference.recommendedEquivalentUnits &&
       rules.qualificationPolicy.threshold ===
         expected.qualificationPolicy.threshold &&
       rules.qualificationPolicy.accumulation ===
@@ -947,8 +947,8 @@ export function validatePlan(
       issues,
       'RULESET_BODY_MISMATCH',
       { snapshotId, field: 'ruleset' },
-      '규칙 버전 6.0.0의 본문이 확정된 규칙과 일치하지 않습니다.',
-      '내보낸 기본 RuleSet 6.0.0을 변경하지 않고 사용해 주세요.',
+      '규칙 버전 7.0.0의 본문이 확정된 규칙과 일치하지 않습니다.',
+      '내보낸 기본 RuleSet 7.0.0을 변경하지 않고 사용해 주세요.',
     );
   }
 

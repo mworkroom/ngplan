@@ -523,9 +523,9 @@ describe('optimizer arithmetic, construction, objective, and oracle defenses', (
       totalNewPv: 1,
       confirmedPayoutWon: 0,
       discardedExcessPv: 0,
-      priorityDepthAscendingDayVector: [],
-      highTargetAscendingDayVector: [],
-      target700AscendingDayVector: [8, 7],
+      priorityDepthAscendingEquivalentUnitVector: [],
+      highTargetAscendingEquivalentUnitVector: [],
+      target700AscendingEquivalentUnitVector: [8, 7],
       futureCumulativePvpInvestmentPv: 0,
       nonHundredCellCount: 1,
       maxDirectPvp: 1,
@@ -573,9 +573,9 @@ describe('optimizer arithmetic, construction, objective, and oracle defenses', (
       Object.freeze({ root: optimizerOpening() }),
     );
     const target1500 = verifiedFixture(target1500Request);
-    expect(target1500.objective.priorityDepthAscendingDayVector).toEqual([]);
-    expect(target1500.objective.highTargetAscendingDayVector).toEqual([]);
-    expect(target1500.objective.target700AscendingDayVector).toEqual([]);
+    expect(target1500.objective.priorityDepthAscendingEquivalentUnitVector).toEqual([]);
+    expect(target1500.objective.highTargetAscendingEquivalentUnitVector).toEqual([]);
+    expect(target1500.objective.target700AscendingEquivalentUnitVector).toEqual([]);
 
     const request = createOptimizerRequest();
     const raw = constructive(request);
@@ -694,7 +694,7 @@ describe('optimizer certificate and run-state defensive coverage', () => {
       {
         ...valid,
         provenVectorPrefix: {
-          objective: 'TARGET_700_ASCENDING_VECTOR',
+          objective: 'TARGET_700_ASCENDING_EQUIVALENT_UNIT_VECTOR',
           length: coordinateCount,
         },
       },

@@ -673,7 +673,7 @@ describe('calculatePlan', () => {
     }
   });
 
-  test('uses ruleset and engine 6.0.0 and canonical root-first LEFT-before-RIGHT output order', () => {
+  test('uses ruleset and engine 7.0.0 and canonical root-first LEFT-before-RIGHT output order', () => {
     const result = calculate(
       makePlanInput({
         members: [
@@ -685,8 +685,8 @@ describe('calculatePlan', () => {
       }),
     );
 
-    expect(result.rulesetVersion).toBe('6.0.0');
-    expect(result.engineVersion).toBe('6.0.0');
+    expect(result.rulesetVersion).toBe('7.0.0');
+    expect(result.engineVersion).toBe('7.0.0');
     expect(result.inputSnapshot.organization.members.map(({ memberKey }) => memberKey))
       .toEqual(['Z', 'M', 'A', 'B']);
     expect(Object.keys(result.finalAssessmentByMember)).toEqual(['Z', 'M', 'A', 'B']);
@@ -772,7 +772,7 @@ describe('calculatePlan', () => {
     }
   });
 
-  test('rejects a modified RuleSet body that reuses version 6.0.0', () => {
+  test('rejects a modified RuleSet body that reuses version 7.0.0', () => {
     const alteredRules = {
       ...DEFAULT_RULE_SET,
       fortnightSideTarget: 2_499 as Pv,

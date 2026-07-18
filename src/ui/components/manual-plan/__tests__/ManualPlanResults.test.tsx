@@ -136,7 +136,7 @@ describe('WP5 daily and fortnight result presentation', () => {
     expect(screen.getByText('400 PV · 자격 300 이상')).toBeDefined();
     expect(screen.getByText('4. 오늘 계산에 사용할 합계')).toBeDefined();
     expect(screen.getByText('작은 쪽 좌에 PVP 적용')).toBeDefined();
-    expect(screen.getByText('300 단계 · 커미션 발생')).toBeDefined();
+    expect(screen.getByText('300 단계 · 300단계 환산 1회')).toBeDefined();
     expect(screen.getByText('9. 오늘까지의 보름 합계')).toBeDefined();
   });
 
@@ -213,6 +213,9 @@ describe('WP5 daily and fortnight result presentation', () => {
     expect(screen.getByText('2,500 PV · 우 목표 달성')).toBeDefined();
     expect(screen.getByText('7월 1일')).toBeDefined();
     expect(screen.getByText('2,400 PV 단계')).toBeDefined();
+    expect(screen.getByText('수당 환산 횟수').closest('div')?.textContent).toBe(
+      '수당 환산 횟수8회 (300단계 기준)',
+    );
   });
 
   it('COUNT-001 renders every commission occurrence date and tier plus the day count', () => {
@@ -240,7 +243,10 @@ describe('WP5 daily and fortnight result presentation', () => {
     );
 
     expect(screen.getAllByText('8일').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('8회 권장 달성').length).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getAllByText('환산표가 없는 상위 단계 포함 · 권장 확인 필요').length,
+    ).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('환산 횟수 미확정').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('7월 1일')).toBeDefined();
     expect(screen.getByText('7월 9일')).toBeDefined();
     expect(screen.getAllByText('300 PV 단계')).toHaveLength(2);

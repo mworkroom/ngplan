@@ -3,11 +3,13 @@ import type {
   DailySettlement,
   NormalizedAllocationCell,
 } from '../engine';
+import { commissionEquivalentUnitsForTier } from '../engine';
 import {
   assertCanonicalNonNegativeSafeInteger,
   checkedAddScore,
 } from './checked-integer';
 import { validateAutomaticPlanCandidateShape } from './candidate-shape';
+import { AUTOMATIC_PLAN_TARGET_700_RECOMMENDED_EQUIVALENT_UNITS } from './constants';
 import { discardedExcessForSettlement } from './discarded-excess';
 import { automaticPlanError, errorFromUnknown } from './errors';
 import { deriveRootCommissionGoalCapacity } from './root-commission-goal';
@@ -15,10 +17,10 @@ import type {
   AutomaticPlanDisplayMetrics,
   AutomaticPlanObjectiveVector,
   AutomaticPlanRequest,
-  HighTargetMemberDayCount,
-  PriorityDepthMemberDayCount,
+  HighTargetMemberEquivalentUnitCount,
+  PriorityDepthMemberEquivalentUnitCount,
   SafeAutomaticPlanError,
-  Target700MemberDayCount,
+  Target700MemberEquivalentUnitCount,
   TerminalCarryMemberSummary,
 } from './types';
 
@@ -101,16 +103,16 @@ function compareMaxVector(
   return compareMax(left.length, right.length);
 }
 
-function assertAscendingDayVector(
+function assertAscendingEquivalentUnitVector(
   values: readonly number[],
   label: string,
 ): void {
   for (const value of values) {
-    assertCanonicalNonNegativeSafeInteger(value, `${label} day count`);
+    assertCanonicalNonNegativeSafeInteger(value, `${label} equivalent unit count`);
   }
   for (let index = 1; index < values.length; index += 1) {
     if (values[index - 1]! > values[index]!) {
-      throw new TypeError(`${label} day vector must be sorted ascending`);
+      throw new TypeError(`${label} equivalent unit vector must be sorted ascending`);
     }
   }
 }
@@ -165,16 +167,16 @@ export function assertValidAutomaticPlanObjective(
   ] as const) {
     assertCanonicalNonNegativeSafeInteger(value, label);
   }
-  assertAscendingDayVector(
-    objective.priorityDepthAscendingDayVector,
+  assertAscendingEquivalentUnitVector(
+    objective.priorityDepthAscendingEquivalentUnitVector,
     'priorityDepth',
   );
-  assertAscendingDayVector(
-    objective.highTargetAscendingDayVector,
+  assertAscendingEquivalentUnitVector(
+    objective.highTargetAscendingEquivalentUnitVector,
     'highTarget',
   );
-  assertAscendingDayVector(
-    objective.target700AscendingDayVector,
+  assertAscendingEquivalentUnitVector(
+    objective.target700AscendingEquivalentUnitVector,
     'target700',
   );
   for (const value of objective.deterministicAllocationVector) {
@@ -198,16 +200,16 @@ export function compareAutomaticPlanObjectives(
     compareMax(left.confirmedPayoutWon, right.confirmedPayoutWon) ||
     compareMin(left.discardedExcessPv, right.discardedExcessPv) ||
     compareMaxVector(
-      left.priorityDepthAscendingDayVector,
-      right.priorityDepthAscendingDayVector,
+      left.priorityDepthAscendingEquivalentUnitVector,
+      right.priorityDepthAscendingEquivalentUnitVector,
     ) ||
     compareMaxVector(
-      left.highTargetAscendingDayVector,
-      right.highTargetAscendingDayVector,
+      left.highTargetAscendingEquivalentUnitVector,
+      right.highTargetAscendingEquivalentUnitVector,
     ) ||
     compareMaxVector(
-      left.target700AscendingDayVector,
-      right.target700AscendingDayVector,
+      left.target700AscendingEquivalentUnitVector,
+      right.target700AscendingEquivalentUnitVector,
     ) ||
     compareMax(
       left.futureCumulativePvpInvestmentPv,
@@ -260,10 +262,13 @@ export function evaluateAutomaticPlanObjective(
     const rootGoalCapacity = deriveRootCommissionGoalCapacity(request);
     let rootActualCommissionDays = 0;
     const depthByMember = organizationDepths(request);
-    const priorityDepthMemberDayCounts: PriorityDepthMemberDayCount[] = [];
-    const highTargetMemberDayCounts: HighTargetMemberDayCount[] = [];
-    const target700MemberDayCounts: Target700MemberDayCount[] = [];
-    let target700TotalCommissionDays = 0;
+    const priorityDepthMemberEquivalentUnitCounts:
+      PriorityDepthMemberEquivalentUnitCount[] = [];
+    const highTargetMemberEquivalentUnitCounts:
+      HighTargetMemberEquivalentUnitCount[] = [];
+    const target700MemberEquivalentUnitCounts:
+      Target700MemberEquivalentUnitCount[] = [];
+    let target700TotalCommissionEquivalentUnits = 0;
     for (const memberKey of request.canonicalMemberKeys) {
       const member = request.organization.members.find(
         (candidate) => candidate.memberKey === memberKey,
@@ -271,7 +276,7 @@ export function evaluateAutomaticPlanObjective(
       if (member === undefined) {
         throw new TypeError(`missing member ${memberKey}`);
       }
-      let commissionDays = 0;
+      let commissionEquivalentUnits = 0;
       for (const date of request.calendar.dates) {
         const settlement = settlementAt(calculation, date, memberKey);
         if (isFullCommission(settlement)) {
@@ -279,7 +284,10 @@ export function evaluateAutomaticPlanObjective(
             throw new TypeError('FULL_COMMISSION settlement must contain a tier');
           }
           const payoutWon = confirmedPayoutWonForTier(settlement.commissionTier);
-          if (payoutWon === null) {
+          const equivalentUnits = commissionEquivalentUnitsForTier(
+            settlement.commissionTier,
+          );
+          if (payoutWon === null || equivalentUnits === null) {
             return {
               status: 'FAILURE',
               error: automaticPlanError(
@@ -293,7 +301,10 @@ export function evaluateAutomaticPlanObjective(
             };
           }
           confirmedPayoutWon = checkedAddScore(confirmedPayoutWon, payoutWon);
-          commissionDays = checkedAddScore(commissionDays, 1);
+          commissionEquivalentUnits = checkedAddScore(
+            commissionEquivalentUnits,
+            equivalentUnits,
+          );
           if (memberKey === rootGoalCapacity.rootMemberKey) {
             rootActualCommissionDays = checkedAddScore(rootActualCommissionDays, 1);
           }
@@ -308,25 +319,31 @@ export function evaluateAutomaticPlanObjective(
         throw new TypeError(`missing organization depth for ${memberKey}`);
       }
       if (organizationDepth === 2 || organizationDepth === 3) {
-        priorityDepthMemberDayCounts.push(
-          Object.freeze({ memberKey, organizationDepth, commissionDays }),
+        priorityDepthMemberEquivalentUnitCounts.push(
+          Object.freeze({
+            memberKey,
+            organizationDepth,
+            commissionEquivalentUnits,
+          }),
         );
       } else if (
         organizationDepth > 1 &&
         (member.pvpTarget === 1500 || member.pvpTarget === 2400)
       ) {
-        highTargetMemberDayCounts.push(
+        highTargetMemberEquivalentUnitCounts.push(
           Object.freeze({
             memberKey,
             pvpTarget: member.pvpTarget,
-            commissionDays,
+            commissionEquivalentUnits,
           }),
         );
       } else if (organizationDepth > 1 && member.pvpTarget === 700) {
-        target700MemberDayCounts.push(Object.freeze({ memberKey, commissionDays }));
-        target700TotalCommissionDays = checkedAddScore(
-          target700TotalCommissionDays,
-          commissionDays,
+        target700MemberEquivalentUnitCounts.push(
+          Object.freeze({ memberKey, commissionEquivalentUnits }),
+        );
+        target700TotalCommissionEquivalentUnits = checkedAddScore(
+          target700TotalCommissionEquivalentUnits,
+          commissionEquivalentUnits,
         );
       }
 
@@ -348,17 +365,21 @@ export function evaluateAutomaticPlanObjective(
         futureInvestment,
       );
     }
-    const priorityDepthAscendingDayVector = priorityDepthMemberDayCounts
-      .map((item) => item.commissionDays)
+    const priorityDepthAscendingEquivalentUnitVector =
+      priorityDepthMemberEquivalentUnitCounts
+      .map((item) => item.commissionEquivalentUnits)
       .sort((left, right) => left - right);
-    const highTargetAscendingDayVector = highTargetMemberDayCounts
-      .map((item) => item.commissionDays)
+    const highTargetAscendingEquivalentUnitVector =
+      highTargetMemberEquivalentUnitCounts
+      .map((item) => item.commissionEquivalentUnits)
       .sort((left, right) => left - right);
-    const target700AscendingDayVector = target700MemberDayCounts
-      .map((item) => item.commissionDays)
+    const target700AscendingEquivalentUnitVector =
+      target700MemberEquivalentUnitCounts
+      .map((item) => item.commissionEquivalentUnits)
       .sort((left, right) => left - right);
-    const target700MembersAtLeastEight = target700AscendingDayVector.filter(
-      (days) => days >= 8,
+    const target700MembersAtLeastEightEquivalentUnits =
+      target700AscendingEquivalentUnitVector.filter(
+      (units) => units >= AUTOMATIC_PLAN_TARGET_700_RECOMMENDED_EQUIVALENT_UNITS,
     ).length;
 
     const finalDate = request.calendar.dates.at(-1);
@@ -396,13 +417,15 @@ export function evaluateAutomaticPlanObjective(
       totalNewPv,
       confirmedPayoutWon,
       discardedExcessPv,
-      priorityDepthAscendingDayVector: Object.freeze(
-        priorityDepthAscendingDayVector,
+      priorityDepthAscendingEquivalentUnitVector: Object.freeze(
+        priorityDepthAscendingEquivalentUnitVector,
       ),
-      highTargetAscendingDayVector: Object.freeze(
-        highTargetAscendingDayVector,
+      highTargetAscendingEquivalentUnitVector: Object.freeze(
+        highTargetAscendingEquivalentUnitVector,
       ),
-      target700AscendingDayVector: Object.freeze(target700AscendingDayVector),
+      target700AscendingEquivalentUnitVector: Object.freeze(
+        target700AscendingEquivalentUnitVector,
+      ),
       futureCumulativePvpInvestmentPv,
       nonHundredCellCount,
       maxDirectPvp,
@@ -418,11 +441,17 @@ export function evaluateAutomaticPlanObjective(
         capacityLimited: rootGoalCapacity.capacityLimited,
         met: rootCommissionGoalShortfallDays === 0,
       }),
-      priorityDepthMemberDayCounts: Object.freeze(priorityDepthMemberDayCounts),
-      highTargetMemberDayCounts: Object.freeze(highTargetMemberDayCounts),
-      target700MembersAtLeastEight,
-      target700TotalCommissionDays,
-      target700MemberDayCounts: Object.freeze(target700MemberDayCounts),
+      priorityDepthMemberEquivalentUnitCounts: Object.freeze(
+        priorityDepthMemberEquivalentUnitCounts,
+      ),
+      highTargetMemberEquivalentUnitCounts: Object.freeze(
+        highTargetMemberEquivalentUnitCounts,
+      ),
+      target700MembersAtLeastEightEquivalentUnits,
+      target700TotalCommissionEquivalentUnits,
+      target700MemberEquivalentUnitCounts: Object.freeze(
+        target700MemberEquivalentUnitCounts,
+      ),
       terminalCarrySummary: Object.freeze({
         byMember: Object.freeze(terminalByMember),
         totalPvp,

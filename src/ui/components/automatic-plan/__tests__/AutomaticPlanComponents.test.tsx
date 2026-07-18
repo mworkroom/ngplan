@@ -27,21 +27,21 @@ const METRICS = {
     capacityLimited: false,
     met: false,
   },
-  priorityDepthMemberDayCounts: [
+  priorityDepthMemberEquivalentUnitCounts: [
     {
       memberKey: 'priority',
       memberLabel: '조직 우선 회원',
       organizationDepth: 2,
-      days: 12,
+      equivalentUnits: 12,
     },
   ],
-  highTargetMemberDayCounts: [
-    { memberKey: 'high', memberLabel: '고목표 회원', pvpTarget: 2400, days: 10 },
+  highTargetMemberEquivalentUnitCounts: [
+    { memberKey: 'high', memberLabel: '고목표 회원', pvpTarget: 2400, equivalentUnits: 10 },
   ],
-  target700MembersAtLeastEight: 1,
-  target700TotalCommissionDays: 8,
-  target700MemberDayCounts: [
-    { memberKey: 'other-700', memberLabel: '그 외 700 회원', days: 8 },
+  target700MembersAtLeastEightEquivalentUnits: 1,
+  target700TotalCommissionEquivalentUnits: 8,
+  target700MemberEquivalentUnitCounts: [
+    { memberKey: 'other-700', memberLabel: '그 외 700 회원', equivalentUnits: 8 },
   ],
   futureCumulativePvpInvestmentPv: 100,
   nonHundredCellCount: 0,
@@ -232,8 +232,8 @@ describe('automatic plan operator components', () => {
 
     expect(screen.getByText(/지금 보는 계획은 바뀌지 않았습니다/)).toBeTruthy();
     expect(screen.getByText('200 (폐기 아님)')).toBeTruthy();
-    expect(screen.getByText('그 외 700 목표 중 8일 이상')).toBeTruthy();
-    expect(screen.getByRole('list', { name: '그 외 700 목표 회원별 발생일' })).toBeTruthy();
+    expect(screen.getByText('그 외 700 목표 중 환산 8회 이상')).toBeTruthy();
+    expect(screen.getByRole('list', { name: '그 외 700 목표 회원별 수당 환산 횟수' })).toBeTruthy();
     const rootGoalMetric = screen.getByText('맨 위 회원 수당').closest('div');
     expect(rootGoalMetric).not.toBeNull();
     expect(within(rootGoalMetric!).getByText('12 / 13영업일')).toBeTruthy();
@@ -259,9 +259,9 @@ describe('automatic plan operator components', () => {
           ...METRICS,
           optimalityProven: true,
           runStatusLabel: '최소값 확인 완료',
-          priorityDepthMemberDayCounts: [],
-          highTargetMemberDayCounts: [],
-          target700MemberDayCounts: [],
+          priorityDepthMemberEquivalentUnitCounts: [],
+          highTargetMemberEquivalentUnitCounts: [],
+          target700MemberEquivalentUnitCounts: [],
           rootCommissionGoal: {
             ...METRICS.rootCommissionGoal,
             actualCommissionDays: 13,
@@ -279,7 +279,7 @@ describe('automatic plan operator components', () => {
     expect(screen.getByText('✓ 모든 회원의 보름 목표를 확인했습니다.')).toBeTruthy();
     expect(screen.getByText('✓ 모든 정산일의 수당 자격을 확인했습니다.')).toBeTruthy();
     expect(screen.queryByText(/수당 목표가 .* 부족합니다/)).toBeNull();
-    expect(screen.queryByRole('list', { name: '그 외 700 목표 회원별 발생일' })).toBeNull();
+    expect(screen.queryByRole('list', { name: '그 외 700 목표 회원별 수당 환산 횟수' })).toBeNull();
     await user.click(screen.getByRole('button', { name: '닫기' }));
     expect(onClose).toHaveBeenCalledOnce();
   });
@@ -311,7 +311,7 @@ describe('automatic plan operator components', () => {
     expect(within(rootGoalMetric!).getByText('10 / 10영업일')).toBeTruthy();
     expect(screen.getByText('계획 영업일').nextElementSibling?.textContent).toBe('14일');
     expect(screen.getByText('현재 총량 기준 목표 10일')).toBeTruthy();
-    expect(screen.getByText('조직 우선 회원 (조직 2번): 12/14일')).toBeTruthy();
+    expect(screen.getByText('조직 우선 회원 (조직 2번): 12회 (300단계 기준)')).toBeTruthy();
   });
 
   it('describes a capacity-limited shortfall against the aggregate goal', () => {

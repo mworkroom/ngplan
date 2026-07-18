@@ -30,9 +30,9 @@ function objective(
     totalNewPv: 100,
     confirmedPayoutWon: 0,
     discardedExcessPv: 0,
-    priorityDepthAscendingDayVector: [],
-    highTargetAscendingDayVector: [],
-    target700AscendingDayVector: [],
+    priorityDepthAscendingEquivalentUnitVector: [],
+    highTargetAscendingEquivalentUnitVector: [],
+    target700AscendingEquivalentUnitVector: [],
     futureCumulativePvpInvestmentPv: 0,
     nonHundredCellCount: 0,
     maxDirectPvp: 100,
@@ -148,7 +148,7 @@ describe('Phase 4 canonical objective comparator', () => {
     const clean = objective({ discardedExcessPv: 0 });
     const waste = objective({
       discardedExcessPv: 1,
-      highTargetAscendingDayVector: [14],
+      highTargetAscendingEquivalentUnitVector: [14],
     });
     expect(compareAutomaticPlanObjectives(clean, waste)).toBe(-1);
     expect(discardedExcessForSettlement(settlement('FULL_COMMISSION'))).toBe(200);
@@ -158,44 +158,44 @@ describe('Phase 4 canonical objective comparator', () => {
 
   it('compares organization-depth priority before both target-group vectors', () => {
     const strongerPriority = objective({
-      priorityDepthAscendingDayVector: [10, 10],
-      highTargetAscendingDayVector: [0, 0],
-      target700AscendingDayVector: [0, 0],
+      priorityDepthAscendingEquivalentUnitVector: [10, 10],
+      highTargetAscendingEquivalentUnitVector: [0, 0],
+      target700AscendingEquivalentUnitVector: [0, 0],
     });
     const strongerTargetGroups = objective({
-      priorityDepthAscendingDayVector: [9, 13],
-      highTargetAscendingDayVector: [14, 14],
-      target700AscendingDayVector: [14, 14],
+      priorityDepthAscendingEquivalentUnitVector: [9, 13],
+      highTargetAscendingEquivalentUnitVector: [14, 14],
+      target700AscendingEquivalentUnitVector: [14, 14],
     });
     expect(
       compareAutomaticPlanObjectives(strongerPriority, strongerTargetGroups),
     ).toBe(-1);
 
     const strongerHighTarget = objective({
-      highTargetAscendingDayVector: [8, 9],
-      target700AscendingDayVector: [0, 0],
+      highTargetAscendingEquivalentUnitVector: [8, 9],
+      target700AscendingEquivalentUnitVector: [0, 0],
     });
     const strongerTarget700 = objective({
-      highTargetAscendingDayVector: [7, 14],
-      target700AscendingDayVector: [14, 14],
+      highTargetAscendingEquivalentUnitVector: [7, 14],
+      target700AscendingEquivalentUnitVector: [14, 14],
     });
     expect(
       compareAutomaticPlanObjectives(strongerHighTarget, strongerTarget700),
     ).toBe(-1);
   });
 
-  it('prefers the complete balanced target-700 vector without an eight-day threshold', () => {
+  it('prefers the complete balanced target-700 vector without a hard eight-unit threshold', () => {
     const balanced = objective({
-      target700AscendingDayVector: [7, 7, 7],
+      target700AscendingEquivalentUnitVector: [7, 7, 7],
     });
     const thresholdCount = objective({
-      target700AscendingDayVector: [0, 8, 8],
+      target700AscendingEquivalentUnitVector: [0, 8, 8],
     });
     expect(compareAutomaticPlanObjectives(balanced, thresholdCount)).toBe(-1);
     expect(
       compareAutomaticPlanObjectives(
-        objective({ target700AscendingDayVector: [9] }),
-        objective({ target700AscendingDayVector: [8] }),
+        objective({ target700AscendingEquivalentUnitVector: [9] }),
+        objective({ target700AscendingEquivalentUnitVector: [8] }),
       ),
     ).toBe(-1);
     expect(automaticPlanObjectivesEqual(objective(), objective())).toBe(true);
@@ -207,11 +207,11 @@ describe('Phase 4 canonical objective comparator', () => {
     expect(compareAutomaticPlanObjectives(investment, noInvestment)).toBe(-1);
 
     const fairer = objective({
-      target700AscendingDayVector: [7],
+      target700AscendingEquivalentUnitVector: [7],
       futureCumulativePvpInvestmentPv: 0,
     });
     const invested = objective({
-      target700AscendingDayVector: [6],
+      target700AscendingEquivalentUnitVector: [6],
       futureCumulativePvpInvestmentPv: 1_000,
     });
     expect(compareAutomaticPlanObjectives(fairer, invested)).toBe(-1);
@@ -259,18 +259,18 @@ describe('Phase 4 canonical objective comparator', () => {
       ['discarded excess', { discardedExcessPv: 1 }, { discardedExcessPv: 0 }],
       [
         'priority-depth vector',
-        { priorityDepthAscendingDayVector: [9, 13] },
-        { priorityDepthAscendingDayVector: [10, 10] },
+        { priorityDepthAscendingEquivalentUnitVector: [9, 13] },
+        { priorityDepthAscendingEquivalentUnitVector: [10, 10] },
       ],
       [
         'high-target vector',
-        { highTargetAscendingDayVector: [7, 14] },
-        { highTargetAscendingDayVector: [8, 8] },
+        { highTargetAscendingEquivalentUnitVector: [7, 14] },
+        { highTargetAscendingEquivalentUnitVector: [8, 8] },
       ],
       [
         'target-700 vector',
-        { target700AscendingDayVector: [7, 14] },
-        { target700AscendingDayVector: [8, 8] },
+        { target700AscendingEquivalentUnitVector: [7, 14] },
+        { target700AscendingEquivalentUnitVector: [8, 8] },
       ],
       [
         'future cumulative PVP investment',
@@ -306,18 +306,18 @@ describe('Phase 4 canonical objective comparator', () => {
     ][] = [
       [
         'priority-depth vector',
-        { priorityDepthAscendingDayVector: [8] },
-        { priorityDepthAscendingDayVector: [8, 9] },
+        { priorityDepthAscendingEquivalentUnitVector: [8] },
+        { priorityDepthAscendingEquivalentUnitVector: [8, 9] },
       ],
       [
         'high-target vector',
-        { highTargetAscendingDayVector: [8] },
-        { highTargetAscendingDayVector: [8, 9] },
+        { highTargetAscendingEquivalentUnitVector: [8] },
+        { highTargetAscendingEquivalentUnitVector: [8, 9] },
       ],
       [
         'target-700 vector',
-        { target700AscendingDayVector: [8] },
-        { target700AscendingDayVector: [8, 9] },
+        { target700AscendingEquivalentUnitVector: [8] },
+        { target700AscendingEquivalentUnitVector: [8, 9] },
       ],
       [
         'deterministic allocation vector',
@@ -341,19 +341,19 @@ describe('Phase 4 canonical objective comparator', () => {
   it('rejects fairness vectors that are not sorted ascending', () => {
     expect(() =>
       compareAutomaticPlanObjectives(
-        objective({ priorityDepthAscendingDayVector: [2, 1] }),
+        objective({ priorityDepthAscendingEquivalentUnitVector: [2, 1] }),
         objective(),
       ),
     ).toThrow(TypeError);
     expect(() =>
       compareAutomaticPlanObjectives(
-        objective({ highTargetAscendingDayVector: [2, 1] }),
+        objective({ highTargetAscendingEquivalentUnitVector: [2, 1] }),
         objective(),
       ),
     ).toThrow(TypeError);
     expect(() =>
       compareAutomaticPlanObjectives(
-        objective({ target700AscendingDayVector: [2, 1] }),
+        objective({ target700AscendingEquivalentUnitVector: [2, 1] }),
         objective(),
       ),
     ).toThrow(TypeError);
@@ -366,18 +366,18 @@ describe('Phase 4 canonical objective comparator', () => {
       return seed % 20;
     };
     const values = Array.from({ length: 40 }, () => {
-      const priorityDays = [next() % 10, next() % 10].sort((a, b) => a - b);
-      const highDays = [next() % 10, next() % 10].sort((a, b) => a - b);
-      const target700Days = [next() % 10, next() % 10].sort(
+      const priorityUnits = [next() % 10, next() % 10].sort((a, b) => a - b);
+      const highUnits = [next() % 10, next() % 10].sort((a, b) => a - b);
+      const target700Units = [next() % 10, next() % 10].sort(
         (a, b) => a - b,
       );
       return objective({
         totalNewPv: next(),
         confirmedPayoutWon: next() * 60_000,
         discardedExcessPv: next(),
-        priorityDepthAscendingDayVector: priorityDays,
-        highTargetAscendingDayVector: highDays,
-        target700AscendingDayVector: target700Days,
+        priorityDepthAscendingEquivalentUnitVector: priorityUnits,
+        highTargetAscendingEquivalentUnitVector: highUnits,
+        target700AscendingEquivalentUnitVector: target700Units,
         futureCumulativePvpInvestmentPv: next(),
         nonHundredCellCount: next(),
         maxDirectPvp: next(),
@@ -440,13 +440,94 @@ describe('Phase 4 canonical objective comparator', () => {
         return total + payout;
       }, 0);
     expect(evaluated.objective.confirmedPayoutWon).toBe(expectedPayout);
-    expect(evaluated.display.target700MembersAtLeastEight).toBe(
-      evaluated.objective.target700AscendingDayVector.filter((days) => days >= 8)
+    expect(evaluated.display.target700MembersAtLeastEightEquivalentUnits).toBe(
+      evaluated.objective.target700AscendingEquivalentUnitVector.filter((units) => units >= 8)
         .length,
     );
     expect(evaluated.objective).not.toHaveProperty(
-      'target700MembersAtLeastEight',
+      'target700MembersAtLeastEightEquivalentUnits',
     );
+  });
+
+  it('uses 1·2·4·8 equivalent units rather than occurrence days in fairness vectors', () => {
+    const members = [
+      optimizerMember('root', null, null, 2400),
+      optimizerMember('priority', 'root', 'LEFT', 700),
+    ];
+    const request = createOptimizerRequest(members, Object.freeze({
+      root: optimizerOpening({
+        openingQualificationPvp: 2_400,
+        fortnightPvpOpeningCredit: 2_400,
+      }),
+      priority: optimizerOpening({
+        openingQualificationPvp: 700,
+        fortnightPvpOpeningCredit: 700,
+      }),
+    }));
+    const built = buildConstructiveCandidate(request);
+    expect(built.status).toBe('SUCCESS');
+    if (built.status !== 'SUCCESS') return;
+    const calculated = calculatePlan({
+      period: request.period,
+      organization: request.organization,
+      allocations: built.candidate.allocations,
+    });
+    expect(calculated.status).toBe('SUCCESS');
+    if (calculated.status !== 'SUCCESS') return;
+
+    const tiers = [300, 700, 1500, 2400] as const;
+    const settledDates = request.calendar.dates.filter(
+      (date) => calculated.result.dailySettlementByDateAndMember[date]?.priority
+        ?.settlementStatus === 'SETTLED',
+    );
+    const tierByDate = new Map(
+      settledDates.slice(0, tiers.length).map((date, index) => [date, tiers[index]!] as const),
+    );
+    const calculationWithKnownTiers: CalculationResult = {
+      ...calculated.result,
+      dailySettlementByDateAndMember: Object.freeze(Object.fromEntries(
+        Object.entries(calculated.result.dailySettlementByDateAndMember).map(
+          ([date, byMember]) => {
+            const original = byMember.priority!;
+            if (original.settlementStatus === 'SKIPPED') return [date, byMember];
+            const tier = tierByDate.get(date as IsoDate);
+            const priority: DailySettlement = tier === undefined
+              ? {
+                  ...original,
+                  settlementKind: 'NO_COMMISSION',
+                  commissionTier: null,
+                  commissionOccurred: false,
+                }
+              : {
+                  ...original,
+                  preSettlement: { pvp: 0 as Pv, left: tier as Pv, right: tier as Pv },
+                  assessedLeft: tier as Pv,
+                  assessedRight: tier as Pv,
+                  settlementKind: 'FULL_COMMISSION',
+                  commissionTier: tier,
+                  commissionOccurred: true,
+                };
+            return [date, Object.freeze({ ...byMember, priority })];
+          },
+        ),
+      )),
+    };
+    const evaluated = evaluateAutomaticPlanObjective(
+      request,
+      built.candidate.allocations,
+      calculationWithKnownTiers,
+    );
+
+    expect(evaluated.status).toBe('SUCCESS');
+    if (evaluated.status !== 'SUCCESS') return;
+    expect(evaluated.objective.priorityDepthAscendingEquivalentUnitVector).toEqual([15]);
+    expect(evaluated.display.priorityDepthMemberEquivalentUnitCounts).toEqual([
+      {
+        memberKey: 'priority',
+        organizationDepth: 2,
+        commissionEquivalentUnits: 15,
+      },
+    ]);
   });
 
   it('derives priority members from organization depth rather than sheet markers or targets', () => {
@@ -484,18 +565,18 @@ describe('Phase 4 canonical objective comparator', () => {
     expect(evaluated.status).toBe('SUCCESS');
     if (evaluated.status !== 'SUCCESS') return;
 
-    expect(evaluated.display.priorityDepthMemberDayCounts.map((item) => [
+    expect(evaluated.display.priorityDepthMemberEquivalentUnitCounts.map((item) => [
       item.memberKey,
       item.organizationDepth,
     ])).toEqual([
       ['depth-2', 2],
       ['depth-3', 3],
     ]);
-    expect(evaluated.objective.priorityDepthAscendingDayVector).toHaveLength(2);
-    expect(evaluated.display.highTargetMemberDayCounts.map((item) => item.memberKey))
+    expect(evaluated.objective.priorityDepthAscendingEquivalentUnitVector).toHaveLength(2);
+    expect(evaluated.display.highTargetMemberEquivalentUnitCounts.map((item) => item.memberKey))
       .toEqual(['depth-4']);
-    expect(evaluated.objective.highTargetAscendingDayVector).toHaveLength(1);
-    expect(evaluated.display.target700MemberDayCounts).toEqual([]);
+    expect(evaluated.objective.highTargetAscendingEquivalentUnitVector).toHaveLength(1);
+    expect(evaluated.display.target700MemberEquivalentUnitCounts).toEqual([]);
   });
 
   it('fails closed when a full commission uses an unconfirmed payout tier', () => {

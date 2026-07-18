@@ -133,7 +133,8 @@ describe('WP5 pure result view models', () => {
       assessedRight: 300,
       commissionTier: 300,
       commissionOccurred: true,
-      commissionLabel: '300 단계 · 커미션 발생',
+      commissionEquivalentUnits: 1,
+      commissionLabel: '300 단계 · 300단계 환산 1회',
       carryOut: { pvp: 0, left: 0, right: 0 },
       running: {
         newPvpTotal: 100,
@@ -260,7 +261,9 @@ describe('WP5 pure result view models', () => {
       sideTargetsMet: true,
       allTargetsMet: true,
       allTargetsLabel: '전체 목표 달성',
-      recommendationLabel: '8회 권장 미달',
+      commissionDays: 1,
+      commissionEquivalentUnits: 8,
+      recommendationLabel: '300단계 환산 8회 권장 달성',
     });
   });
 
@@ -430,8 +433,8 @@ describe('WP5 pure result view models', () => {
     const below = currentResult(bundle([member('A', null, null, 700)]));
     expect(deriveManualPlanMemberSummaryView(below.result, below.schema, 'A')).toMatchObject({
       recommendationStatus: 'BELOW_RECOMMENDED',
-      recommendedCommissionDays: 8,
-      recommendationLabel: '8회 권장 미달',
+      recommendedCommissionEquivalentUnits: 8,
+      recommendationLabel: '300단계 환산 8회 권장 미달',
     });
 
     const met = currentResult(bundle([member('A', null, null, 700)]), (schema, initial) => {
@@ -445,8 +448,9 @@ describe('WP5 pure result view models', () => {
     });
     expect(deriveManualPlanMemberSummaryView(met.result, met.schema, 'A')).toMatchObject({
       commissionDays: 8,
+      commissionEquivalentUnits: 8,
       recommendationStatus: 'MET_OR_EXCEEDED',
-      recommendationLabel: '8회 권장 달성',
+      recommendationLabel: '300단계 환산 8회 권장 달성',
     });
   });
 
@@ -463,7 +467,7 @@ describe('WP5 pure result view models', () => {
           A: {
             ...assessment,
             recommendationStatus,
-            recommendedCommissionDays: null,
+            recommendedCommissionEquivalentUnits: null,
           },
         },
       };
@@ -493,10 +497,12 @@ describe('WP5 pure result view models', () => {
     );
     const summary = deriveManualPlanMemberSummaryView(result, schema, 'A');
     expect(summary?.commissionDays).toBe(8);
+    expect(summary?.commissionEquivalentUnits).toBeNull();
+    expect(summary?.recommendationStatus).toBe('UNCONFIRMED');
     expect(summary?.commissionOccurrences.map(({ tier }) => tier)).toEqual(tiers);
   });
 
-  it('COUNT-003 keeps six commission days as a soft miss after required goals pass', () => {
+  it('COUNT-003 keeps six 300-tier equivalent units as a soft miss after required goals pass', () => {
     const { schema, result } = currentResult(
       bundle([member('A', null, null, 700)]),
       (schema, initial) => {
@@ -504,11 +510,9 @@ describe('WP5 pure result view models', () => {
         const dates = schema.dates
           .filter((item) => item.settlementMode === 'SETTLE')
           .slice(0, 6);
-        draft = edit(schema, draft, dates[0]!.date, 'A', 'pvp', 700);
-        draft = edit(schema, draft, dates[0]!.date, 'A', 'selfLeft', 2500);
-        draft = edit(schema, draft, dates[0]!.date, 'A', 'selfRight', 1800);
-        for (const date of dates.slice(1)) {
-          draft = edit(schema, draft, date.date, 'A', 'selfLeft', 300);
+        for (const [index, date] of dates.entries()) {
+          draft = edit(schema, draft, date.date, 'A', 'pvp', index === 0 ? 700 : 0);
+          draft = edit(schema, draft, date.date, 'A', 'selfLeft', index === 0 ? 0 : 500);
           draft = edit(schema, draft, date.date, 'A', 'selfRight', 300);
         }
         return draft;
@@ -518,8 +522,9 @@ describe('WP5 pure result view models', () => {
       allTargetsMet: true,
       allTargetsLabel: '전체 목표 달성',
       commissionDays: 6,
+      commissionEquivalentUnits: 6,
       recommendationStatus: 'BELOW_RECOMMENDED',
-      recommendationLabel: '8회 권장 미달',
+      recommendationLabel: '300단계 환산 8회 권장 미달',
     });
   });
 

@@ -14,6 +14,7 @@ export type SettlementKind =
   | 'BELOW_QUALIFICATION_SETTLEMENT'
   | 'FULL_COMMISSION';
 export type CommissionTier = 300 | 700 | 1500 | 2400 | 6000 | 20000 | 60000;
+export type CommissionEquivalentUnits = 1 | 2 | 4 | 8;
 export type PvpTarget = 700 | 1500 | 2400;
 export type SheetMarker =
   | 'NONE'
@@ -25,7 +26,8 @@ export type PvpApplicationReason = 'SMALLER_LEFT' | 'SMALLER_RIGHT' | 'TIE_LEFT'
 export type RecommendationStatus =
   | 'NOT_APPLICABLE'
   | 'BELOW_RECOMMENDED'
-  | 'MET_OR_EXCEEDED';
+  | 'MET_OR_EXCEEDED'
+  | 'UNCONFIRMED';
 
 export interface PeriodInput {
   readonly year: number;
@@ -78,7 +80,7 @@ export interface CalculatePlanInput {
 }
 
 export interface RuleSet {
-  readonly rulesetVersion: '6.0.0';
+  readonly rulesetVersion: '7.0.0';
   readonly commissionTiers: readonly CommissionTier[];
   readonly allowedPvpTargets: readonly PvpTarget[];
   readonly cumulativePvpCap: Pv;
@@ -88,7 +90,7 @@ export interface RuleSet {
   readonly fortnightPvpSourcePolicy: 'NEW_ONLY_EXCLUDING_OPENING_AND_DAILY_CARRY';
   readonly target700CommissionPreference: {
     readonly eligiblePvpTarget: 700;
-    readonly recommendedDays: 8;
+    readonly recommendedEquivalentUnits: 8;
   };
   readonly qualificationPolicy: {
     readonly threshold: 300;
@@ -183,10 +185,11 @@ export interface FortnightAssessment extends FortnightRawTotals {
   readonly allTargetsMet: boolean;
   readonly commissionOccurrences: readonly CommissionOccurrence[];
   readonly commissionDays: number;
+  readonly commissionEquivalentUnits: number | null;
   readonly belowQualificationSettlementOccurrences: readonly BelowQualificationSettlementOccurrence[];
   readonly belowQualificationSettlementDays: number;
   readonly recommendationStatus: RecommendationStatus;
-  readonly recommendedCommissionDays: number | null;
+  readonly recommendedCommissionEquivalentUnits: number | null;
 }
 
 export interface ValidationLocation {

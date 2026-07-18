@@ -46,25 +46,25 @@ describe('verified automatic-plan workspace checkpoint', () => {
     const serialized = JSON.stringify(snapshot);
     expect(serialized).not.toContain('dailySettlementByDateAndMember');
     expect(serialized).not.toContain('proof');
-    expect(snapshot.checkpointVersion).toBe('2.0.0');
+    expect(snapshot.checkpointVersion).toBe('3.0.0');
     expect(snapshot.checkpointVersion).toBe(AUTOMATIC_PLAN_CHECKPOINT_VERSION);
     expect(snapshot.objective).toMatchObject({
       confirmedPayoutWon: expect.any(Number),
       futureCumulativePvpInvestmentPv: expect.any(Number),
     });
-    expect(snapshot.objective.highTargetAscendingDayVector).toEqual(
-      fixture.candidate.objective.highTargetAscendingDayVector,
+    expect(snapshot.objective.highTargetAscendingEquivalentUnitVector).toEqual(
+      fixture.candidate.objective.highTargetAscendingEquivalentUnitVector,
     );
-    expect(snapshot.objective.priorityDepthAscendingDayVector).toEqual(
-      fixture.candidate.objective.priorityDepthAscendingDayVector,
+    expect(snapshot.objective.priorityDepthAscendingEquivalentUnitVector).toEqual(
+      fixture.candidate.objective.priorityDepthAscendingEquivalentUnitVector,
     );
     expect(snapshot.objective).not.toHaveProperty(
-      'target700MembersAtLeastEight',
+      'target700MembersAtLeastEightEquivalentUnits',
     );
     expect(snapshot.display).toMatchObject({
-      target700MembersAtLeastEight: expect.any(Number),
-      priorityDepthMemberDayCounts: expect.any(Array),
-      highTargetMemberDayCounts: expect.any(Array),
+      target700MembersAtLeastEightEquivalentUnits: expect.any(Number),
+      priorityDepthMemberEquivalentUnitCounts: expect.any(Array),
+      highTargetMemberEquivalentUnitCounts: expect.any(Array),
     });
     expect(snapshot.savedAtIso).toBe('1970-01-01T00:00:00.000Z');
 
@@ -75,7 +75,7 @@ describe('verified automatic-plan workspace checkpoint', () => {
     expect(restored.status).toBe('RESTORED');
     if (restored.status === 'RESTORED') {
       expect(restored.candidate.candidateId).toBe(fixture.candidate.candidateId);
-      expect(restored.candidate.calculation.engineVersion).toBe('6.0.0');
+      expect(restored.candidate.calculation.engineVersion).toBe('7.0.0');
     }
   });
 
@@ -117,8 +117,8 @@ describe('verified automatic-plan workspace checkpoint', () => {
       ...snapshot,
       display: {
         ...snapshot.display,
-        target700TotalCommissionDays:
-          snapshot.display.target700TotalCommissionDays + 1,
+        target700TotalCommissionEquivalentUnits:
+          snapshot.display.target700TotalCommissionEquivalentUnits + 1,
       },
     };
     expect(
@@ -126,16 +126,16 @@ describe('verified automatic-plan workspace checkpoint', () => {
     ).toMatchObject({ status: 'IGNORED', reason: 'CHECKPOINT_SUMMARY_MISMATCH' });
   });
 
-  it('rejects a version-2 checkpoint carrying the legacy objective shape', () => {
+  it('rejects a version-3 checkpoint carrying the legacy day-based objective shape', () => {
     const fixture = verifiedFixture();
     const snapshot = createAutomaticPlanCheckpointSnapshot(fixture.candidate);
     const legacyObjective = {
       totalNewPv: snapshot.objective.totalNewPv,
       discardedExcessPv: snapshot.objective.discardedExcessPv,
       target700MembersAtLeastEight:
-        snapshot.display.target700MembersAtLeastEight,
+        snapshot.display.target700MembersAtLeastEightEquivalentUnits,
       target700AscendingDayVector:
-        snapshot.objective.target700AscendingDayVector,
+        snapshot.objective.target700AscendingEquivalentUnitVector,
       nonHundredCellCount: snapshot.objective.nonHundredCellCount,
       maxDirectPvp: snapshot.objective.maxDirectPvp,
       deterministicAllocationVector:

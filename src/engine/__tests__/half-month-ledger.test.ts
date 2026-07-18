@@ -403,8 +403,41 @@ describe('half-month-ledger', () => {
 
     expect(eightResult.commissionDays).toBe(8);
     expect(eightResult.commissionOccurrences).toEqual(eight);
+    expect(eightResult.commissionEquivalentUnits).toBeNull();
+    expect(eightResult.recommendationStatus).toBe('UNCONFIRMED');
     expect(oneResult.commissionDays).toBe(1);
     expect(oneResult.commissionOccurrences).toEqual(occurrences([60000]));
+    expect(oneResult.commissionEquivalentUnits).toBeNull();
+  });
+
+  it('[COUNT-004] 확정 단계는 300단계 기준 1·2·4·8회로 환산', () => {
+    const mixed = assess(
+      700,
+      0,
+      700,
+      2500,
+      1800,
+      occurrences([300, 700, 1500, 2400]),
+    );
+    const fourSevenHundredDays = assess(
+      700,
+      0,
+      700,
+      2500,
+      1800,
+      occurrences([700, 700, 700, 700]),
+    );
+
+    expect(mixed).toMatchObject({
+      commissionDays: 4,
+      commissionEquivalentUnits: 15,
+      recommendationStatus: 'MET_OR_EXCEEDED',
+    });
+    expect(fourSevenHundredDays).toMatchObject({
+      commissionDays: 4,
+      commissionEquivalentUnits: 8,
+      recommendationStatus: 'MET_OR_EXCEEDED',
+    });
   });
 
   it('[COUNT-003] 6회 권장 미달은 필수 보름 목표 실패가 아님', () => {
@@ -421,7 +454,7 @@ describe('half-month-ledger', () => {
       allTargetsMet: true,
       commissionDays: 6,
       recommendationStatus: 'BELOW_RECOMMENDED',
-      recommendedCommissionDays: 8,
+      recommendedCommissionEquivalentUnits: 8,
     });
   });
 
@@ -430,15 +463,15 @@ describe('half-month-ledger', () => {
 
     expect(assess(700, 0, 700, 2500, 1800, eight)).toMatchObject({
       recommendationStatus: 'MET_OR_EXCEEDED',
-      recommendedCommissionDays: 8,
+      recommendedCommissionEquivalentUnits: 8,
     });
     expect(assess(1500, 0, 700, 2500, 1800, eight)).toMatchObject({
       recommendationStatus: 'NOT_APPLICABLE',
-      recommendedCommissionDays: null,
+      recommendedCommissionEquivalentUnits: null,
     });
     expect(assess(2400, 0, 700, 2500, 1800, eight)).toMatchObject({
       recommendationStatus: 'NOT_APPLICABLE',
-      recommendedCommissionDays: null,
+      recommendedCommissionEquivalentUnits: null,
     });
   });
 

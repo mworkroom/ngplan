@@ -1,7 +1,8 @@
 # Phase 4 Execution Plan — Automatic Plan Optimization
 
 Date: 2026-07-12  
-Status: Implementation-ready after operator revision; synchronize the revised Q-SIM-01 through Q-SIM-06 contracts and the additional proof/calendar/state safeguards in PRE-WP0
+Latest contract revision: 2026-07-19
+Status: Implemented contract updated for operator-defined 300-tier equivalent commission units
 
 This document turns **Phase 4 — Automatic Plan Optimization** from `ROADMAP.md` into an implementation-ready plan. It first extends the deterministic calculation engine with the confirmed current PVP qualification and smaller-side application rules, then builds optimization on that tested engine and the completed manual worksheet without creating a second source of truth for business calculations.
 
@@ -104,10 +105,10 @@ Phase 4 is successful when all of the following are true:
 - Total direct new PV is the first optimization objective and is never worsened for any lower objective.
 - Root commission-goal shortfall is minimized only after total PV is fixed. Confirmed payout follows only after total PV and root shortfall are fixed. The known table is 300=60,000, 700=120,000, 1,500=240,000, and 2,400=480,000 won; an automatic candidate containing a higher unpriced tier is not ranked.
 - Daily discarded excess is minimized only after total PV, root commission-goal shortfall, and confirmed payout are fixed.
-- Actual topology-depth-2/3 members use the first complete ascending commission-day vector. The remaining high-target members and then the remaining target-700 members use their own complete ascending vectors. The root and UI marker numbers are excluded; the ideal upper bound is the request's `N`, never a fixed 13. `[7,7,7]` beats `[0,8,8]`; the target-700 at-least-eight count is display-only.
+- Actual topology-depth-2/3 members use the first complete ascending equivalent-unit vector. The remaining high-target members and then the remaining target-700 members use their own complete ascending equivalent-unit vectors. The root and UI marker numbers are excluded. `[7,7,7]` beats `[0,8,8]`; the target-700 at-least-eight-equivalent-units count is display-only.
 - A constructive result that misses `U` but satisfies the calculation, fortnight-target, qualification, lifetime-cap, Sunday, and automatic-value rules remains a verified shortfall candidate with `맨 위 회원 전체 영업일 목표 미달 X일`. An equal-total-PV target candidate outranks it, but no extra PV may be purchased merely to reduce shortfall.
 - Constructive failure or failure to find a zero-shortfall candidate is never reported as `INFEASIBLE` without a matching certified complete proof.
-- A cost-neutral candidate that moves more PVP toward the lifetime 2,400 cap is preferred only after the higher total-PV, root-shortfall, payout, waste, and day-distribution objectives tie.
+- A cost-neutral candidate that moves more PVP toward the lifetime 2,400 cap is preferred only after the higher total-PV, root-shortfall, payout, waste, and equivalent-unit-distribution objectives tie.
 - Exact automatic values such as 39 or 267 beat rounded alternatives whenever rounding increases total PV or worsens any higher objective; automatic values 1–29 are not legal direct assignments.
 - Exact PVP value 100 is **not** an independent optimization preference. PVP 100 is selected only when its actual placement improves or ties the higher business objectives and later general readability/concentration rules choose it.
 - When all business objectives tie, plans with fewer non-zero direct values outside 100-PV multiples are preferred, followed by a smaller maximum direct PVP cell.
@@ -245,9 +246,9 @@ Objectives are solved sequentially. A lower objective may be optimized only whil
 2. **Minimize root commission-day shortfall.** Within the minimum-total-PV set, minimize `MAX(0, U - root qualification-valid full-commission days)`. A zero-shortfall candidate outranks a shortfall fallback only when objective 1 remains fixed.
 3. **Maximize confirmed commission payout.** Sum only qualification-valid full commissions using the confirmed 300–2,400 payout table. If a 6,000+ tier occurs, stop automatic ranking with `AUTOMATIC_PLAN_PAYOUT_TABLE_INCOMPLETE`; do not guess its value.
 4. **Minimize total daily discarded excess.** Sum the metric in section 3.6 across valid full-commission days and members.
-5. **Improve topology-depth-2/3 commission-day distribution.** Compute depth from the actual parent links with the root at depth 1, then sort all depth-2/3 members' counted days ascending and lexicographically maximize the complete vector. UI `1·2·3` markers and selected PVP targets do not define this group.
-6. **Improve the remaining high-target commission-day distribution.** Exclude the root and members already used by objective 5, then sort target-1,500/2,400 members' counted days ascending and maximize the complete vector.
-7. **Improve the remaining target-700 commission-day distribution.** Apply the same exclusions, then sort target-700 members' counted days ascending and maximize the complete vector.
+5. **Improve topology-depth-2/3 equivalent-unit distribution.** Compute depth from the actual parent links with the root at depth 1, then sort all depth-2/3 members' 300-tier equivalent commission units ascending and lexicographically maximize the complete vector. UI `1·2·3` markers and selected PVP targets do not define this group.
+6. **Improve the remaining high-target equivalent-unit distribution.** Exclude the root and members already used by objective 5, then sort target-1,500/2,400 members' equivalent units ascending and maximize the complete vector.
+7. **Improve the remaining target-700 equivalent-unit distribution.** Apply the same exclusions, then sort target-700 members' equivalent units ascending and maximize the complete vector.
 8. **Maximize cost-neutral future cumulative-PVP investment.** Sum `MAX(0, closing cumulative PVP - MAX(opening cumulative PVP, selected target))`.
 9. **Prefer communication-friendly 100-PV multiples.** Minimize the number of non-zero direct editable cells whose value is not divisible by 100.
 10. **Avoid unnecessary direct-PVP concentration.** Minimize the maximum direct PVP cell after objectives 1–9 are fixed.
@@ -295,11 +296,11 @@ Qualification surplus is different. Cumulative PVP opening 33 plus new PVP 300 c
 
 Period-end carry is not automatically treated as discarded excess. It follows the Phase 1 closing semantics. If an authoritative rule actually expires or erases carry at the boundary, Phase 1 must expose that explicit event and PRE-WP0 must add a calculation case before the optimizer assigns it a cost. Phase 4 must not invent a terminal-carry penalty merely to make a plan look tidy.
 
-### 3.7 Topology-Priority and Target-Group Commission Days — Q-SIM-03
+### 3.7 Root Commission Days and Target-Group Equivalent Units — Q-SIM-03
 
-Commission days never outrank total PV. Root shortfall is objective 2; the three general fairness vectors follow confirmed payout and discarded excess.
+Commission days never outrank total PV. Root shortfall is objective 2 and remains a business-day measure. The three general fairness vectors follow confirmed payout and discarded excess and use 300-tier equivalent commission units instead of day counts.
 
-A counted day for every group is a qualification-valid full commission day:
+A counted root occurrence day is a qualification-valid full commission day:
 
 ```text
 isCountedCommissionDay(member, date) =
@@ -307,23 +308,34 @@ isCountedCommissionDay(member, date) =
   && qualificationPvp(member, date) >= 300
 ```
 
-An official higher tier still counts as one day, not multiple days. A reduced below-300 settlement, skipped day, or non-commission day counts as zero.
+An official higher tier still counts as one occurrence day for the root-day metric. A reduced below-300 settlement, skipped day, or non-commission day counts as zero.
+
+For the three general fairness groups, convert each confirmed full-commission tier to the operator's 300-tier equivalent units:
+
+```text
+300 -> 1
+700 -> 2
+1,500 -> 4
+2,400 -> 8
+```
+
+Thus four 700-tier days are four occurrence days but eight equivalent units. Equivalent units deliberately do not prefer the same total units spread over more dates. Tiers 6,000/20,000/60,000 remain unconfirmed; manual results show the occurrence day with an unconfirmed equivalent total, while automatic ranking fails closed together with the unconfirmed payout table.
 
 Count the root with the same predicate and compare `rootCommissionGoalShortfallDays` only after total PV is fixed. A constructive candidate below `U` remains verified when every calculation hard rule passes; report the exact shortfall and continue search. Never spend additional PV to reduce it and never call the request infeasible merely because constructive search missed zero shortfall.
 
-Among candidates tied on objectives 1–4, first maximize the complete ascending vector for members at actual topology depth 2 or 3. Depth comes only from canonical parent links; the root is depth 1 and UI sheet markers never affect it. Then compare the remaining target-1,500/2,400 members, followed by the remaining target-700 members. The root is excluded from all three general day-distribution vectors and no member appears twice. The ideal upper bound is the request's actual input-eligible business-day count `N`, including a calendar where `N=14`; it is never a fixed 13.
+Among candidates tied on objectives 1–4, first maximize the complete ascending equivalent-unit vector for members at actual topology depth 2 or 3. Depth comes only from canonical parent links; the root is depth 1 and UI sheet markers never affect it. Then compare the remaining target-1,500/2,400 members, followed by the remaining target-700 members. The root is excluded from all three general equivalent-unit vectors and no member appears twice.
 
 Comparing the smallest entry first prevents sacrificing one member at zero merely to improve a few others; in the remaining target-700 group `[7,7,7]` therefore beats `[0,8,8]`.
 
-`target700MembersAtLeastEight` and `target700TotalCommissionDays` remain derived preview/reporting statistics only. Neither is part of the canonical comparator or proof stages.
+`target700MembersAtLeastEightEquivalentUnits` and `target700TotalCommissionEquivalentUnits` remain derived preview/reporting statistics only. Neither is a separate canonical comparator or proof stage.
 
-There is no hard-coded cap or minimum for the general fairness groups. With all higher objectives tied, a vector containing 9 can beat the corresponding vector containing 8. The optimizer must never add PV merely to improve a commission-day vector.
+There is no hard-coded cap or minimum for the general fairness groups. With all higher objectives tied, a vector containing 9 can beat the corresponding vector containing 8. The optimizer must never add PV merely to improve an equivalent-unit vector.
 
-The sorted vector deliberately ignores which specific member receives an extra tied day. When identities are otherwise indistinguishable under all business objectives, section 3.8's canonical allocation tie-break chooses one plan. Cross-period rotation or historical “who got the extra day last time” fairness is out of Phase 4 scope.
+The sorted vector deliberately ignores which specific member receives an extra tied equivalent unit. When identities are otherwise indistinguishable under all business objectives, section 3.8's canonical allocation tie-break chooses one plan. Cross-period rotation or historical “who got the extra unit last time” fairness is out of Phase 4 scope.
 
 ### 3.8 Exact PV, 100-Multiple Readability, PVP Concentration, and Deterministic Tie-Break — Revised Q-SIM-04/Q-SIM-06
 
-The readability and concentration preferences apply only after total PV, root shortfall, payout, discarded excess, all three general day-distribution vectors, and cost-neutral future PVP investment are fixed.
+The readability and concentration preferences apply only after total PV, root shortfall, payout, discarded excess, all three general equivalent-unit vectors, and cost-neutral future PVP investment are fixed.
 
 ```text
 nonHundredCellCount = count(
@@ -425,7 +437,7 @@ Constructive algorithms and heuristics may produce warm starts and verified incu
 - Actual values, completed-date locks, plan differences, or partial resimulation.
 - Editing setup/topology/opening values while an optimizer run is active.
 - Per-cell manual locks or “optimize around these cells.”
-- Cross-period fairness rotation or use of prior periods to decide who receives extra tied commission days.
+- Cross-period fairness rotation or use of prior periods to decide who receives extra tied equivalent units.
 - Product selection, Korean won cost, inventory, or item combinations.
 - Persistent projects, cross-tab/device recovery, closed records, or export.
 - Supabase, Google login, authorization, RLS, or remote job infrastructure.
@@ -512,8 +524,8 @@ Use explicit versioned types equivalent to:
 const AUTOMATIC_PLAN_PRODUCT_TIME_LIMIT_MS = 1_800_000 as const;
 
 interface AutomaticPlanPolicy {
-  readonly policyVersion: '5.0.0';
-  readonly objectiveVersion: '5.0.0';
+  readonly policyVersion: '6.0.0';
+  readonly objectiveVersion: '6.0.0';
   readonly deterministicSeed: number;
 }
 
@@ -545,7 +557,7 @@ Tests may inject a fake clock, deterministic work/node budget, or test-only shor
 
 The `problemFingerprint` includes the normalized bundle/business inputs, ruleset version, policy version, objective version, calendar version/date set, canonical member sequence, and relevant schema versions. It excludes elapsed time, run ID, candidate sequence, warm start, and transient UI state. A warm start may change search speed but must not change the definition of the problem or the proven optimum.
 
-The synchronized versions are ruleset/engine `6.0.0`, policy/objective `5.0.0`, request/fingerprint/model/model-certificate/checkpoint `2.0.0`, worker protocol `2.0.0`, and calendar `1.0.0`. Policy version is a fingerprint input, so `4.0.0` candidates, checkpoints, warm starts, and model certificates are incompatible.
+The synchronized versions are ruleset/engine `7.0.0`, policy/objective `6.0.0`, request/fingerprint/model/model-certificate/checkpoint `3.0.0`, worker protocol `3.0.0`, and calendar `1.0.0`. Equivalent-unit semantics and objective shape changed, so prior day-vector candidates, checkpoints, warm starts, and model certificates are incompatible.
 
 ### 6.2 Objective Vector and Display Metrics
 
@@ -555,9 +567,9 @@ interface AutomaticPlanObjectiveVector {
   readonly rootCommissionGoalShortfallDays: number;
   readonly confirmedPayoutWon: number;
   readonly discardedExcessPv: number;
-  readonly priorityDepthAscendingDayVector: readonly number[];
-  readonly highTargetAscendingDayVector: readonly number[];
-  readonly target700AscendingDayVector: readonly number[];
+  readonly priorityDepthAscendingEquivalentUnitVector: readonly number[];
+  readonly highTargetAscendingEquivalentUnitVector: readonly number[];
+  readonly target700AscendingEquivalentUnitVector: readonly number[];
   readonly futureCumulativePvpInvestmentPv: number;
   readonly nonHundredCellCount: number;
   readonly maxDirectPvp: number;
@@ -574,16 +586,16 @@ interface AutomaticPlanDisplayMetrics {
     readonly capacityLimited: boolean;
     readonly met: boolean;
   };
-  readonly priorityDepthMemberDayCounts: readonly PriorityDepthMemberDayCount[];
-  readonly highTargetMemberDayCounts: readonly HighTargetMemberDayCount[];
-  readonly target700MembersAtLeastEight: number;
-  readonly target700TotalCommissionDays: number;
-  readonly target700MemberDayCounts: readonly Target700MemberDayCount[];
+  readonly priorityDepthMemberEquivalentUnitCounts: readonly PriorityDepthMemberEquivalentUnitCount[];
+  readonly highTargetMemberEquivalentUnitCounts: readonly HighTargetMemberEquivalentUnitCount[];
+  readonly target700MembersAtLeastEightEquivalentUnits: number;
+  readonly target700TotalCommissionEquivalentUnits: number;
+  readonly target700MemberEquivalentUnitCounts: readonly Target700MemberEquivalentUnitCount[];
   readonly terminalCarrySummary: TerminalCarrySummary;
 }
 ```
 
-`target700MembersAtLeastEight` and `target700TotalCommissionDays` are display-only and must never be compared as optimization stages.
+`target700MembersAtLeastEightEquivalentUnits` and `target700TotalCommissionEquivalentUnits` are display-only and must never be compared as separate optimization stages.
 
 For `rootCommissionGoal`, `businessDayCount=N`, `targetCommissionDays=U`, `shortfallDays=max(0,U-actualCommissionDays)`, `capacityLimited=(U<N)`, and `met=(shortfallDays===0)`.
 
@@ -601,9 +613,9 @@ type AutomaticPlanObjectiveStage =
   | 'ROOT_COMMISSION_GOAL_SHORTFALL'
   | 'CONFIRMED_PAYOUT_WON'
   | 'DISCARDED_EXCESS'
-  | 'PRIORITY_DEPTH_ASCENDING_VECTOR'
-  | 'HIGH_TARGET_ASCENDING_VECTOR'
-  | 'TARGET_700_ASCENDING_VECTOR'
+  | 'PRIORITY_DEPTH_ASCENDING_EQUIVALENT_UNIT_VECTOR'
+  | 'HIGH_TARGET_ASCENDING_EQUIVALENT_UNIT_VECTOR'
+  | 'TARGET_700_ASCENDING_EQUIVALENT_UNIT_VECTOR'
   | 'FUTURE_CUMULATIVE_PVP_INVESTMENT'
   | 'NON_HUNDRED_CELLS'
   | 'MAX_DIRECT_PVP'
@@ -616,9 +628,9 @@ interface AutomaticPlanProofProgress {
   readonly provenVectorPrefix:
     | {
         readonly objective:
-          | 'PRIORITY_DEPTH_ASCENDING_VECTOR'
-          | 'HIGH_TARGET_ASCENDING_VECTOR'
-          | 'TARGET_700_ASCENDING_VECTOR'
+          | 'PRIORITY_DEPTH_ASCENDING_EQUIVALENT_UNIT_VECTOR'
+          | 'HIGH_TARGET_ASCENDING_EQUIVALENT_UNIT_VECTOR'
+          | 'TARGET_700_ASCENDING_EQUIVALENT_UNIT_VECTOR'
           | 'DETERMINISTIC_ALLOCATION_VECTOR';
         readonly length: number;
       }
@@ -698,7 +710,7 @@ A vector objective may require many internal proof steps. A single unconstrained
 - Every final `FortnightAssessment.allTargetsMet` must be true, including `fortnightAssessedPvp >= selectedPvpTarget` and both 2,500 side targets. The root has no additional fixed raw-side floor.
 - Recompute `N`, the root minimum-period capacity profile `L/R/P`, opening values `OL/OR`, the exact first-commission tuple set `F`, and aggregate target `U` from the canonical request. Count the root's qualification-valid full-commission days and derive `rootCommissionGoalShortfallDays`; a positive shortfall is a verified warning and objective value, not a rejection reason.
 - A 6,000+ full commission causes `AUTOMATIC_PLAN_PAYOUT_TABLE_INCOMPLETE` until its payout is supplied; the verifier never invents a payout score.
-- Count every day-distribution group only with the exact section 3.7 predicate and derive depth from canonical parent links.
+- Count root occurrence days with the exact section 3.7 predicate, derive every fairness group's equivalent units from confirmed tiers, and derive depth from canonical parent links.
 - Recompute objective and display values from the canonical candidate and Phase 1 result; never trust solver-reported values without exact comparison.
 - Reject and record an internal model-consistency failure if solver and verifier disagree.
 - A restored checkpoint candidate is re-run through the current verifier before it is shown, used as a warm start, or applied.
@@ -760,7 +772,7 @@ The selected exact model must represent all of the following without excluding a
 - exact derivation of dynamic `N`, root minimum-period `L/R/P`, opening-only-first-commission set `F`, aggregate target `U`, and root shortfall, without adding `OL/OR` directly to period capacity;
 - root shortfall as objective 2 rather than a hard feasibility rule, including a verified constructive fallback when `U` is not reached;
 - confirmed payout lookup for tiers 300–2,400 and fail-closed handling of unpriced higher tiers;
-- exact topology-depth-2/3, remaining high-target, and remaining target-700 counted-day predicates and complete ascending day vectors;
+- exact topology-depth-2/3, remaining high-target, and remaining target-700 equivalent-unit predicates and complete ascending equivalent-unit vectors;
 - cost-neutral future cumulative-PVP investment;
 - discarded excess from the achieved tier and actual erased values;
 - general 100-PV-multiple readability metric;
@@ -868,9 +880,9 @@ Before applying, show:
 - confirmed commission payout total and any unpriced-tier blocking notice;
 - whether the complete optimum is proven;
 - total discarded excess;
-- actual topology-depth-2/3 member day counts and depth labels;
-- remaining target-1,500/2,400 member day counts;
-- remaining target-700 member day counts, display-only members reaching at least 8, and display-only total days;
+- actual topology-depth-2/3 member equivalent-unit counts and depth labels;
+- remaining target-1,500/2,400 member equivalent-unit counts;
+- remaining target-700 member equivalent-unit counts, display-only members reaching at least 8 equivalent units, and display-only total equivalent units;
 - cost-neutral future cumulative-PVP investment;
 - count of non-zero direct cells outside 100-PV multiples;
 - maximum direct PVP cell;
@@ -969,8 +981,8 @@ Tasks:
 - Define canonical date-only business calendar, Sunday/skip calculation, and stable member ordering. Remove any browser-time-zone-dependent path.
 - Confirm/document authoritative period-end carry behavior and that Phase 4 adds no invented terminal penalty.
 - Confirm the explicit “no extra daily/member capacity” assumption or add any real limit as a hard rule.
-- Define the exact topology-depth-2/3, remaining high-target, and remaining target-700 counted-day predicates; exclude the root and UI sheet markers.
-- Keep both `target700MembersAtLeastEight` and `target700TotalCommissionDays` display-only.
+- Define the exact topology-depth-2/3, remaining high-target, and remaining target-700 equivalent-unit predicates; exclude the root and UI sheet markers.
+- Keep both `target700MembersAtLeastEightEquivalentUnits` and `target700TotalCommissionEquivalentUnits` display-only.
 - Add a calculation case proving `[7, 7, 7]` beats `[0, 8, 8]` by the complete ascending vector.
 - Add confirmed payout, unpriced-tier fail-closed, automatic minimum-30, and cost-neutral future-PVP cases.
 - Add dynamic root-capacity cases for `N=13`, `N=14`, `U<N`, opening balances that can fund only the first resetting commission, and a verified constructive shortfall fallback that is never mislabeled infeasible.
@@ -998,7 +1010,7 @@ Tasks:
 - Apply same-date direct PVP before checking the 300 gate.
 - Preserve actual daily reset/carry behavior for a manually entered below-300 settlement, while marking it unusable and warning-worthy.
 - Expose authoritative period-end carry without inventing optimizer waste.
-- Count only qualification-valid days in the topology-depth-2/3, remaining high-target, and remaining target-700 vectors.
+- Count only qualification-valid full commissions and convert their confirmed tiers to 1·2·4·8 equivalent units in the topology-depth-2/3, remaining high-target, and remaining target-700 vectors.
 - Implement canonical date-only parsing/validation and timezone-independent Sunday/skip classification.
 - Bump and test the calculation ruleset version before optimizer integration.
 - Define request, fingerprint, candidate, objective, display, proof, outcome, and error types.
@@ -1008,7 +1020,7 @@ Tasks:
 - Implement Phase 1 independent verification and checkpoint re-verification.
 - Implement discarded excess and the one canonical objective comparator.
 - Implement confirmed payout, all three fairness vectors, cost-neutral future PVP, `nonHundredCellCount`, `maxDirectPvp`, and the deterministic canonical allocation vector.
-- Keep target-700 at-least-eight count and total days as display-only data.
+- Keep target-700 at-least-eight-equivalent-units count and total equivalent units as display-only data.
 - Implement a bounded exhaustive oracle for tiny organizations, short synthetic date sets, and small PV domains.
 - Add comparator property tests, objective dominance, stable-order, and deterministic tie tests before integrating a solver.
 
@@ -1020,7 +1032,7 @@ Exit gate:
 - Date/Sunday results are identical under multiple process/browser time zones.
 - `N=13`, `N=14`, capacity-limited `U<N`, and large-opening-reset cases reproduce the finalized calculation cases; opening carry cannot be split into multiple root commission days.
 - A calculation-valid constructive candidate below `U` remains verified with a positive shortfall and is not reported as infeasible.
-- The comparator reproduces every finalized Phase 4 case and contains no dead total-days or exact-PVP-100 stage.
+- The comparator reproduces every finalized Phase 4 case and contains no dead total-equivalent-units or exact-PVP-100 stage.
 - The exhaustive oracle returns a deterministic global optimum for bounded fixtures.
 
 ### WP2 — Constructive Candidate, Exact Model Contract, and Solver Feasibility Spike
@@ -1231,8 +1243,8 @@ Do not lower a threshold to make Phase 4 pass. Add optimizer paths to the covera
 | P4-ROOT-006 | Same total PV has zero-shortfall and shortfall candidates; a different zero-shortfall candidate uses more PV | Equal-total zero-shortfall candidate wins; more-PV candidate loses |
 | P4-OBJ-002 | Same total PV and root shortfall, higher confirmed payout | Higher-payout candidate wins |
 | P4-OBJ-002A | Same total and payout, lower discarded excess | Lower-excess candidate wins |
-| P4-OBJ-003 | Same higher objectives, 8 versus 9 days | 9-day vector wins |
-| P4-OBJ-004 | Extra PV creates more commission days | Lower-PV candidate wins |
+| P4-OBJ-003 | Same higher objectives, 8 versus 9 equivalent units | 9-unit vector wins |
+| P4-OBJ-004 | Extra PV creates more equivalent units | Lower-PV candidate wins |
 | P4-OBJ-005 | Same higher objectives, direct cells 100/200 versus 50/250 | 100/200 wins because fewer cells are outside 100 multiples |
 | P4-OBJ-006 | 39 versus 100 with different total PV | 39 wins |
 | P4-OBJ-007 | Complete tie | Stable canonical earlier-coordinate plan wins |
@@ -1247,13 +1259,13 @@ Do not lower a threshold to make Phase 4 pass. Add optimizer paths to the covera
 | P4-OBJ-016 | Otherwise rankable candidate contains a 6,000+ tier | Automatic ranking fails closed with `AUTOMATIC_PLAN_PAYOUT_TABLE_INCOMPLETE` |
 | P4-OBJ-017 | Higher objectives tie and one candidate adds more PVP within remaining lifetime headroom | Greater cost-neutral future-PVP investment wins |
 | P4-FAIR-001 | `[0,8,8]` versus `[7,7,7]` with all higher objectives tied | `[7,7,7]` wins by the complete ascending target-700 vector |
-| P4-FAIR-002 | Complete sorted day vectors are equal | Comparator ties; no separate total-days stage exists |
+| P4-FAIR-002 | Complete sorted equivalent-unit vectors are equal | Comparator ties; no separate total-units stage exists |
 | P4-FAIR-003 | No target-700 members | Empty vector is valid and deterministic |
-| P4-FAIR-004 | Target-700 member earns a higher full tier | Counts as one qualification-valid commission day |
+| P4-FAIR-004 | Target-700 member earns 300, 700, 1,500, and 2,400 tiers | Adds 1, 2, 4, and 8 equivalent units respectively; occurrence-day count remains one per date |
 | P4-FAIR-005 | Actual depth-2/3 members have different targets and deliberately wrong UI markers | Parent-link-derived complete ascending priority vector decides; markers do not |
 | P4-FAIR-006 | Priority-depth vectors tie and remaining target-1,500/2,400 distributions differ | Complete ascending remaining high-target vector decides before remaining target-700 fairness |
-| P4-FAIR-007 | A depth-2/3 member has fewer than the request's `N` counted days | Candidate remains feasible; dynamic `N` is an ideal upper bound, not a hard condition |
-| P4-FAIR-008 | Root target is 1,500 or 2,400 | Root is excluded from every commission-day fairness vector |
+| P4-FAIR-007 | A depth-2/3 member has fewer than the recommended equivalent units | Candidate remains feasible; fairness is not a hard condition |
+| P4-FAIR-008 | Root target is 1,500 or 2,400 | Root is excluded from every equivalent-unit fairness vector |
 | P4-PERIOD-001 | Constructive candidate over the canonical business calendar | Searches and may allocate across every input-eligible date; it does not stop at the earliest feasible prefix by construction |
 | P4-PERIOD-002 | Root aggregate target is capacity-limited to `U<N` | No 1-PV token or invented final-date commission is added merely to fill unused dates |
 | P4-PERIOD-003 | Aggregate formula yields `U`, but date-by-date construction finds only `U-1` | Verified shortfall fallback is exposed and search may continue; aggregate `U` is not treated as a schedule-existence proof |
@@ -1390,14 +1402,14 @@ There is no 3-hour benchmark requirement or product acceptance path. The key mea
 - Total PV dominates every preference.
 - Root commission-goal shortfall is minimized only among equal-total-PV candidates and never authorizes additional purchasing.
 - Confirmed payout is maximized only after total PV and root shortfall tie, using the known 300/700/1,500/2,400 table; unpriced higher tiers fail closed.
-- Discarded excess dominates commission-day, future-investment, and readability/concentration preferences.
-- More target-700 days never justify extra PV.
-- Actual topology-depth-2/3 fairness, remaining high-target fairness, and remaining target-700 fairness each use one complete ascending-vector stage; the root is excluded, the request's dynamic `N` is an ideal upper bound rather than a hard gate, and at-least-eight/total-day statistics are display-only.
+- Discarded excess dominates equivalent-unit, future-investment, and readability/concentration preferences.
+- More target-700 equivalent units never justify extra PV.
+- Actual topology-depth-2/3 fairness, remaining high-target fairness, and remaining target-700 fairness each use one complete ascending equivalent-unit-vector stage; the root is excluded, and at-least-eight/total-unit statistics are display-only.
 - `[7,7,7]` beats `[0,8,8]` when higher objectives tie.
 - Any feasible total-PV saving beats round-number readability; the automatic domain itself is 0 or an integer at least 30.
 - Exact PVP 100 has no standalone reward.
 - Current-rule PVP 100 placement is chosen by the whole-tree calculation.
-- Cost-neutral future PVP within lifetime headroom is considered only after all three day vectors, then general 100-PV-multiple preference is followed by maximum direct PVP.
+- Cost-neutral future PVP within lifetime headroom is considered only after all three equivalent-unit vectors, then general 100-PV-multiple preference is followed by maximum direct PVP.
 - Tie-break is deterministic, uses stable business identity/order, and is not presented as business value.
 
 ### D — Model and Status Honesty
@@ -1448,9 +1460,9 @@ There is no 3-hour benchmark requirement or product acceptance path. The key mea
 | Solver model differs from Phase 1 | Apparently optimal but wrong plan | Independent candidate verification, explicit soundness/completeness/objective-preservation mapping, tiny exhaustive/oracle evidence |
 | Model omits a better valid plan | False `OPTIMAL` or `INFEASIBLE` | Versioned model certificate; no proof status until completeness is established |
 | MILP/tolerance behavior changes an integer decision | Incorrect feasibility, bound, or proof | Exact range/tolerance analysis and boundary tests; reject backend if certificate conditions cannot be met |
-| Weighted objective changes priority | Extra PV purchased for readability/commission days | Sequential lexicographic stages; one comparator; dominance tests |
-| Dead fairness stage remains in one implementation path | Inconsistent comparator/proof/UI | Remove total-days objective everywhere; retain only display metric; comparator property tests |
-| Display-only 8-day statistic leaks back into ranking | One member is sacrificed to push others over a marker | Keep only complete ascending day vectors in the comparator; prove `[7,7,7] > [0,8,8]` and test every proof/UI path |
+| Weighted objective changes priority | Extra PV purchased for readability/equivalent units | Sequential lexicographic stages; one comparator; dominance tests |
+| Dead fairness stage remains in one implementation path | Inconsistent comparator/proof/UI | Remove separate total-units objective everywhere; retain only display metric; comparator property tests |
+| Display-only 8-unit statistic leaks back into ranking | One member is sacrificed to push others over a marker | Keep only complete ascending equivalent-unit vectors in the comparator; prove `[7,7,7] > [0,8,8]` and test every proof/UI path |
 | Exact PVP 100 historical habit becomes a universal rule | Wrong placement, excess waste, unnecessary splitting | Remove exact-100 objective; test child-versus-parent placement under current rules |
 | PVP concentrates into one large remainder | Hard-to-use plan despite tied business outcome | Minimize maximum direct PVP only after general 100-multiple readability and all higher objectives |
 | PVP concentration rule over-influences real business results | More PV or worse commissions for prettier cells | Place max PVP after total, waste, fairness, and roundness; dominance tests |
@@ -1500,8 +1512,8 @@ Phase 4 is complete only when:
 - Current-rule PVP placement can move a 100 entry between descendant and ancestor according to total PV, waste, targets, and later objectives.
 - Exact PVP value 100 is never rewarded merely for being 100.
 - Confirmed payout uses only 300=60,000, 700=120,000, 1,500=240,000, and 2,400=480,000 after total PV and root shortfall are fixed; any 6,000+ tier fails closed with `AUTOMATIC_PLAN_PAYOUT_TABLE_INCOMPLETE`.
-- Confirmed payout, discarded excess, all three complete ascending day vectors, cost-neutral future-PVP investment, general 100-multiple readability, maximum direct PVP, and deterministic tie-break obey their documented strict order after total PV and root shortfall.
-- Topology-depth-2/3, remaining high-target, and remaining target-700 vector fairness is exact, including root/marker exclusion, `[7,7,7] > [0,8,8]`, empty-member, and higher-tier-one-day cases; the request's dynamic `N` is ideal rather than hard, and at-least-eight/total-day values remain display-only.
+- Confirmed payout, discarded excess, all three complete ascending equivalent-unit vectors, cost-neutral future-PVP investment, general 100-multiple readability, maximum direct PVP, and deterministic tie-break obey their documented strict order after total PV and root shortfall.
+- Topology-depth-2/3, remaining high-target, and remaining target-700 vector fairness is exact, including root/marker exclusion, `[7,7,7] > [0,8,8]`, empty-member, and confirmed-tier 1·2·4·8 cases; at-least-eight/total-unit values remain display-only.
 - Period-end carry follows Phase 1 and is not labeled discarded without an explicit authoritative erasure.
 - Soundness, completeness, and objective preservation are documented, reviewed, version-certified, and supported by exhaustive/oracle evidence.
 - `OPTIMAL` and `INFEASIBLE` can be emitted only under the matching model certificate and complete exact proof.

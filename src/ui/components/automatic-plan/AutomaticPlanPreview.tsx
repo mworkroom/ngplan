@@ -16,24 +16,24 @@ export interface AutomaticPlanPreviewMetrics {
     readonly capacityLimited: boolean;
     readonly met: boolean;
   };
-  readonly priorityDepthMemberDayCounts: readonly {
+  readonly priorityDepthMemberEquivalentUnitCounts: readonly {
     readonly memberKey: string;
     readonly memberLabel: string;
     readonly organizationDepth: 2 | 3;
-    readonly days: number;
+    readonly equivalentUnits: number;
   }[];
-  readonly highTargetMemberDayCounts: readonly {
+  readonly highTargetMemberEquivalentUnitCounts: readonly {
     readonly memberKey: string;
     readonly memberLabel: string;
     readonly pvpTarget: 1500 | 2400;
-    readonly days: number;
+    readonly equivalentUnits: number;
   }[];
-  readonly target700MembersAtLeastEight: number;
-  readonly target700TotalCommissionDays: number;
-  readonly target700MemberDayCounts: readonly {
+  readonly target700MembersAtLeastEightEquivalentUnits: number;
+  readonly target700TotalCommissionEquivalentUnits: number;
+  readonly target700MemberEquivalentUnitCounts: readonly {
     readonly memberKey: string;
     readonly memberLabel: string;
-    readonly days: number;
+    readonly equivalentUnits: number;
   }[];
   readonly futureCumulativePvpInvestmentPv: number;
   readonly nonHundredCellCount: number;
@@ -98,8 +98,14 @@ export function AutomaticPlanPreview({
           <dt>계획 영업일</dt>
           <dd>{metrics.rootCommissionGoal.businessDayCount}일</dd>
         </div>
-        <div><dt>그 외 700 목표 중 8일 이상</dt><dd>{metrics.target700MembersAtLeastEight}명</dd></div>
-        <div><dt>그 외 700 목표 총 발생일</dt><dd>{metrics.target700TotalCommissionDays}일 (표시용)</dd></div>
+        <div>
+          <dt>그 외 700 목표 중 환산 8회 이상</dt>
+          <dd>{metrics.target700MembersAtLeastEightEquivalentUnits}명</dd>
+        </div>
+        <div>
+          <dt>그 외 700 목표 총 환산 횟수</dt>
+          <dd>{metrics.target700TotalCommissionEquivalentUnits}회 (300단계 기준)</dd>
+        </div>
         <div><dt>미래 누적 PVP 투자</dt><dd>{metrics.futureCumulativePvpInvestmentPv.toLocaleString('ko-KR')}</dd></div>
         <div><dt>100 단위가 아닌 입력칸</dt><dd>{metrics.nonHundredCellCount}칸</dd></div>
         <div><dt>가장 큰 직접 PVP</dt><dd>{metrics.maxDirectPvp.toLocaleString('ko-KR')}</dd></div>
@@ -126,33 +132,33 @@ export function AutomaticPlanPreview({
         </p>
       )}
 
-      {metrics.priorityDepthMemberDayCounts.length === 0 ? null : (
-        <ul className="automatic-plan-preview__days" aria-label="조직 2·3번 우선 회원별 발생일">
-          {metrics.priorityDepthMemberDayCounts.map((member) => (
+      {metrics.priorityDepthMemberEquivalentUnitCounts.length === 0 ? null : (
+        <ul className="automatic-plan-preview__days" aria-label="조직 2·3번 우선 회원별 수당 환산 횟수">
+          {metrics.priorityDepthMemberEquivalentUnitCounts.map((member) => (
             <li key={member.memberKey}>
               {member.memberLabel} (조직 {member.organizationDepth}번):{' '}
-              {member.days}/{metrics.rootCommissionGoal.businessDayCount}일
+              {member.equivalentUnits}회 (300단계 기준)
             </li>
           ))}
         </ul>
       )}
 
-      {metrics.highTargetMemberDayCounts.length === 0 ? null : (
-        <ul className="automatic-plan-preview__days" aria-label="고목표 회원별 발생일">
-          {metrics.highTargetMemberDayCounts.map((member) => (
+      {metrics.highTargetMemberEquivalentUnitCounts.length === 0 ? null : (
+        <ul className="automatic-plan-preview__days" aria-label="고목표 회원별 수당 환산 횟수">
+          {metrics.highTargetMemberEquivalentUnitCounts.map((member) => (
             <li key={member.memberKey}>
               {member.memberLabel} (목표 {member.pvpTarget.toLocaleString('ko-KR')}):{' '}
-              {member.days}/{metrics.rootCommissionGoal.businessDayCount}일
+              {member.equivalentUnits}회 (300단계 기준)
             </li>
           ))}
         </ul>
       )}
 
-      {metrics.target700MemberDayCounts.length === 0 ? null : (
-        <ul className="automatic-plan-preview__days" aria-label="그 외 700 목표 회원별 발생일">
-          {metrics.target700MemberDayCounts.map((member) => (
+      {metrics.target700MemberEquivalentUnitCounts.length === 0 ? null : (
+        <ul className="automatic-plan-preview__days" aria-label="그 외 700 목표 회원별 수당 환산 횟수">
+          {metrics.target700MemberEquivalentUnitCounts.map((member) => (
             <li key={member.memberKey}>
-              {member.memberLabel}: {member.days}/{metrics.rootCommissionGoal.businessDayCount}일
+              {member.memberLabel}: {member.equivalentUnits}회 (300단계 기준)
             </li>
           ))}
         </ul>

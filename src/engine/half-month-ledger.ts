@@ -1,4 +1,5 @@
 import {
+  commissionEquivalentUnitsForTier,
   DEFAULT_RULE_SET,
 } from '../domain/constants';
 import { checkedAdd, subtractFloorZero, ZERO_PV } from '../domain/pv';
@@ -48,6 +49,18 @@ interface PersonalPvpProgress {
   readonly personalPvpTarget: Pv;
   readonly remainingPvp: Pv;
   readonly personalPvpTargetMet: boolean;
+}
+
+function totalCommissionEquivalentUnits(
+  occurrences: readonly CommissionOccurrence[],
+): number | null {
+  let total = 0;
+  for (const occurrence of occurrences) {
+    const units = commissionEquivalentUnitsForTier(occurrence.tier);
+    if (units === null) return null;
+    total += units;
+  }
+  return total;
 }
 
 export function createFortnightAccumulator(): FortnightAccumulator {
@@ -206,12 +219,18 @@ export function evaluateFortnight(
     input.member.pvpTarget ===
     rules.target700CommissionPreference.eligiblePvpTarget;
   const commissionDays = input.accumulator.commissionOccurrences.length;
+  const commissionEquivalentUnits = totalCommissionEquivalentUnits(
+    input.accumulator.commissionOccurrences,
+  );
   const belowQualificationSettlementDays =
     input.accumulator.belowQualificationSettlementOccurrences.length;
   const recommendationStatus: RecommendationStatus = recommendationApplies
-    ? commissionDays >= rules.target700CommissionPreference.recommendedDays
-      ? 'MET_OR_EXCEEDED'
-      : 'BELOW_RECOMMENDED'
+    ? commissionEquivalentUnits === null
+      ? 'UNCONFIRMED'
+      : commissionEquivalentUnits >=
+          rules.target700CommissionPreference.recommendedEquivalentUnits
+        ? 'MET_OR_EXCEEDED'
+        : 'BELOW_RECOMMENDED'
     : 'NOT_APPLICABLE';
 
   return {
@@ -241,14 +260,15 @@ export function evaluateFortnight(
       (occurrence) => ({ ...occurrence }),
     ),
     commissionDays,
+    commissionEquivalentUnits,
     belowQualificationSettlementOccurrences:
       input.accumulator.belowQualificationSettlementOccurrences.map(
         (occurrence) => ({ ...occurrence }),
       ),
     belowQualificationSettlementDays,
     recommendationStatus,
-    recommendedCommissionDays: recommendationApplies
-      ? rules.target700CommissionPreference.recommendedDays
+    recommendedCommissionEquivalentUnits: recommendationApplies
+      ? rules.target700CommissionPreference.recommendedEquivalentUnits
       : null,
   };
 }

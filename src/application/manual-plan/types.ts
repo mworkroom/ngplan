@@ -181,6 +181,7 @@ export interface ManualPlanDailyAuditView {
   readonly assessedRight: number | null;
   readonly commissionTier: DailySettlement['commissionTier'];
   readonly commissionOccurred: boolean;
+  readonly commissionEquivalentUnits: number | null;
   readonly commissionLabel: string;
   readonly carryOut: PvBalance;
   readonly running: RunningFortnightState;
@@ -218,12 +219,13 @@ export interface ManualPlanMemberSummaryView {
   readonly allTargetsMet: boolean;
   readonly allTargetsLabel: string;
   readonly commissionDays: number;
+  readonly commissionEquivalentUnits: number | null;
   readonly commissionOccurrences: FortnightAssessment['commissionOccurrences'];
   readonly belowQualificationSettlementOccurrences:
     FortnightAssessment['belowQualificationSettlementOccurrences'];
   readonly belowQualificationSettlementDays: number;
   readonly recommendationStatus: FortnightAssessment['recommendationStatus'];
-  readonly recommendedCommissionDays: number | null;
+  readonly recommendedCommissionEquivalentUnits: number | null;
   readonly recommendationLabel: string;
 }
 

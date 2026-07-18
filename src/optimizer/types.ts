@@ -55,9 +55,9 @@ export interface AutomaticPlanObjectiveVector {
   readonly totalNewPv: number;
   readonly confirmedPayoutWon: number;
   readonly discardedExcessPv: number;
-  readonly priorityDepthAscendingDayVector: readonly number[];
-  readonly highTargetAscendingDayVector: readonly number[];
-  readonly target700AscendingDayVector: readonly number[];
+  readonly priorityDepthAscendingEquivalentUnitVector: readonly number[];
+  readonly highTargetAscendingEquivalentUnitVector: readonly number[];
+  readonly target700AscendingEquivalentUnitVector: readonly number[];
   readonly futureCumulativePvpInvestmentPv: number;
   readonly nonHundredCellCount: number;
   readonly maxDirectPvp: number;
@@ -74,21 +74,21 @@ export interface RootCommissionGoalMetric {
   readonly met: boolean;
 }
 
-export interface PriorityDepthMemberDayCount {
+export interface PriorityDepthMemberEquivalentUnitCount {
   readonly memberKey: string;
   readonly organizationDepth: 2 | 3;
-  readonly commissionDays: number;
+  readonly commissionEquivalentUnits: number;
 }
 
-export interface HighTargetMemberDayCount {
+export interface HighTargetMemberEquivalentUnitCount {
   readonly memberKey: string;
   readonly pvpTarget: 1500 | 2400;
-  readonly commissionDays: number;
+  readonly commissionEquivalentUnits: number;
 }
 
-export interface Target700MemberDayCount {
+export interface Target700MemberEquivalentUnitCount {
   readonly memberKey: string;
-  readonly commissionDays: number;
+  readonly commissionEquivalentUnits: number;
 }
 
 export interface TerminalCarryMemberSummary {
@@ -108,11 +108,14 @@ export interface TerminalCarrySummary {
 
 export interface AutomaticPlanDisplayMetrics {
   readonly rootCommissionGoal: RootCommissionGoalMetric;
-  readonly priorityDepthMemberDayCounts: readonly PriorityDepthMemberDayCount[];
-  readonly highTargetMemberDayCounts: readonly HighTargetMemberDayCount[];
-  readonly target700MembersAtLeastEight: number;
-  readonly target700TotalCommissionDays: number;
-  readonly target700MemberDayCounts: readonly Target700MemberDayCount[];
+  readonly priorityDepthMemberEquivalentUnitCounts:
+    readonly PriorityDepthMemberEquivalentUnitCount[];
+  readonly highTargetMemberEquivalentUnitCounts:
+    readonly HighTargetMemberEquivalentUnitCount[];
+  readonly target700MembersAtLeastEightEquivalentUnits: number;
+  readonly target700TotalCommissionEquivalentUnits: number;
+  readonly target700MemberEquivalentUnitCounts:
+    readonly Target700MemberEquivalentUnitCount[];
   readonly terminalCarrySummary: TerminalCarrySummary;
 }
 
@@ -147,9 +150,9 @@ export interface AutomaticPlanProofProgress {
   readonly provenVectorPrefix:
     | {
         readonly objective:
-          | 'PRIORITY_DEPTH_ASCENDING_VECTOR'
-          | 'HIGH_TARGET_ASCENDING_VECTOR'
-          | 'TARGET_700_ASCENDING_VECTOR'
+          | 'PRIORITY_DEPTH_ASCENDING_EQUIVALENT_UNIT_VECTOR'
+          | 'HIGH_TARGET_ASCENDING_EQUIVALENT_UNIT_VECTOR'
+          | 'TARGET_700_ASCENDING_EQUIVALENT_UNIT_VECTOR'
           | 'DETERMINISTIC_ALLOCATION_VECTOR';
         readonly length: number;
       }
