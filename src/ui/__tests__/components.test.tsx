@@ -185,7 +185,7 @@ describe('tree cards and child slots', () => {
       kind: 'SELF' as const,
       childMemberKey: null,
     };
-    const { rerender } = render(
+    const { container, rerender } = render(
       <ChildSlot
         slot={selfSlot}
         parentName="부모"
@@ -211,6 +211,7 @@ describe('tree cards and child slots', () => {
         onRemoveChild={onRemoveChild}
       />,
     );
+    expect(container.querySelector('.child-slot__state--placeholder')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '자식 위치 바꾸기 또는 명단에서 빼기' }));
     expect(onRemoveChild).toHaveBeenCalledWith('child');
 
@@ -239,7 +240,7 @@ describe('tree cards and child slots', () => {
     const onSelect = vi.fn();
     const onToggle = vi.fn();
     const onOpenSlot = vi.fn();
-    render(
+    const { container } = render(
       <MemberCard
         member={current}
         issues={[issue('MEMBER_NAME_REQUIRED', 'ERROR', 'name', current.memberKey)]}
@@ -257,6 +258,7 @@ describe('tree cards and child slots', () => {
         onRemoveChild={vi.fn()}
       />,
     );
+    expect(container.querySelector('.member-card__summary')).toBeTruthy();
     expect(screen.getByText('확인')).toBeTruthy();
     expect(screen.getByLabelText('세 시작값').textContent).toContain('PVP 0');
     expect(screen.getAllByText('스스로')).toHaveLength(2);
@@ -311,6 +313,10 @@ describe('tree cards and child slots', () => {
       'right',
     );
     expect(container.querySelectorAll('.tree-node--connected')).toHaveLength(1);
+    expect(container.querySelector('.organization-tree__connectors')).toBeTruthy();
+    expect(
+      container.querySelector('.tree-node[data-member-key="root-tree"]'),
+    ).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '− 작게' }));
     expect(sharedProps.onScaleChange).toHaveBeenCalledWith(0.9);
     fireEvent.click(screen.getByRole('button', { name: '+ 크게' }));

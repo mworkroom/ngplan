@@ -137,7 +137,7 @@ Usage rules:
 - Target year and month.
 - `FIRST_HALF` or `SECOND_HALF`.
 - Derived default title and manual-title state.
-- Fixed timezone `Asia/Seoul`.
+- Fixed project business timezone `America/Sao_Paulo`; device/browser timezone must not change the plan date.
 - Stable in-session `projectId`.
 - `IN_PROGRESS` project state.
 - Derived UI state: `EDITING` or `READY`.

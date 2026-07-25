@@ -60,37 +60,39 @@ export function MemberCard({
       aria-current={selected ? 'true' : undefined}
       tabIndex={-1}
     >
-      <div className="member-card__header">
-        <button
-          type="button"
-          className="member-card__select"
-          aria-label={`${displayName} 회원 상세 편집`}
-          onClick={() => onSelect(member.memberKey)}
-        >
-          <h3 className="member-card__name">{displayName}</h3>
-          <p className="member-card__meta">
-            ID {member.memberId.trim() || '미입력'} · 목표{' '}
-            {member.pvpTarget === ''
-              ? '미선택'
-              : `${Number(member.pvpTarget).toLocaleString('ko-KR')} PV`}
-          </p>
-        </button>
-        <span
-          className={`status-badge ${
-            complete ? 'status-badge--complete' : 'status-badge--incomplete'
-          }`}
-        >
-          {complete ? '완료' : '확인'}
-        </span>
-      </div>
+      <div className="member-card__summary">
+        <div className="member-card__header">
+          <button
+            type="button"
+            className="member-card__select"
+            aria-label={`${displayName} 회원 상세 편집`}
+            onClick={() => onSelect(member.memberKey)}
+          >
+            <h3 className="member-card__name">{displayName}</h3>
+            <p className="member-card__meta">
+              ID {member.memberId.trim() || '미입력'} · 목표{' '}
+              {member.pvpTarget === ''
+                ? '미선택'
+                : `${Number(member.pvpTarget).toLocaleString('ko-KR')} PV`}
+            </p>
+          </button>
+          <span
+            className={`status-badge ${
+              complete ? 'status-badge--complete' : 'status-badge--incomplete'
+            }`}
+          >
+            {complete ? '완료' : '확인'}
+          </span>
+        </div>
 
-      <p className="member-card__opening" aria-label="세 시작값">
-        PVP {member.openingState.cumulativePvp || '0'}
-        <span aria-hidden="true"> | </span>
-        좌 {member.openingState.dailyCarryLeft || '0'}
-        <span aria-hidden="true"> | </span>
-        우 {member.openingState.dailyCarryRight || '0'}
-      </p>
+        <p className="member-card__opening" aria-label="세 시작값">
+          PVP {member.openingState.cumulativePvp || '0'}
+          <span aria-hidden="true"> | </span>
+          좌 {member.openingState.dailyCarryLeft || '0'}
+          <span aria-hidden="true"> | </span>
+          우 {member.openingState.dailyCarryRight || '0'}
+        </p>
+      </div>
 
       <div className="member-card__slots">
         <ChildSlot

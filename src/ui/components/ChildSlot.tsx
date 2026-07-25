@@ -45,19 +45,25 @@ export function ChildSlot({
           </button>
         </>
       ) : (
-        <button
-          type="button"
-          className="child-slot__action child-slot__action--remove"
-          aria-label={`${childName ?? slot.childMemberKey ?? '하위 회원'} 위치 바꾸기 또는 명단에서 빼기`}
-          title={`${childName ?? slot.childMemberKey ?? '하위 회원'} 위치 바꾸기 또는 명단에서 빼기`}
-          onClick={() => {
-            if (slot.childMemberKey !== null) {
-              onRemoveChild(slot.childMemberKey);
-            }
-          }}
-        >
-          −
-        </button>
+        <>
+          <span
+            className="child-slot__state child-slot__state--placeholder"
+            aria-hidden="true"
+          />
+          <button
+            type="button"
+            className="child-slot__action child-slot__action--remove"
+            aria-label={`${childName ?? slot.childMemberKey ?? '하위 회원'} 위치 바꾸기 또는 명단에서 빼기`}
+            title={`${childName ?? slot.childMemberKey ?? '하위 회원'} 위치 바꾸기 또는 명단에서 빼기`}
+            onClick={() => {
+              if (slot.childMemberKey !== null) {
+                onRemoveChild(slot.childMemberKey);
+              }
+            }}
+          >
+            −
+          </button>
+        </>
       )}
     </div>
   );

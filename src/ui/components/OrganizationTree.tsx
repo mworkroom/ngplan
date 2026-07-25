@@ -1,4 +1,10 @@
-import { useRef, type CSSProperties, type ReactNode } from 'react';
+import {
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
 import {
   getChildSlotState,
   projectFieldId,
@@ -10,6 +16,12 @@ import {
 import { MemberCard } from './MemberCard';
 
 type Side = ChildSlotState['side'];
+
+interface TreeConnector {
+  readonly parentMemberKey: string;
+  readonly childMemberKeys: readonly string[];
+  readonly path: string;
+}
 
 export interface OrganizationTreeProps {
   readonly draft: ProjectSetupDraft;
@@ -42,6 +54,7 @@ export function OrganizationTree({
 }: OrganizationTreeProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const [connectors, setConnectors] = useState<readonly TreeConnector[]>([]);
   const errors = issues.filter((issue) => issue.severity === 'ERROR');
   const root =
     draft.rootMemberKey === null
@@ -63,6 +76,122 @@ export function OrganizationTree({
     onScaleChange(Math.max(0.25, Math.floor(fittedScale * 20) / 20));
     viewport.scrollTo?.({ left: 0, behavior: 'smooth' });
   };
+
+  useLayoutEffect(() => {
+    const canvas = canvasRef.current;
+    if (canvas === null) {
+      setConnectors([]);
+      return;
+    }
+
+    const measureConnectors = (): void => {
+      const canvasRect = canvas.getBoundingClientRect();
+      const measuredScale = canvas.offsetWidth > 0
+        ? canvasRect.width / canvas.offsetWidth
+        : scale;
+      const effectiveScale = measuredScale > 0 ? measuredScale : 1;
+      const nextConnectors: TreeConnector[] = [];
+
+      for (const node of canvas.querySelectorAll<HTMLElement>('.tree-node[data-member-key]')) {
+        const memberKey = node.dataset.memberKey;
+        const memberCard = Array.from(node.children).find((child) =>
+          child.classList.contains('member-card'),
+        );
+        const childrenContainer = Array.from(node.children).find((child) =>
+          child.classList.contains('tree-children'),
+        );
+
+        if (
+          memberKey === undefined ||
+          !(memberCard instanceof HTMLElement) ||
+          !(childrenContainer instanceof HTMLElement) ||
+          childrenContainer.hidden ||
+          memberCard.getClientRects().length === 0
+        ) {
+          continue;
+        }
+
+        const childNodes = Array.from(childrenContainer.children).filter(
+          (child): child is HTMLElement =>
+            child instanceof HTMLElement && child.classList.contains('tree-node'),
+        );
+        const childCards = childNodes
+          .map((childNode) => {
+            const card = Array.from(childNode.children).find((child) =>
+              child.classList.contains('member-card'),
+            );
+            if (!(card instanceof HTMLElement) || card.getClientRects().length === 0) {
+              return null;
+            }
+            return {
+              memberKey: childNode.dataset.memberKey ?? '',
+              rect: card.getBoundingClientRect(),
+            };
+          })
+          .filter(
+            (
+              child,
+            ): child is {
+              readonly memberKey: string;
+              readonly rect: DOMRect;
+            } => child !== null && child.memberKey !== '',
+          );
+
+        if (childCards.length === 0) {
+          continue;
+        }
+
+        const parentRect = memberCard.getBoundingClientRect();
+        const parentX =
+          (parentRect.left + parentRect.width / 2 - canvasRect.left) / effectiveScale;
+        const parentBottom = (parentRect.bottom - canvasRect.top) / effectiveScale;
+        const childPoints = childCards.map(({ memberKey: childMemberKey, rect }) => ({
+          memberKey: childMemberKey,
+          x: (rect.left + rect.width / 2 - canvasRect.left) / effectiveScale,
+          top: (rect.top - canvasRect.top) / effectiveScale,
+        }));
+        const firstChildTop = Math.min(...childPoints.map(({ top }) => top));
+        const junctionY = parentBottom + Math.max(12, (firstChildTop - parentBottom) / 2);
+        const horizontalStart = Math.min(parentX, ...childPoints.map(({ x }) => x));
+        const horizontalEnd = Math.max(parentX, ...childPoints.map(({ x }) => x));
+        const pathParts = [
+          `M ${parentX} ${parentBottom} V ${junctionY}`,
+          `M ${horizontalStart} ${junctionY} H ${horizontalEnd}`,
+          ...childPoints.map(({ x, top }) => `M ${x} ${junctionY} V ${top}`),
+        ];
+
+        nextConnectors.push({
+          parentMemberKey: memberKey,
+          childMemberKeys: childPoints.map(({ memberKey: childMemberKey }) => childMemberKey),
+          path: pathParts.join(' '),
+        });
+      }
+
+      setConnectors((current) => {
+        const unchanged =
+          current.length === nextConnectors.length &&
+          current.every(
+            (connector, index) =>
+              connector.parentMemberKey === nextConnectors[index]?.parentMemberKey &&
+              connector.path === nextConnectors[index]?.path,
+          );
+        return unchanged ? current : nextConnectors;
+      });
+    };
+
+    measureConnectors();
+    window.addEventListener('resize', measureConnectors);
+    const resizeObserver =
+      typeof ResizeObserver === 'undefined'
+        ? null
+        : new ResizeObserver(measureConnectors);
+    resizeObserver?.observe(canvas);
+
+    return () => {
+      window.removeEventListener('resize', measureConnectors);
+      resizeObserver?.disconnect();
+    };
+  }, [collapsedMemberKeys, draft, scale]);
 
   const renderNode = (memberKey: string, connectedToParent = false): ReactNode => {
     const member = topology.memberByKey.get(memberKey);
@@ -86,6 +215,7 @@ export function OrganizationTree({
     return (
       <div
         className={`tree-node${connectedToParent ? ' tree-node--connected' : ''}`}
+        data-member-key={memberKey}
         key={memberKey}
       >
         <MemberCard
@@ -194,6 +324,20 @@ export function OrganizationTree({
             className="organization-tree__canvas"
             style={{ '--organization-scale': scale } as CSSProperties}
           >
+            <svg
+              className="organization-tree__connectors"
+              aria-hidden="true"
+              focusable="false"
+            >
+              {connectors.map((connector) => (
+                <path
+                  key={connector.parentMemberKey}
+                  data-connector-from={connector.parentMemberKey}
+                  data-connector-to={connector.childMemberKeys.join(' ')}
+                  d={connector.path}
+                />
+              ))}
+            </svg>
             {renderNode(root.memberKey)}
           </div>
         )}
