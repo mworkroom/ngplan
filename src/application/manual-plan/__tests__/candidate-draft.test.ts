@@ -66,7 +66,7 @@ function bundle(
         month: 7,
         half: 'FIRST_HALF' as const,
       }),
-      timezone: 'Asia/Seoul' as const,
+      timezone: 'America/Sao_Paulo' as const,
       projectStatus: 'IN_PROGRESS' as const,
       organizationSnapshotId: organization.snapshotId,
     }),

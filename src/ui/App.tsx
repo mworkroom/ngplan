@@ -216,6 +216,11 @@ export interface AppProps {
   readonly generateId?: IdGenerator;
   readonly initialDate?: Date;
   readonly createAutomaticPlanWorker?: AutomaticPlanWorkerFactory;
+  readonly initialWorkspaceSession?: WorkspaceSessionSnapshot | null;
+  readonly onWorkspaceSessionChange?: (
+    snapshot: WorkspaceSessionSnapshot,
+  ) => void;
+  readonly onCreateNewPlan?: () => void;
 }
 
 interface SlotAction {
@@ -225,7 +230,7 @@ interface SlotAction {
 
 function createInitialDraft(generateId: IdGenerator, date: Date): ProjectSetupDraft {
   const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Asia/Seoul',
+    timeZone: 'America/Sao_Paulo',
     year: 'numeric',
     month: 'numeric',
     day: 'numeric',
@@ -247,6 +252,9 @@ export function App({
   generateId: injectedGenerateId,
   initialDate,
   createAutomaticPlanWorker = defaultAutomaticPlanWorkerFactory,
+  initialWorkspaceSession,
+  onWorkspaceSessionChange,
+  onCreateNewPlan,
 }: AppProps = {}) {
   const generateIdRef = useRef<IdGenerator | null>(null);
   if (generateIdRef.current === null) {
@@ -256,9 +264,13 @@ export function App({
   const initialDateRef = useRef(initialDate ?? new Date());
   const restoredSessionRef = useRef<WorkspaceSessionSnapshot | null | undefined>(undefined);
   if (restoredSessionRef.current === undefined) {
-    restoredSessionRef.current = readWorkspaceSession();
+    restoredSessionRef.current =
+      initialWorkspaceSession === undefined
+        ? readWorkspaceSession()
+        : initialWorkspaceSession;
   }
   const restoredSession = restoredSessionRef.current;
+  const cloudStorageEnabled = onWorkspaceSessionChange !== undefined;
   const [draft, setDraft] = useState<ProjectSetupDraft>(() =>
     restoredSession?.draft ?? createInitialDraft(generateId, initialDateRef.current),
   );
@@ -344,17 +356,23 @@ export function App({
   }, [slotAction]);
 
   useEffect(() => {
-    writeWorkspaceSession({
+    const snapshot: WorkspaceSessionSnapshot = {
       version: WORKSPACE_SESSION_VERSION,
       draft,
       manualPlanDraft,
       screen: screenState,
       organizationScale,
       automaticPlanCheckpoint: workspaceAutomaticPlanCheckpoint,
-    });
+    };
+    if (onWorkspaceSessionChange === undefined) {
+      writeWorkspaceSession(snapshot);
+    } else {
+      onWorkspaceSessionChange(snapshot);
+    }
   }, [
     draft,
     manualPlanDraft,
+    onWorkspaceSessionChange,
     organizationScale,
     screenState,
     workspaceAutomaticPlanCheckpoint,
@@ -491,9 +509,15 @@ export function App({
     if (
       draftHasMemberData(draft) &&
       !window.confirm(
-        '지금까지 입력한 회원과 숫자를 모두 지우고 새로 시작할까요?',
+        onCreateNewPlan === undefined
+          ? '지금까지 입력한 회원과 숫자를 모두 지우고 새로 시작할까요?'
+          : '현재 계획은 그대로 저장한 채 새 계획을 만들까요?',
       )
     ) {
+      return;
+    }
+    if (onCreateNewPlan !== undefined) {
+      onCreateNewPlan();
       return;
     }
     invalidateAutomaticPlan();
@@ -776,6 +800,7 @@ export function App({
           onDraftChange={setManualPlanDraft}
           onReturnToSetup={() => setScreenState('SETUP')}
           announcement={announcement}
+          storageMode={cloudStorageEnabled ? 'CLOUD' : 'LOCAL'}
           automaticPlanPanel={(
             <AutomaticPlanPanel
               status={automaticPlanUiStatus}
@@ -839,7 +864,7 @@ export function App({
             {draft.activeBundle === null ? '입력 중' : '계획표 준비 완료'}
           </span>
           <button type="button" className="secondary-button" onClick={handleNewProject}>
-            초기화
+            {cloudStorageEnabled ? '새 계획' : '초기화'}
           </button>
           <button type="button" className="primary-button" onClick={handleNormalize}>
             플래너 생성
@@ -850,10 +875,19 @@ export function App({
       <aside className="storage-notice" aria-label="저장 안내">
         <span aria-hidden="true">ⓘ</span>
         <div>
-          <strong>이 브라우저에 자동으로 저장됩니다.</strong>
-          <div>
-            브라우저를 닫아도 입력 내용이 유지됩니다. 사이트 데이터를 삭제하면 저장 자료도 삭제됩니다.
-          </div>
+          {cloudStorageEnabled ? (
+            <>
+              <strong>클라우드와 이 기기에 자동으로 저장됩니다.</strong>
+              <div>인터넷이 잠시 끊겨도 이 기기에 보관한 뒤 자동으로 다시 저장합니다.</div>
+            </>
+          ) : (
+            <>
+              <strong>이 브라우저에 자동으로 저장됩니다.</strong>
+              <div>
+                브라우저를 닫아도 입력 내용이 유지됩니다. 사이트 데이터를 삭제하면 저장 자료도 삭제됩니다.
+              </div>
+            </>
+          )}
         </div>
       </aside>
 

@@ -118,7 +118,7 @@ function looksLikeProjectDraft(
     (value.half === 'FIRST_HALF' || value.half === 'SECOND_HALF') &&
     typeof value.title === 'string' &&
     (value.titleSource === 'DERIVED' || value.titleSource === 'MANUAL') &&
-    value.timezone === 'Asia/Seoul' &&
+    value.timezone === 'America/Sao_Paulo' &&
     value.projectStatus === 'IN_PROGRESS' &&
     (value.rootMemberKey === null || typeof value.rootMemberKey === 'string') &&
     (value.selectedMemberKey === null || typeof value.selectedMemberKey === 'string') &&
@@ -153,7 +153,7 @@ function looksLikeProjectSetupBundle(value: unknown): value is ProjectSetupBundl
     !Number.isSafeInteger(value.project.period.month) ||
     (value.project.period.half !== 'FIRST_HALF' &&
       value.project.period.half !== 'SECOND_HALF') ||
-    value.project.timezone !== 'Asia/Seoul' ||
+    value.project.timezone !== 'America/Sao_Paulo' ||
     value.project.projectStatus !== 'IN_PROGRESS' ||
     typeof value.project.organizationSnapshotId !== 'string' ||
     typeof value.organization.snapshotId !== 'string'
@@ -253,6 +253,12 @@ function normalizeV3Snapshot(value: unknown): WorkspaceSessionSnapshot | null {
     organizationScale: normalizedScale(value.organizationScale),
     automaticPlanCheckpoint,
   });
+}
+
+export function normalizeWorkspaceSessionSnapshot(
+  value: unknown,
+): WorkspaceSessionSnapshot | null {
+  return normalizeV3Snapshot(value);
 }
 
 type LegacyOpeningStateDraft = Readonly<{

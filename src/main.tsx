@@ -2,7 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { ENGINE_VERSION } from './domain/constants';
-import { App } from './ui/App';
+import { CloudApp } from './ui/CloudApp';
 import './ui/theme.css';
 import './ui/styles.css';
 
@@ -16,6 +16,6 @@ if (appElement === null) {
 
 createRoot(appElement).render(
   <StrictMode>
-    <App />
+    <CloudApp />
   </StrictMode>,
 );

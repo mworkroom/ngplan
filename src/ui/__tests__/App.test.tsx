@@ -170,7 +170,7 @@ describe('App project setup flow', () => {
     expect(screen.queryByLabelText('화면 크기')).toBeNull();
   });
 
-  it('uses Seoul time for the initial half and supports title/slot panel controls', async () => {
+  it('uses Sao Paulo business time for the initial half and supports title/slot panel controls', async () => {
     const generated = createSessionIdGenerator('test session');
     expect(generated('PROJECT')).toBe('project-test_session-1');
     expect(generated('ORGANIZATION_SNAPSHOT')).toBe(
@@ -182,10 +182,10 @@ describe('App project setup flow', () => {
     expect(inputByLabel('연도').value).toBe('2026');
     expect(inputByLabel('월').value).toBe('7');
     expect((screen.getByLabelText('기간') as HTMLSelectElement).value).toBe(
-      'SECOND_HALF',
+      'FIRST_HALF',
     );
     await replaceInput(user, '연도', '2027');
-    expect(inputByLabel('프로젝트명').value).toBe('202707B');
+    expect(inputByLabel('프로젝트명').value).toBe('202707A');
     await replaceInput(user, '프로젝트명', '직접 관리 제목');
     await replaceInput(user, '월', '8');
     expect(inputByLabel('프로젝트명').value).toBe('직접 관리 제목');
@@ -193,7 +193,7 @@ describe('App project setup flow', () => {
       screen.getByRole('button', { name: '제목 초기화' }),
     );
     expect(inputByLabel('프로젝트명').value).toBe(
-      '202708B',
+      '202708A',
     );
 
     await createNamedRoot(user, 'Root', '1000');

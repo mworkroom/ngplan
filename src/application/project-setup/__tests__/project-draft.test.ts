@@ -60,7 +60,7 @@ describe('P2-PROJ 프로젝트 Draft', () => {
       half: 'FIRST_HALF',
       title: '202607A',
       titleSource: 'DERIVED',
-      timezone: 'Asia/Seoul',
+      timezone: 'America/Sao_Paulo',
       projectStatus: 'IN_PROGRESS',
       rootMemberKey: null,
       selectedMemberKey: null,

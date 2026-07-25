@@ -31,6 +31,7 @@ export interface ManualPlanWorkspaceProps {
   readonly onReturnToSetup: () => void;
   readonly automaticPlanPanel?: ReactNode;
   readonly announcement?: string;
+  readonly storageMode?: 'LOCAL' | 'CLOUD';
 }
 
 function formatDateRange(startDate: string, endDate: string): string {
@@ -60,6 +61,7 @@ export function ManualPlanWorkspace({
   onReturnToSetup,
   automaticPlanPanel,
   announcement = '',
+  storageMode = 'LOCAL',
 }: ManualPlanWorkspaceProps) {
   const schema = useMemo(() => deriveManualPlanSchema(bundle), [bundle]);
   const calculation: ManualPlanCalculationState = useMemo(
@@ -161,10 +163,19 @@ export function ManualPlanWorkspace({
       <aside className="storage-notice" aria-label="저장 안내">
         <span aria-hidden="true">ⓘ</span>
         <div>
-          <strong>이 브라우저에 자동으로 저장됩니다.</strong>
-          <div>
-            브라우저를 닫아도 입력 내용이 유지됩니다. 사이트 데이터를 삭제하면 저장 자료도 삭제됩니다.
-          </div>
+          {storageMode === 'CLOUD' ? (
+            <>
+              <strong>클라우드와 이 기기에 자동으로 저장됩니다.</strong>
+              <div>인터넷이 잠시 끊겨도 이 기기에 보관한 뒤 자동으로 다시 저장합니다.</div>
+            </>
+          ) : (
+            <>
+              <strong>이 브라우저에 자동으로 저장됩니다.</strong>
+              <div>
+                브라우저를 닫아도 입력 내용이 유지됩니다. 사이트 데이터를 삭제하면 저장 자료도 삭제됩니다.
+              </div>
+            </>
+          )}
         </div>
       </aside>
 

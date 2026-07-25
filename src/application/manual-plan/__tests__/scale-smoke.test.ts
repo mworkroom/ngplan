@@ -75,7 +75,7 @@ function createScaleBundle(): ProjectSetupBundle {
         month: 7,
         half: 'SECOND_HALF' as const,
       }),
-      timezone: 'Asia/Seoul' as const,
+      timezone: 'America/Sao_Paulo' as const,
       projectStatus: 'IN_PROGRESS' as const,
       organizationSnapshotId: organization.snapshotId,
     }),

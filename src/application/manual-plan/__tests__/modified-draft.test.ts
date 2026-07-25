@@ -21,7 +21,7 @@ function createBundle(): ProjectSetupBundle {
       projectId: 'project-1',
       title: '수정 판정 테스트',
       period: Object.freeze({ year: 2026, month: 7, half: 'FIRST_HALF' as const }),
-      timezone: 'Asia/Seoul' as const,
+      timezone: 'America/Sao_Paulo' as const,
       projectStatus: 'IN_PROGRESS' as const,
       organizationSnapshotId: 'snapshot-1',
     }),

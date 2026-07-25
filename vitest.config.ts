@@ -29,6 +29,7 @@ export default defineConfig({
         'src/engine/**/*.ts',
         'src/optimizer/**/*.ts',
         'src/application/**/*.ts',
+        'src/cloud/**/*.ts',
         'src/ui/**/*.{ts,tsx}',
       ],
       exclude: [
@@ -62,6 +63,12 @@ export default defineConfig({
           functions: 95,
           lines: 95,
           statements: 95,
+        },
+        'src/cloud/**': {
+          branches: 85,
+          functions: 90,
+          lines: 95,
+          statements: 90,
         },
         'src/ui/**': {
           branches: 85,

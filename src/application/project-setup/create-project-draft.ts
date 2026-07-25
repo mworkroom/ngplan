@@ -55,7 +55,7 @@ export function createProjectDraft(input: CreateProjectDraftInput): ProjectSetup
     half: input.half,
     title: deriveDefaultProjectTitle(year, month, input.half),
     titleSource: 'DERIVED',
-    timezone: 'Asia/Seoul',
+    timezone: 'America/Sao_Paulo',
     projectStatus: 'IN_PROGRESS',
     members: [],
     rootMemberKey: null,

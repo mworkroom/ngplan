@@ -2,8 +2,8 @@
 
 > 기준 요구사항: `docs/requirements/pyramid-app-requirements-v2.md`  
 > 작성일: 2026-07-11  
-> 최종 갱신일: 2026-07-19
-> 문서 상태: Phase 4 자동 계획 확정 계약 반영 — 규칙·엔진 `7.0.0`, 정책·목적함수 `7.0.0`
+> 최종 갱신일: 2026-07-26
+> 문서 상태: Phase 4 자동 계획 베타 동결, Phase 6A 클라우드 안전 저장 구현 반영 — 규칙·엔진 `7.0.0`, 정책·목적함수 `7.0.0`
 > Phase 1 결정 확정일: 2026-07-11
 > Phase 4 Q-SIM-01~06 확정일: 2026-07-12
 
@@ -11,7 +11,7 @@
 
 이 문서는 피라미드앱의 권위 있는 데이터, 파생 데이터, 조직 실적 전파, 일일 장부, 보름 장부, 자동 계획, 부분 재시뮬레이션의 경계를 정의한다.
 
-현재 단계에서는 실행 코드를 정의하지 않는다. 기술과 무관하게 지켜야 할 도메인 계약을 먼저 정하고, 기술 스택과 저장 방식은 해당 계약의 어댑터로 취급한다.
+기술과 무관하게 지켜야 할 도메인 계약을 기준으로 삼고, 기술 스택과 저장 방식은 해당 계약의 어댑터로 취급한다. 구현이 완료된 범위는 계약과 실제 경로를 함께 기록하되, 아직 구현하지 않은 Phase 5·전체 Phase 6 계약과 구분한다.
 
 ## 2. 핵심 설계 원칙
 
@@ -746,6 +746,21 @@ GitHub Pages는 정적 배포이므로 다음 두 제품은 아키텍처가 다�
 - **계정·동기화형:** 별도 인증과 원격 저장 서비스 필요, 권한·개인정보·백업 운영 필요
 
 Phase 6A에서는 기존 Supabase 프로젝트의 계정·동기화형 저장을 사용한다. 계획의 업무 시간대는 `America/Sao_Paulo`로 고정하며 Supabase 리전이나 접속 기기의 시간대에서 자동으로 파생하지 않는다. 원격 최신 작업본은 전체 계획 단위로 덮어쓰고, IndexedDB는 오프라인 복구용 로컬 사본으로만 사용한다. 계획별 `business_date` 하루 보관본은 상파울루 날짜 기준으로 한 개를 유지한다. 특별 스냅샷·셀별 영구 이력·외부 JSON 백업은 Phase 6A 범위에 포함하지 않는다.
+
+### 14.2.1 Phase 6A 구현 경계
+
+| 경계 | 구현 |
+|---|---|
+| 원격 원본 | `public.ngplan_projects`의 `document jsonb`에 `CloudPlanDocumentV1` 전체를 저장한다. 서버 trigger가 revision, UTC 저장 시각과 사용자 식별자를 정한다. |
+| 하루 보관본 | `public.ngplan_daily_backups`의 `(project_id, business_date)`를 기본 키로 사용한다. 현재 작업본 저장과 같은 transaction의 trigger가 상파울루 당일 행을 upsert한다. |
+| 접근 권한 | 기존 `workspaces`·`workspace_members`의 별도 `ngplan` 작업공간을 사용한다. 두 등록 계정은 동일 권한이며 RLS와 명시적 grant를 함께 적용한다. 익명 접근과 클라이언트 DELETE는 허용하지 않는다. |
+| 로컬 사본 | `src/cloud/indexeddb-plan-cache.ts`가 사용자·작업공간에 결합된 최신 로컬 문서, 원격 대기 상태와 기기 전용 UI 복원 정보를 저장한다. |
+| 저장 순서 | `src/cloud/plan-save-coordinator.ts`가 약 0.5초 뒤 로컬 저장, 입력 정지 약 2초 뒤 원격 저장, 단일 in-flight 요청, 최신 대기본 후속 저장과 지수형 재시도를 담당한다. |
+| 원격 어댑터 | `src/cloud/supabase-plan-repository.ts`가 목록·읽기·upsert·숨김/복원만 제공하며 DELETE 메서드를 노출하지 않는다. |
+| 제품 진입점 | `src/ui/CloudApp.tsx`가 기존 Google Auth 세션, 계획 목록과 편집기, 저장 상태를 조합한다. 프로덕션 진입점은 과거 `localStorage` 자료를 가져오지 않는다. |
+| 배포 구성 | GitHub Pages workflow는 `VITE_SUPABASE_URL`과 `VITE_SUPABASE_PUBLISHABLE_KEY` repository variable만 빌드에 전달한다. service role·secret key는 브라우저에 제공하지 않는다. |
+
+서로 다른 기기 사이의 충돌은 합의한 마지막 도착 전체 문서 우선 정책이다. 한 기기에서는 원격 요청을 직렬화해 오래된 요청이 더 최신 입력 뒤에 완료되어 최종본을 되돌리는 일을 막는다. 하루 보관본은 현재 복원 UI에 노출하지 않으며, 운영·분석용 보존 자료로만 유지한다.
 
 ### 14.3 종료 스냅샷
 

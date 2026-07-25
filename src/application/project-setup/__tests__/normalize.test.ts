@@ -63,7 +63,7 @@ describe('P2-NORM 정본 Setup Bundle', () => {
         projectId: 'project-1',
         title: '202607A',
         period: { year: 2026, month: 7, half: 'FIRST_HALF' },
-        timezone: 'Asia/Seoul',
+        timezone: 'America/Sao_Paulo',
         projectStatus: 'IN_PROGRESS',
         organizationSnapshotId: 'snapshot-1',
       },

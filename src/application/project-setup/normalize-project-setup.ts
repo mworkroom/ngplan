@@ -130,7 +130,7 @@ export function normalizeProjectSetup(
       projectId: draft.projectId,
       title: draft.title.trim(),
       period,
-      timezone: 'Asia/Seoul',
+      timezone: 'America/Sao_Paulo',
       projectStatus: 'IN_PROGRESS',
       organizationSnapshotId: draft.organizationSnapshotId,
     },

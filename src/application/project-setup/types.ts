@@ -44,7 +44,7 @@ export interface PlanProject {
   readonly projectId: string;
   readonly title: string;
   readonly period: PeriodInput;
-  readonly timezone: 'Asia/Seoul';
+  readonly timezone: 'America/Sao_Paulo';
   readonly projectStatus: 'IN_PROGRESS';
   readonly organizationSnapshotId: string;
 }
@@ -62,7 +62,7 @@ export interface ProjectSetupDraft {
   readonly half: Half;
   readonly title: string;
   readonly titleSource: DraftTitleSource;
-  readonly timezone: 'Asia/Seoul';
+  readonly timezone: 'America/Sao_Paulo';
   readonly projectStatus: 'IN_PROGRESS';
   readonly members: readonly MemberDraft[];
   readonly rootMemberKey: string | null;

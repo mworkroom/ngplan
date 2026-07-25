@@ -67,7 +67,7 @@ function bundle(
       projectId: 'results',
       title: '결과 표시 테스트',
       period: Object.freeze({ year: 2026, month: 7, half: 'FIRST_HALF' as const }),
-      timezone: 'Asia/Seoul' as const,
+      timezone: 'America/Sao_Paulo' as const,
       projectStatus: 'IN_PROGRESS' as const,
       organizationSnapshotId: 'results-snapshot',
     }),

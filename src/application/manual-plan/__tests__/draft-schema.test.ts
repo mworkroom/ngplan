@@ -69,7 +69,7 @@ function bundle(
       projectId: 'project-1',
       title: '테스트 계획',
       period: Object.freeze({ year: 2026, month, half }),
-      timezone: 'Asia/Seoul' as const,
+      timezone: 'America/Sao_Paulo' as const,
       projectStatus: 'IN_PROGRESS' as const,
       organizationSnapshotId: 'snapshot-1',
     }),
