@@ -17,7 +17,11 @@ import type {
   PlanCache,
   PlanRepository,
 } from '../../cloud/types';
-import { CloudApp, mergeCloudProjectLists } from '../CloudApp';
+import {
+  CloudApp,
+  mergeCloudProjectLists,
+  resolveCloudAppRedirectUrl,
+} from '../CloudApp';
 import {
   WORKSPACE_SESSION_VERSION,
   type WorkspaceSessionSnapshot,
@@ -196,6 +200,21 @@ afterEach(() => {
 });
 
 describe('CloudApp', () => {
+  it('resolves OAuth redirects for both Pages and the custom domain', () => {
+    expect(
+      resolveCloudAppRedirectUrl(
+        'https://mworkroom.github.io/ngplan/?source=login',
+        './',
+      ),
+    ).toBe('https://mworkroom.github.io/ngplan/');
+    expect(
+      resolveCloudAppRedirectUrl(
+        'https://plan.nangok.app/?source=login',
+        './',
+      ),
+    ).toBe('https://plan.nangok.app/');
+  });
+
   it('reuses Google login and does not offer public account creation', async () => {
     const { client, signInWithOAuth } = authenticatedClient(null);
     render(

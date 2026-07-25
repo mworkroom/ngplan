@@ -2,7 +2,7 @@ import { readFile, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const EXPECTED_BASE = '/ngplan/';
+const EXPECTED_BASE = './';
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const distDirectory = path.join(projectRoot, 'dist');
 const indexPath = path.join(distDirectory, 'index.html');
@@ -122,11 +122,11 @@ const assetReferences = localReferences.filter((reference) =>
 );
 
 if (!assetReferences.some((reference) => /\.js(?:[?#]|$)/u.test(reference))) {
-  recordFailure('dist/index.html에서 /ngplan/assets/ JavaScript 자산을 찾지 못했습니다.');
+  recordFailure('dist/index.html에서 ./assets/ JavaScript 자산을 찾지 못했습니다.');
 }
 
 if (!assetReferences.some((reference) => /\.css(?:[?#]|$)/u.test(reference))) {
-  recordFailure('dist/index.html에서 /ngplan/assets/ CSS 자산을 찾지 못했습니다.');
+  recordFailure('dist/index.html에서 ./assets/ CSS 자산을 찾지 못했습니다.');
 }
 
 if (/\b(?:src|href)\s*=\s*["']\/(?:src|assets)\//iu.test(html)) {
@@ -169,7 +169,9 @@ for (const workerPath of workerArtifacts) {
   const expectedBaseReference = `${EXPECTED_BASE}${workerRelativePath}`;
   const referencingBundles = appBundleSources.filter(
     (source) =>
-      source.includes(expectedBaseReference) || source.includes(workerRelativePath),
+      source.includes(expectedBaseReference) ||
+      source.includes(workerRelativePath) ||
+      source.includes(workerFileName),
   );
   const referencedByManifest = manifestSources.some(
     (source) =>

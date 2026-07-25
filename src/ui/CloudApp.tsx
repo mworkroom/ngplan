@@ -152,6 +152,13 @@ function formatSavedAt(value: string): string {
   }).format(date);
 }
 
+export function resolveCloudAppRedirectUrl(
+  currentUrl: string,
+  baseUrl = import.meta.env.BASE_URL,
+): string {
+  return new URL(baseUrl, currentUrl).toString();
+}
+
 function LoginScreen({
   client,
 }: {
@@ -163,10 +170,7 @@ function LoginScreen({
   const signIn = async (): Promise<void> => {
     setPending(true);
     setError(null);
-    const redirectTo = new URL(
-      import.meta.env.BASE_URL,
-      window.location.origin,
-    ).toString();
+    const redirectTo = resolveCloudAppRedirectUrl(window.location.href);
     const { error: signInError } = await client.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo },

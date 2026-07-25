@@ -841,7 +841,7 @@ Policy seed, 제품 deadline, run ID, candidate sequence, elapsed time, warm sta
 Phase 1과 Phase 2는 다음 최소 구성으로 확정한다.
 
 - TypeScript: 정수·상태·방향과 원본·파생 계약을 명시적으로 표현
-- Vite: `/ngplan/` 정적 웹 앱의 개발·빌드·미리보기 기반
+- Vite: `./` 상대 base로 기본 GitHub Pages 경로와 custom domain 루트를 함께 지원하는 개발·빌드·미리보기 기반
 - Vitest: Node 계산 테스트와 jsdom UI 테스트를 분리해 실행
 - React + React DOM: 프로젝트 폼, 카드형 조직 트리, 회원 편집과 검증 상태 조합
 - Testing Library + user-event: 실제 레이블, 키보드 순서와 사용자 동작 중심의 DOM 검증
