@@ -246,28 +246,25 @@ describe('App project setup flow', () => {
     expect(screen.getByRole('button', { name: 'Left 위치 바꾸기 또는 명단에서 빼기' })).toBeDefined();
   });
 
-  it('publishes a valid READY bundle and invalidates it on the next real edit', async () => {
+  it('opens a valid plan directly with the keyboard and removes repeated setup states', async () => {
     const user = renderApp();
     await createNamedRoot(user);
     await addNamedChild(user, 'Root', '왼쪽', 'Left', '1001');
     await addNamedChild(user, 'Root', '오른쪽', 'Right', '1002');
 
-    await user.click(
-      screen.getByRole('button', { name: '플래너 생성' }),
+    expect(screen.queryByText('계획표 준비 완료')).toBeNull();
+    expect(screen.queryByText('플랜을 만들 준비가 되었습니다')).toBeNull();
+    expect(screen.queryByText('준비 완료')).toBeNull();
+    expect(screen.queryByText('입력 중')).toBeNull();
+
+    await activateWithKeyboard(
+      user,
+      screen.getByRole('button', { name: '수동 플랜 열기' }),
     );
 
-    expect(screen.getByText('계획표 준비 완료')).toBeDefined();
-    expect(
-      screen.getByRole('heading', { name: '플랜을 만들 준비가 되었습니다' }),
-    ).toBeDefined();
-    expect(screen.getByText('입력을 모두 확인했습니다. 계획표를 열 수 있습니다.')).toBeDefined();
-
-    await user.type(inputByLabel('표시 이름 (닉네임)'), ' 수정');
-
-    expect(screen.getAllByText('입력 중').length).toBeGreaterThanOrEqual(1);
-    expect(
-      screen.queryByRole('heading', { name: '플랜을 만들 준비가 되었습니다' }),
-    ).toBeNull();
+    const planTitle = await screen.findByRole('heading', { name: '202607A' });
+    await waitFor(() => expect(document.activeElement).toBe(planTitle));
+    expect(screen.getByText('입력을 확인하고 수동 플랜을 열었습니다.')).toBeDefined();
   });
 
   it('blocks invalid completion and lets the compact summary focus the first error', async () => {
@@ -275,12 +272,10 @@ describe('App project setup flow', () => {
     await addRootWithKeyboard(user);
     await replaceInput(user, '프로젝트명', '');
 
-    await user.click(
-      screen.getByRole('button', { name: '플래너 생성' }),
-    );
+    await user.click(screen.getByRole('button', { name: '수동 플랜 열기' }));
 
     expect(screen.getByText(/설정을 완료하지 못했습니다/)).toBeDefined();
-    expect(screen.getAllByText('입력 중').length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText('입력 중')).toBeNull();
     expect(screen.getByText(/미입력 항목이 4개 있습니다/)).toBeDefined();
     expect(screen.getByLabelText('현재 회원 입력 확인 결과')).toBeDefined();
 
@@ -551,8 +546,7 @@ describe('App project setup flow', () => {
   it('keeps manual entries while moving between setup and the plan in the same tab', async () => {
     const user = renderApp();
     await createNamedRoot(user);
-    await user.click(screen.getByRole('button', { name: '플래너 생성' }));
-    await user.click(screen.getByRole('button', { name: '플랜 열기' }));
+    await user.click(screen.getByRole('button', { name: '수동 플랜 열기' }));
 
     const pvpInput = screen.getByRole('textbox', {
       name: /1 \(수\).*Root.*PVP 계획 PV/,
@@ -562,7 +556,7 @@ describe('App project setup flow', () => {
 
     await user.click(screen.getByRole('button', { name: '설정으로 돌아가기' }));
     expect(screen.getByRole('heading', { name: '애터미 직급 플랜 설정' })).toBeDefined();
-    await user.click(screen.getByRole('button', { name: '플랜 열기' }));
+    await user.click(screen.getByRole('button', { name: '수동 플랜 열기' }));
 
     expect(
       (screen.getByRole('textbox', {
@@ -635,8 +629,7 @@ describe('App project setup flow', () => {
     await createNamedRoot(user);
     await addNamedChild(user, 'Root', '오른쪽', 'Kelly', '1001');
     await addNamedChild(user, 'Kelly', '왼쪽', 'Yuri', '1002');
-    await user.click(screen.getByRole('button', { name: '플래너 생성' }));
-    await user.click(screen.getByRole('button', { name: '플랜 열기' }));
+    await user.click(screen.getByRole('button', { name: '수동 플랜 열기' }));
     expect(
       Array.from(
         document.querySelectorAll('.manual-plan-table__member-heading strong'),

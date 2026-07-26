@@ -130,7 +130,9 @@ export function ManualPlanWorkspace({
       <header className="app-header">
         <div className="app-header__copy">
           <p className="app-header__eyebrow">애터미 수당 계획표</p>
-          <h1>{bundle.project.title}</h1>
+          <h1 id="manual-plan-title" tabIndex={-1}>
+            {bundle.project.title}
+          </h1>
           <p className="app-header__description">
             {formatDateRange(schema.period.startDate, schema.period.endDate)}
           </p>

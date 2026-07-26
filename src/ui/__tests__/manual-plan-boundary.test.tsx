@@ -36,12 +36,18 @@ afterEach(() => {
 });
 
 describe('WP3 App setup handoff', () => {
-  it('does not offer manual planning before an active setup bundle exists', () => {
+  it('offers both direct plan choices without repeated editing or ready states', () => {
     render(<App generateId={createIdGenerator()} initialDate={INITIAL_DATE} />);
-    expect(screen.queryByRole('button', { name: '플랜 열기' })).toBeNull();
+    expect(screen.getByRole('button', { name: '수동 플랜 열기' })).toBeDefined();
+    expect(screen.getByRole('button', { name: '자동 플랜 만들기' })).toBeDefined();
+    expect(screen.queryByRole('button', { name: '플래너 생성' })).toBeNull();
+    expect(screen.queryByText('입력 중')).toBeNull();
+    expect(screen.queryByText('계획표 준비 완료')).toBeNull();
+    expect(screen.queryByText('플랜을 만들 준비가 되었습니다')).toBeNull();
+    expect(screen.queryByText('준비 완료')).toBeNull();
   });
 
-  it('P3-BOUNDARY-002 invalidates READY and removes the start action after a setup edit', async () => {
+  it('P3-BOUNDARY-002 validates the latest setup again after a real edit', async () => {
     const user = userEvent.setup();
     render(<App generateId={createIdGenerator()} initialDate={INITIAL_DATE} />);
 
@@ -50,17 +56,18 @@ describe('WP3 App setup handoff', () => {
     await user.type(inputById('member-member-1-name'), '루트 회원');
     await user.selectOptions(selectById('member-member-1-pvpTarget'), '700');
     await user.click(inputById('member-member-1-openingStateConfirmed'));
-    await user.click(screen.getByRole('button', { name: '플래너 생성' }));
-    expect(
-      await screen.findByRole('button', { name: '플랜 열기' }),
-    ).toBeDefined();
+    await user.click(screen.getByRole('button', { name: '수동 플랜 열기' }));
+    await screen.findByRole('heading', { name: '202607A' });
+    await user.click(screen.getByRole('button', { name: '설정으로 돌아가기' }));
 
     await user.type(screen.getByRole('textbox', { name: '프로젝트명' }), ' 수정');
-    expect(screen.queryByRole('button', { name: '플랜 열기' })).toBeNull();
-    expect(screen.queryByText('계획표 준비 완료')).toBeNull();
+    await user.click(screen.getByRole('button', { name: '수동 플랜 열기' }));
+
+    const updatedTitle = await screen.findByRole('heading', { name: '202607A 수정' });
+    await waitFor(() => expect(document.activeElement).toBe(updatedTitle));
   });
 
-  it('opens the exact ready session and returns an unmodified plan without a dialog', async () => {
+  it('opens the exact session directly and returns to the setup title without a dialog', async () => {
     const user = userEvent.setup();
     render(<App generateId={createIdGenerator()} initialDate={INITIAL_DATE} />);
 
@@ -69,22 +76,25 @@ describe('WP3 App setup handoff', () => {
     await user.type(inputById('member-member-1-name'), '루트 회원');
     await user.selectOptions(selectById('member-member-1-pvpTarget'), '700');
     await user.click(inputById('member-member-1-openingStateConfirmed'));
-    await user.click(screen.getByRole('button', { name: '플래너 생성' }));
 
-    const openButton = await screen.findByRole('button', {
-      name: '플랜 열기',
+    const openButton = screen.getByRole('button', {
+      name: '수동 플랜 열기',
     });
-    await user.click(openButton);
+    openButton.focus();
+    await user.keyboard('{Enter}');
 
     expect(document.getElementById('project-setup')).toBeNull();
     expect(document.getElementById('manual-plan-workspace')).not.toBeNull();
     expect(screen.queryByRole('heading', { name: '기간 설정' })).toBeNull();
     expect(screen.getByText('✓ 계산 완료')).toBeDefined();
+    const planTitle = screen.getByRole('heading', { name: '202607A' });
+    await waitFor(() => expect(document.activeElement).toBe(planTitle));
 
     await user.click(screen.getByRole('button', { name: '설정으로 돌아가기' }));
     expect(screen.queryByRole('dialog')).toBeNull();
     await waitFor(() => expect(document.getElementById('project-setup')).not.toBeNull());
-    expect(screen.getByRole('button', { name: '플랜 열기' })).toBeDefined();
-    expect(screen.getByText('계획표 준비 완료')).toBeDefined();
+    const setupTitle = screen.getByRole('heading', { name: '애터미 직급 플랜 설정' });
+    await waitFor(() => expect(document.activeElement).toBe(setupTitle));
+    expect(screen.getByRole('button', { name: '수동 플랜 열기' })).toBeDefined();
   });
 });

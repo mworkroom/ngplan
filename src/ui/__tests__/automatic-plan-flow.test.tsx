@@ -270,6 +270,35 @@ afterEach(() => {
 });
 
 describe('App automatic-plan integration', () => {
+  it('opens automatic planning directly with the keyboard and focuses the plan title', async () => {
+    const workspace = readyWorkspace(null);
+    writeWorkspaceSession({
+      version: WORKSPACE_SESSION_VERSION,
+      draft: workspace.draft,
+      manualPlanDraft: workspace.manualDraft,
+      screen: 'SETUP',
+      organizationScale: 1,
+      automaticPlanCheckpoint: null,
+    });
+    const factory = new FakeAutomaticPlanWorkerFactory();
+    const user = userEvent.setup();
+    render(<App createAutomaticPlanWorker={factory.create} />);
+
+    const automaticButton = screen.getByRole('button', {
+      name: '자동 플랜 만들기',
+    });
+    automaticButton.focus();
+    expect(document.activeElement).toBe(automaticButton);
+    await user.keyboard('{Enter}');
+
+    expect(factory.workers).toHaveLength(1);
+    const planTitle = await screen.findByRole('heading', { name: '202607A' });
+    await waitFor(() => expect(document.activeElement).toBe(planTitle));
+    expect(
+      screen.getByText('입력을 확인하고 자동 플랜 만들기를 시작했습니다.'),
+    ).toBeDefined();
+  });
+
   it('P4-PREVIEW-001/002 and P4-APPLY-002 keeps a pinned verified plan through proof failure and a newer incumbent', async () => {
     const workspace = readyWorkspace('123');
     seedWorkspace(workspace);

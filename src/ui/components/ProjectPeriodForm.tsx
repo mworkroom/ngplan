@@ -45,7 +45,6 @@ export function ProjectPeriodForm({
             직급 기간
           </h2>
         </div>
-        <span className="status-badge status-badge--editing">입력 중</span>
       </div>
 
       <div className="form-grid">

@@ -46,6 +46,7 @@ import {
   type IdGenerator,
   type IdKind,
   type MemberDraft,
+  type ProjectSetupBundle,
   type ProjectSetupDraft,
   type ProjectSetupIssue,
   type ProjectSetupValidation,
@@ -325,6 +326,7 @@ export function App({
   const restoredCheckpointFingerprintRef = useRef<string | null>(null);
   const slotFirstActionRef = useRef<HTMLButtonElement>(null);
   const excludeTriggerRef = useRef<HTMLElement | null>(null);
+  const previousScreenRef = useRef<AppScreen>(screenState);
 
   const topology = useMemo(() => deriveTopology(draft), [draft]);
   const liveValidation = useMemo(() => validateProjectSetupDraft(draft), [draft]);
@@ -361,6 +363,16 @@ export function App({
   useEffect(() => {
     slotFirstActionRef.current?.focus();
   }, [slotAction]);
+
+  useEffect(() => {
+    const previousScreen = previousScreenRef.current;
+    previousScreenRef.current = screenState;
+    if (previousScreen === screenState) return;
+
+    const titleId =
+      screenState === 'MANUAL_PLAN' ? 'manual-plan-title' : 'project-setup-title';
+    document.getElementById(titleId)?.focus();
+  }, [screenState]);
 
   useEffect(() => {
     const snapshot: WorkspaceSessionSnapshot = {
@@ -621,7 +633,10 @@ export function App({
     }
   };
 
-  const handleNormalize = (): void => {
+  const preparePlan = (): ProjectSetupBundle | null => {
+    if (draft.activeBundle !== null) {
+      return draft.activeBundle;
+    }
     const outcome = normalizeProjectSetup(draft);
     setSubmittedValidation(outcome.validation);
     if (outcome.status === 'FAILURE') {
@@ -630,26 +645,23 @@ export function App({
       if (firstError !== undefined) {
         focusIssue(firstError);
       }
-      return;
+      return null;
     }
     invalidateAutomaticPlan();
     setDraft(activateProjectSetupBundle(draft, outcome.bundle));
     setCommandError(null);
-    setAnnouncement('입력을 모두 확인했습니다. 계획표를 열 수 있습니다.');
+    return outcome.bundle;
   };
 
   const handleOpenManualPlan = (): void => {
-    const activeBundle = draft.activeBundle;
-    if (activeBundle === null) {
-      return;
-    }
+    const activeBundle = preparePlan();
+    if (activeBundle === null) return;
     setManualPlanDraft(reconcileManualPlanDraft(activeBundle, manualPlanDraft));
+    setAnnouncement('입력을 확인하고 수동 플랜을 열었습니다.');
     setScreenState('MANUAL_PLAN');
   };
 
-  const startAutomaticPlan = (): void => {
-    const activeBundle = draft.activeBundle;
-    if (activeBundle === null) return;
+  const startAutomaticPlanForBundle = (activeBundle: ProjectSetupBundle): void => {
     const baseRequest = createAutomaticPlanRequest(activeBundle);
     if (baseRequest.status === 'FAILURE') {
       setAutomaticPlanActionError(baseRequest.error.message);
@@ -697,12 +709,18 @@ export function App({
     }
   };
 
+  const startAutomaticPlan = (): void => {
+    if (draft.activeBundle === null) return;
+    startAutomaticPlanForBundle(draft.activeBundle);
+  };
+
   const handleStartAutomaticPlanFromSetup = (): void => {
-    const activeBundle = draft.activeBundle;
+    const activeBundle = preparePlan();
     if (activeBundle === null) return;
     setManualPlanDraft(reconcileManualPlanDraft(activeBundle, manualPlanDraft));
+    setAnnouncement('입력을 확인하고 자동 플랜 만들기를 시작했습니다.');
     setScreenState('MANUAL_PLAN');
-    startAutomaticPlan();
+    startAutomaticPlanForBundle(activeBundle);
   };
 
   const handleOpenAutomaticPlanPreview = (): void => {
@@ -857,24 +875,24 @@ export function App({
       <header className="app-header">
         <div className="app-header__copy">
           <p className="app-header__eyebrow">애터미 수당 계획표</p>
-          <h1>애터미 직급 플랜 설정</h1>
+          <h1 id="project-setup-title" tabIndex={-1}>
+            애터미 직급 플랜 설정
+          </h1>
           <p className="app-header__description">기간과 회원 정보를 차례대로 입력해 주세요.</p>
         </div>
         <div className="app-header__actions">
-          <span
-            className={`status-badge ${
-              draft.activeBundle === null
-                ? 'status-badge--editing'
-                : 'status-badge--ready'
-            }`}
-          >
-            {draft.activeBundle === null ? '입력 중' : '계획표 준비 완료'}
-          </span>
           <button type="button" className="secondary-button" onClick={handleNewProject}>
             {cloudStorageEnabled ? '새 계획' : '초기화'}
           </button>
-          <button type="button" className="primary-button" onClick={handleNormalize}>
-            플래너 생성
+          <button type="button" className="primary-button" onClick={handleOpenManualPlan}>
+            수동 플랜 열기
+          </button>
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={handleStartAutomaticPlanFromSetup}
+          >
+            자동 플랜 만들기
           </button>
         </div>
       </header>
@@ -906,52 +924,6 @@ export function App({
         <section className="validation-summary validation-summary--error" role="alert">
           <h2 className="validation-summary__title">위치를 바꾸지 못했습니다.</h2>
           <p>{commandError}</p>
-        </section>
-      )}
-
-      {draft.activeBundle === null ? null : (
-        <section className="setup-bundle-summary" aria-labelledby="bundle-summary-title">
-          <div className="panel__header">
-            <div>
-              <h2 id="bundle-summary-title" className="panel__title">
-                플랜을 만들 준비가 되었습니다
-              </h2>
-              <p className="panel__description">
-                내용을 고치면 다시 한 번 입력 확인이 필요합니다.
-              </p>
-            </div>
-            <span className="status-badge status-badge--ready">준비 완료</span>
-          </div>
-          <dl>
-            <dt>제목</dt>
-            <dd>{draft.activeBundle.project.title}</dd>
-            <dt>기간</dt>
-            <dd>
-              {draft.activeBundle.project.period.year}년{' '}
-              {draft.activeBundle.project.period.month}월{' '}
-              {draft.activeBundle.project.period.half === 'FIRST_HALF'
-                ? '상반기'
-                : '하반기'}
-            </dd>
-            <dt>등록된 회원</dt>
-            <dd>{draft.activeBundle.organization.members.length}명</dd>
-          </dl>
-          <div className="form-actions">
-            <button
-              type="button"
-              className="primary-button"
-              onClick={handleOpenManualPlan}
-            >
-              플랜 열기
-            </button>
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={handleStartAutomaticPlanFromSetup}
-            >
-              자동 계획 만들기
-            </button>
-          </div>
         </section>
       )}
 
