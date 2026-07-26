@@ -189,9 +189,9 @@ function LoginScreen({
   return (
     <main className="cloud-gate">
       <section className="cloud-gate__card" aria-labelledby="login-title">
-        <p className="app-header__eyebrow">애터미 수당 계획표</p>
+        <p className="app-header__eyebrow">애터미 직급 계획표</p>
         <h1 id="login-title">계획표 로그인</h1>
-        <p>등록된 엄마 계정이나 J님 계정으로 로그인해 주세요.</p>
+        <p>등록된 계정으로 로그인해 주세요.</p>
         <button
           type="button"
           className="primary-button cloud-gate__button"
@@ -214,7 +214,7 @@ function ConfigurationScreen() {
   return (
     <main className="cloud-gate">
       <section className="cloud-gate__card" aria-labelledby="config-title">
-        <p className="app-header__eyebrow">애터미 수당 계획표</p>
+        <p className="app-header__eyebrow">애터미 직급 계획표</p>
         <h1 id="config-title">클라우드 연결 설정이 필요합니다</h1>
         <p>
           배포 환경에 Supabase URL과 publishable key를 등록한 뒤 다시
@@ -329,7 +329,7 @@ function ProjectListScreen({
     <main className="cloud-projects">
       <header className="cloud-projects__header">
         <div>
-          <p className="app-header__eyebrow">애터미 수당 계획표</p>
+          <p className="app-header__eyebrow">애터미 직급 계획표</p>
           <h1>저장된 계획</h1>
           <p>{user.email ?? '등록된 계정'}</p>
         </div>

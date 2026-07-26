@@ -874,7 +874,7 @@ export function App({
     >
       <header className="app-header">
         <div className="app-header__copy">
-          <p className="app-header__eyebrow">애터미 수당 계획표</p>
+          <p className="app-header__eyebrow">애터미 직급 계획표</p>
           <h1 id="project-setup-title" tabIndex={-1}>
             애터미 직급 플랜 설정
           </h1>
