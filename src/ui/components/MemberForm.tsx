@@ -144,11 +144,11 @@ export function MemberForm({
           />
         )}
         <div className="form-grid form-grid--single">
-          {renderIdentityField('name', '표시 이름 (닉네임)', nameIssue)}
+          {renderIdentityField('name', '이름 (닉네임이 표시됨)', nameIssue)}
           {renderIdentityField('memberId', 'ID', memberIdIssue)}
           <div className="field">
             <label htmlFor={memberFieldId(member.memberKey, 'sheetMarker')}>
-              이름 강조
+              이름 강조색
             </label>
             <select
               id={memberFieldId(member.memberKey, 'sheetMarker')}

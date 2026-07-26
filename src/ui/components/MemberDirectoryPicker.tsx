@@ -132,7 +132,7 @@ export function MemberDirectoryPicker({
             ? '검색 닫기'
             : member.sourceMemberId
               ? '다른 회원 선택'
-              : '회원 DB에서 불러오기'}
+              : '불러오기'}
         </button>
       </div>
 
