@@ -144,11 +144,11 @@ function formatPeriod(project: CloudProjectSummary): string {
   return `${year}년 ${month} ${half}`;
 }
 
-function formatSavedAt(value: string): string {
+function formatSavedAt(value: string, timeZone: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '저장 시각 확인 필요';
   return new Intl.DateTimeFormat('ko-KR', {
-    timeZone: 'America/Sao_Paulo',
+    timeZone,
     year: 'numeric',
     month: 'numeric',
     day: 'numeric',
@@ -255,7 +255,11 @@ function ProjectCard({
         <h3>{project.title}</h3>
         <p>{formatPeriod(project)}</p>
         <p className="cloud-project-card__saved">
-          브라질 시간 {formatSavedAt(project.lastSavedAt)}
+          <span>한국 시간 {formatSavedAt(project.lastSavedAt, 'Asia/Seoul')}</span>
+          <span>
+            브라질 시간{' '}
+            {formatSavedAt(project.lastSavedAt, 'America/Sao_Paulo')}
+          </span>
         </p>
         {project.pendingRemote ? (
           <span className="cloud-project-card__pending">
@@ -368,7 +372,7 @@ function ProjectListScreen({
 
       <section className="cloud-projects__section" aria-labelledby="visible-projects">
         <div className="cloud-projects__section-header">
-          <h2 id="visible-projects">계획 목록</h2>
+          <h2 id="visible-projects">전체 목록</h2>
           <span>{visible.length}개</span>
         </div>
         {visible.length === 0 ? (
@@ -527,7 +531,7 @@ function CloudProjectEditor({
             onClick={() => void leaveEditor('LIST')}
             disabled={navigating}
           >
-            계획 목록
+            전체 목록으로 돌아가기
           </button>
           <span
             className={`cloud-save-status cloud-save-status--${status.state.toLowerCase()}`}

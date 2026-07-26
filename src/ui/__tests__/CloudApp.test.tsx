@@ -306,11 +306,49 @@ describe('CloudApp', () => {
     }
 
     await userEvent.setup().click(
-      screen.getByRole('button', { name: '계획 목록' }),
+      screen.getByRole('button', { name: '전체 목록으로 돌아가기' }),
     );
     expect(
       await screen.findByRole('heading', { name: '저장된 계획' }),
     ).toBeDefined();
+  });
+
+  it('shows Korean time before Brazil time for each saved plan', async () => {
+    const snapshot = createSnapshot();
+    const document = cloudDocumentFromWorkspaceSession(snapshot);
+    const remote = {
+      ...projectRecord(document),
+      updatedAt: '2026-07-26T16:58:00.000Z',
+      lastSavedAt: '2026-07-26T16:58:00.000Z',
+    };
+    const { client } = authenticatedClient();
+    const { repository } = mutableRepository(remote);
+
+    render(
+      <CloudApp
+        client={client}
+        repository={repository}
+        cache={new MemoryCache()}
+      />,
+    );
+
+    const koreanTime = await screen.findByText(
+      '한국 시간 2026. 7. 27. 오전 1:58',
+    );
+    const brazilTime = screen.getByText(
+      '브라질 시간 2026. 7. 26. 오후 1:58',
+    );
+    const savedTimes = koreanTime.closest('.cloud-project-card__saved');
+
+    expect(savedTimes).toBe(brazilTime.closest('.cloud-project-card__saved'));
+    expect(
+      Array.from(savedTimes?.querySelectorAll('span') ?? [], (item) =>
+        item.textContent?.trim(),
+      ),
+    ).toEqual([
+      '한국 시간 2026. 7. 27. 오전 1:58',
+      '브라질 시간 2026. 7. 26. 오후 1:58',
+    ]);
   });
 
   it('hides and restores a plan from the list without exposing deletion', async () => {
@@ -430,10 +468,10 @@ describe('CloudApp', () => {
       await screen.findByText(/이 기기에 저장된 계획을 보여드립니다/),
     ).toBeDefined();
     expect(
-      screen.getByText(/저장 시각 확인 필요/, {
-        selector: '.cloud-project-card__saved',
+      screen.getAllByText(/저장 시각 확인 필요/, {
+        selector: '.cloud-project-card__saved span',
       }),
-    ).toBeDefined();
+    ).toHaveLength(2);
     expect(screen.getByText(/연도 입력 중년 월 입력 중 전반/)).toBeDefined();
     await userEvent.setup().click(
       screen.getByRole('button', { name: '다시 불러오기' }),

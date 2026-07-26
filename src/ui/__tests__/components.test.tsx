@@ -353,10 +353,10 @@ describe('member topology controls', () => {
     );
 
     fireEvent.change(screen.getByLabelText('ID'), { target: { value: '12a34' } });
-    fireEvent.change(screen.getByLabelText('표시 이름 (닉네임)'), {
+    fireEvent.change(screen.getByLabelText('이름 (닉네임이 표시됨)'), {
       target: { value: '새 이름' },
     });
-    fireEvent.change(screen.getByLabelText('이름 강조'), {
+    fireEvent.change(screen.getByLabelText('이름 강조색'), {
       target: { value: 'GREEN_2' },
     });
     expect(screen.getByRole('option', { name: '4 · 연보라색' })).toBeTruthy();

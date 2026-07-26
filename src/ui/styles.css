@@ -337,6 +337,7 @@ fieldset {
   border: 1px solid var(--color-line);
   border-radius: var(--radius-control);
   background: var(--color-background);
+  color: var(--color-danger);
 }
 
 .checkbox-field input,
@@ -344,7 +345,7 @@ fieldset {
   width: 18px;
   height: 18px;
   margin: 2px 0 0;
-  accent-color: var(--color-accent-action);
+  accent-color: var(--color-danger);
 }
 
 .button,
@@ -650,12 +651,12 @@ fieldset {
   word-break: normal;
 }
 
-.organization-error-bar,
-.member-error-summary {
+.organization-error-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 6px;
   margin-bottom: 12px;
   padding: 7px 10px;
   border: 1px solid var(--color-danger);
@@ -664,10 +665,10 @@ fieldset {
   color: var(--color-danger);
   font-size: 0.82rem;
   font-weight: 700;
+  text-align: right;
 }
 
-.organization-error-bar .text-button,
-.member-error-summary .text-button {
+.organization-error-bar .text-button {
   min-height: 30px;
   padding: 4px 7px;
   color: var(--color-danger);
@@ -2339,6 +2340,10 @@ body {
 
 .cloud-project-card__saved {
   font-size: 0.84rem;
+}
+
+.cloud-project-card__saved span {
+  display: block;
 }
 
 .cloud-project-card__pending {

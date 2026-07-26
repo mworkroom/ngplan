@@ -44,7 +44,7 @@ describe('MemberDirectoryPicker', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: '회원 DB에서 불러오기' }));
+    await user.click(screen.getByRole('button', { name: '불러오기' }));
     const search = await screen.findByLabelText('회원 검색');
     await user.type(search, 'bia');
     const results = screen.getByRole('list', { name: '회원 검색 결과' });
@@ -65,7 +65,7 @@ describe('MemberDirectoryPicker', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: '회원 DB에서 불러오기' }));
+    await user.click(screen.getByRole('button', { name: '불러오기' }));
     await user.type(await screen.findByLabelText('회원 검색'), 'Ana Paula');
     await user.click(screen.getByRole('button', { name: /닉네임 없음/ }));
     expect(screen.getByText('이 회원은 닉네임이 없습니다.')).toBeDefined();
@@ -94,7 +94,7 @@ describe('MemberDirectoryPicker', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: '회원 DB에서 불러오기' }));
+    await user.click(screen.getByRole('button', { name: '불러오기' }));
     await user.type(await screen.findByLabelText('회원 검색'), 'Bia');
     const result = screen.getByRole('button', { name: /이미 추가됨/ });
     expect(result.hasAttribute('disabled')).toBe(true);

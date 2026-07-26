@@ -89,7 +89,7 @@ async function fillSelectedMember(
   values: SelectedMemberValues,
 ): Promise<void> {
   await replaceInput(user, 'ID', values.memberId);
-  await replaceInput(user, '표시 이름 (닉네임)', values.name);
+  await replaceInput(user, '이름 (닉네임이 표시됨)', values.name);
   await user.selectOptions(
     screen.getByLabelText('이번 기간 PVP 목표'),
     values.pvpTarget ?? '700',
@@ -205,7 +205,7 @@ describe('App project setup flow', () => {
     );
     expect(screen.getByRole('heading', { name: '회원 정보 입력' })).toBeDefined();
     expect(inputByLabel('ID').value).toBe('');
-    expect(document.activeElement).toBe(inputByLabel('표시 이름 (닉네임)'));
+    expect(document.activeElement).toBe(inputByLabel('이름 (닉네임이 표시됨)'));
   });
 
   it('adds a root and both child sides by keyboard using explicit accessible labels', async () => {
@@ -277,7 +277,7 @@ describe('App project setup flow', () => {
     expect(screen.getByText(/설정을 완료하지 못했습니다/)).toBeDefined();
     expect(screen.queryByText('입력 중')).toBeNull();
     expect(screen.getByText(/미입력 항목이 4개 있습니다/)).toBeDefined();
-    expect(screen.getByLabelText('현재 회원 입력 확인 결과')).toBeDefined();
+    expect(screen.queryByLabelText('현재 회원 입력 확인 결과')).toBeNull();
 
     const organizationPanel = screen.getByRole('region', { name: '조직 구조' });
     await user.click(
@@ -305,9 +305,9 @@ describe('App project setup flow', () => {
     expect(screen.getByText('1개 대기')).toBeDefined();
 
     await user.click(screen.getByRole('button', { name: '회원 정보 보기' }));
-    expect(inputByLabel('표시 이름 (닉네임)').value).toBe('Child');
+    expect(inputByLabel('이름 (닉네임이 표시됨)').value).toBe('Child');
 
-    await user.click(screen.getByRole('button', { name: '첫 항목으로 이동' }));
+    await user.click(screen.getByRole('button', { name: '첫 번째 문제 보기' }));
     const queueEntry = document.getElementById('queue-member-2');
     expect(queueEntry).not.toBeNull();
     await waitFor(() => {
@@ -597,10 +597,10 @@ describe('App project setup flow', () => {
     const user = renderApp({ memberDirectory });
 
     await addRootWithKeyboard(user);
-    await user.click(screen.getByRole('button', { name: '회원 DB에서 불러오기' }));
+    await user.click(screen.getByRole('button', { name: '불러오기' }));
     await user.type(await screen.findByLabelText('회원 검색'), 'Bia');
     await user.click(screen.getByRole('button', { name: /Bia.*Maria Beatriz/ }));
-    expect(inputByLabel('표시 이름 (닉네임)').value).toBe('Bia');
+    expect(inputByLabel('이름 (닉네임이 표시됨)').value).toBe('Bia');
     expect(inputByLabel('ID').value).toBe('1001');
     expect(screen.queryByDisplayValue('Maria Beatriz Rodrigues de Almeida')).toBeNull();
 
@@ -609,7 +609,7 @@ describe('App project setup flow', () => {
         name: 'Bia의 왼쪽 빈 자리에 회원 연결',
       }),
     );
-    await user.click(screen.getByRole('button', { name: '회원 DB에서 불러오기' }));
+    await user.click(screen.getByRole('button', { name: '불러오기' }));
     await user.type(await screen.findByLabelText('회원 검색'), 'Bia');
     expect(
       screen.getByRole('button', { name: /Bia.*이미 추가됨/ }).hasAttribute('disabled'),
@@ -620,7 +620,7 @@ describe('App project setup flow', () => {
     await user.click(screen.getByRole('button', { name: /닉네임 없음.*Ana Paula/ }));
     await user.type(screen.getByLabelText('피라미드 표시 이름'), 'Aninha');
     await user.click(screen.getByRole('button', { name: '이 이름으로 추가' }));
-    expect(inputByLabel('표시 이름 (닉네임)').value).toBe('Aninha');
+    expect(inputByLabel('이름 (닉네임이 표시됨)').value).toBe('Aninha');
     expect(inputByLabel('ID').value).toBe('1002');
   });
 

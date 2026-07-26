@@ -335,11 +335,6 @@ export function App({
     draft.selectedMemberKey === null
       ? undefined
       : topology.memberByKey.get(draft.selectedMemberKey);
-  const selectedMemberIssues = selectedMember === undefined
-    ? []
-    : displayedValidation.issues.filter(
-        (issue) => issue.location.memberKey === selectedMember.memberKey,
-      );
   const memberPendingExclusion =
     excludedMemberKey === null
       ? undefined
@@ -1003,14 +998,6 @@ export function App({
                   취소
                 </button>
               </div>
-            </section>
-          )}
-          {selectedMemberIssues.length === 0 ? null : (
-            <section className="member-error-summary" aria-label="현재 회원 입력 확인 결과" role="alert">
-              <strong>현재 회원: 수정할 항목 {selectedMemberIssues.length}개</strong>
-              <button type="button" className="text-button" onClick={() => focusIssue(selectedMemberIssues[0]!)}>
-                첫 항목으로 이동
-              </button>
             </section>
           )}
           {selectedMember === undefined ? (
