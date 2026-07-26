@@ -403,15 +403,15 @@ fieldset {
 .button--ghost,
 .text-button,
 .icon-button {
-  border-color: #cfd3d7;
-  background: transparent;
-  color: var(--color-accent-action);
+  border-color: var(--color-danger);
+  background: transparent; 
 }
 
 .button--ghost:hover,
 .text-button:hover,
 .icon-button:hover {
-  background: var(--color-accent-soft);
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
 }
 
 .icon-button {
@@ -809,9 +809,9 @@ fieldset {
   gap: 12px;
   margin: 14px 0;
   padding: 14px;
-  border: 1px solid var(--color-accent);
+  border: 1px solid var(--color-line-strong);
   border-radius: var(--radius-control);
-  background: var(--color-accent-soft);
+  background: #ebebeb;
 }
 
 .member-directory__summary,
@@ -863,9 +863,9 @@ fieldset {
   width: 100%;
   gap: 5px;
   padding: 10px 11px;
-  border: 1px solid var(--color-line);
+  border: 1px solid var(--color-line-strong);
   border-radius: var(--radius-control);
-  background: var(--color-panel);
+  background: var(--color-line);
   color: var(--color-text);
   text-align: left;
 }
@@ -1981,7 +1981,7 @@ body {
 
 .manual-result-disclosure {
   border-top: 1px solid var(--color-line);
-  padding-top: 16px;
+  padding-top: 206px;
 }
 
 .manual-result-disclosure > summary {
@@ -2499,7 +2499,7 @@ body {
 }
 
 .cloud-save-status--saved {
-  border-color: #b9d7c5;
+  border-color: var(--color-success);
   background: var(--color-success-soft);
   color: var(--color-success);
 }
