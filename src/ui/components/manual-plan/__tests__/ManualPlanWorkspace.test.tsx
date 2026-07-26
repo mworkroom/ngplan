@@ -139,7 +139,7 @@ describe('WP3 manual-plan workspace boundary', () => {
     expect(screen.getByRole('heading', { name: '2026년 7월 상반기 수당 계획' }))
       .toBeDefined();
     expect(screen.getByText('2026년 7월 1일 ~ 15일')).toBeDefined();
-    expect(screen.getByText('✓ 계산 완료')).toBeDefined();
+    expect(screen.queryByText('✓ 계산 완료')).toBeNull();
     expect(screen.getByText('15일 · 1명 계획표')).toBeDefined();
     expect(document.getElementById('manual-plan-workspace')?.dataset.density).toBe(
       'compact',
@@ -154,6 +154,21 @@ describe('WP3 manual-plan workspace boundary', () => {
     await user.click(screen.getByRole('button', { name: '설정으로 돌아가기' }));
     expect(onReturnToSetup).toHaveBeenCalledOnce();
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('keeps the completed calculation status visible in automatic plan mode', () => {
+    render(
+      <ManualPlanWorkspace
+        bundle={createBundle()}
+        draft={createManualPlanDraft(createBundle())}
+        setupWarnings={[]}
+        onDraftChange={vi.fn()}
+        onReturnToSetup={vi.fn()}
+        planMode="AUTOMATIC"
+      />,
+    );
+
+    expect(screen.getByText('✓ 계산 완료')).toBeDefined();
   });
 
   it('P3-DRAFT-005/006 renders duplicate names, optional IDs, and special keys safely', () => {

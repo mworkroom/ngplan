@@ -145,20 +145,22 @@ export function ManualPlanWorkspace({
           </p>
         </div>
         <div className="app-header__actions">
-          <span
-            className={`status-badge ${
-              calculation.status === 'CURRENT'
-                ? 'status-badge--ready'
-                : 'status-badge--error'
-            }`}
-            role="status"
-          >
-            {calculation.status === 'CURRENT'
-              ? '✓ 계산 완료'
-              : calculation.status === 'AUDIT_BLOCKED'
-                ? '⚠ 정산 자격 확인 필요'
-                : '⚠ 입력 확인 필요'}
-          </span>
+          {planMode === 'AUTOMATIC' || calculation.status !== 'CURRENT' ? (
+            <span
+              className={`status-badge ${
+                calculation.status === 'CURRENT'
+                  ? 'status-badge--ready'
+                  : 'status-badge--error'
+              }`}
+              role="status"
+            >
+              {calculation.status === 'CURRENT'
+                ? '✓ 계산 완료'
+                : calculation.status === 'AUDIT_BLOCKED'
+                  ? '⚠ 정산 자격 확인 필요'
+                  : '⚠ 입력 확인 필요'}
+            </span>
+          ) : null}
           <button
             type="button"
             className="secondary-button"

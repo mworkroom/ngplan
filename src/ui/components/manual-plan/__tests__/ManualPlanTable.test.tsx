@@ -340,7 +340,7 @@ describe('WP4 manual planning worksheet', () => {
 
     await user.clear(pvp);
     await user.type(pvp, '1');
-    expect(screen.getByText('✓ 계산 완료')).toBeDefined();
+    expect(screen.queryByText('✓ 계산 완료')).toBeNull();
     expect(screen.queryByRole('heading', { name: '선택한 입력 확인' })).toBeNull();
     expect(
       screen.getByLabelText('1 (수) 1. 루트 · 회원 ID 1000 좌 조직 합계 501 PV'),

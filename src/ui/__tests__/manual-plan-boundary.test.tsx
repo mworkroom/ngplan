@@ -89,7 +89,7 @@ describe('WP3 App setup handoff', () => {
     expect(screen.queryByRole('heading', { name: '자동 계획 만들기' })).toBeNull();
     expect(screen.queryByRole('button', { name: '자동으로 계산하기' })).toBeNull();
     expect(screen.queryByRole('heading', { name: '기간 설정' })).toBeNull();
-    expect(screen.getByText('✓ 계산 완료')).toBeDefined();
+    expect(screen.queryByText('✓ 계산 완료')).toBeNull();
     const planTitle = screen.getByRole('heading', { name: '202607A' });
     await waitFor(() => expect(document.activeElement).toBe(planTitle));
 
