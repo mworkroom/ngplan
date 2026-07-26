@@ -217,7 +217,7 @@ export function attachSubtree(
     member.placement.parentMemberKey !== null ||
     member.placement.sideAtParent !== null
   ) {
-    return failure(draft, 'SUBTREE_NOT_UNPLACED', '새 위치를 기다리는 회원만 이 자리로 연결할 수 있습니다.');
+    return failure(draft, 'SUBTREE_NOT_UNPLACED', '보관함에 있는 회원만 이 자리에 넣을 수 있습니다.');
   }
   const target = validateTargetSlot(draft, memberKey, parentMemberKey, side);
   if (isFailure(target)) {
@@ -250,7 +250,7 @@ export function moveSubtree(
     member.placement.parentMemberKey === null ||
     member.placement.sideAtParent === null
   ) {
-    return failure(draft, 'SUBTREE_NOT_UNPLACED', '현재 위치가 없는 회원은 조직 그림의 빈 자리에서 다시 연결해 주세요.');
+    return failure(draft, 'SUBTREE_NOT_UNPLACED', '보관함에 있는 회원은 조직도에서 원하는 빈 자리의 + 버튼을 눌러 넣어 주세요.');
   }
   const target = validateTargetSlot(draft, memberKey, parentMemberKey, side);
   if (isFailure(target)) {

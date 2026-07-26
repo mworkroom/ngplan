@@ -244,9 +244,23 @@ export function MemberForm({
 
       {!isRoot && !isPlaced ? (
         <>
-          <p className="storage-notice">
-            이 회원과 아래 회원들의 새 위치를 정해야 합니다. 조직도의 빈 자리에 다시 연결해 주세요.
-          </p>
+          <aside
+            className="storage-notice member-storage-notice"
+            aria-labelledby={`${memberFieldId(member.memberKey, 'parentMemberKey')}-storage-title`}
+          >
+            <div>
+              <h3
+                className="member-storage-notice__title"
+                id={`${memberFieldId(member.memberKey, 'parentMemberKey')}-storage-title`}
+              >
+                보관함에 있는 회원
+              </h3>
+              <div>
+                조직도에서 원하는 빈 자리의 + 버튼을 누른 뒤, 회원 이름이
+                적힌 ‘이 자리에 넣기’ 버튼을 선택하세요.
+              </div>
+            </div>
+          </aside>
           <div className="member-storage-actions member-storage-actions--single">
             <button type="button" className="danger-button" onClick={onExclude}>
               삭제하기

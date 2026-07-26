@@ -964,6 +964,7 @@ export function App({
             <ReassignmentQueue
               entries={topology.reassignmentQueue}
               rootMissing={draft.rootMemberKey === null}
+              selectedMemberKey={draft.selectedMemberKey}
               onSelect={(memberKey) => setDraft(selectMember(draft, memberKey))}
               onSetRoot={(memberKey) =>
                 applyTopologyOutcome(
@@ -980,10 +981,14 @@ export function App({
             <section className="slot-action-panel" aria-labelledby="slot-action-title">
               <div>
                 <h3 id="slot-action-title">
-                  {slotPanelParent.name.trim() || slotPanelParent.memberKey} ·{' '}
-                  {slotAction.side === 'LEFT' ? '왼쪽' : '오른쪽'} 빈 자리
+                  {slotPanelParent.name.trim() || slotPanelParent.memberKey}의{' '}
+                  {slotAction.side === 'LEFT' ? '왼쪽' : '오른쪽'}에 누가
+                  들어갈까요?
                 </h3>
-                <p className="help-text">새 회원을 만들거나 위치를 기다리는 회원을 연결합니다.</p>
+                <p className="help-text">
+                  새 회원을 만들거나 보관함의 회원을 이 자리에 넣을 수
+                  있습니다.
+                </p>
               </div>
               <div className="button-row">
                 <button ref={slotFirstActionRef} type="button" className="primary-button" onClick={handleAddMemberToOpenSlot}>
@@ -991,7 +996,8 @@ export function App({
                 </button>
                 {topology.reassignmentQueue.map((entry) => (
                   <button type="button" className="secondary-button" key={entry.memberKey} onClick={() => handleAttachQueuedSubtree(entry.memberKey)}>
-                    {entry.memberName.trim() || entry.memberKey}님과 하위 회원 연결
+                    {entry.memberName.trim() || entry.memberKey} 회원을 이 자리에
+                    넣기
                   </button>
                 ))}
                 <button type="button" className="text-button" onClick={() => setSlotAction(null)}>
@@ -1060,7 +1066,7 @@ export function App({
                 onDetach={() =>
                   applyTopologyOutcome(
                     detachSubtree(draft, selectedMember.memberKey),
-                    '현재 위치에서 뺐습니다. 새 위치를 정해 주세요.',
+                    `${selectedMember.name.trim() || selectedMember.memberKey} 회원을 보관함에 넣었습니다. 다시 넣으려면 조직도에서 원하는 빈 자리의 + 버튼을 누르세요.`,
                   )
                 }
                 onExclude={() => handleRequestExclude(selectedMember.memberKey)}
@@ -1099,7 +1105,7 @@ export function App({
             );
             const succeeded = applyTopologyOutcome(
               outcome,
-              '선택한 회원을 삭제했습니다. 필요한 하위 회원의 새 위치를 정해 주세요.',
+              '선택한 회원을 삭제했습니다. 보관함에 남은 회원은 조직도의 빈 자리에서 다시 넣을 수 있습니다.',
             );
             if (succeeded) {
               setExcludedMemberKey(null);

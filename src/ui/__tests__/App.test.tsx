@@ -300,12 +300,29 @@ describe('App project setup flow', () => {
     );
 
     expect(
-      screen.getByRole('heading', { name: '새 위치를 정해야 하는 회원' }),
+      screen.getByRole('heading', {
+        name: '보관함에 있는 회원',
+        level: 2,
+      }),
     ).toBeDefined();
-    expect(screen.getByText('1개 대기')).toBeDefined();
+    expect(screen.getByText('1명')).toBeDefined();
 
-    await user.click(screen.getByRole('button', { name: '회원 정보 보기' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Root 회원 상세 편집' }),
+    );
+    const queuedMemberButton = screen.getByRole('button', {
+      name: 'Child 정보 보기',
+    });
+    expect(queuedMemberButton.getAttribute('aria-pressed')).toBe('false');
+    await activateWithKeyboard(user, queuedMemberButton);
+    expect(queuedMemberButton.getAttribute('aria-pressed')).toBe('true');
     expect(inputByLabel('이름 (닉네임이 표시됨)').value).toBe('Child');
+    expect(
+      screen.getByRole('heading', {
+        name: '보관함에 있는 회원',
+        level: 3,
+      }),
+    ).toBeDefined();
 
     await user.click(screen.getByRole('button', { name: '첫 번째 문제 보기' }));
     const queueEntry = document.getElementById('queue-member-2');
@@ -322,11 +339,14 @@ describe('App project setup flow', () => {
     );
     await activateWithKeyboard(
       user,
-      screen.getByRole('button', { name: 'Child님과 하위 회원 연결' }),
+      screen.getByRole('button', { name: 'Child 회원을 이 자리에 넣기' }),
     );
 
     expect(
-      screen.queryByRole('heading', { name: '새 위치를 정해야 하는 회원' }),
+      screen.queryByRole('heading', {
+        name: '보관함에 있는 회원',
+        level: 2,
+      }),
     ).toBeNull();
     expect(screen.getByRole('button', { name: 'Child 위치 바꾸기 또는 명단에서 빼기' })).toBeDefined();
   });
@@ -374,7 +394,10 @@ describe('App project setup flow', () => {
       screen.queryByRole('button', { name: 'Middle 회원 상세 편집' }),
     ).toBeNull();
     expect(
-      screen.queryByRole('heading', { name: '새 위치를 정해야 하는 회원' }),
+      screen.queryByRole('heading', {
+        name: '보관함에 있는 회원',
+        level: 2,
+      }),
     ).toBeNull();
   });
 
@@ -403,13 +426,14 @@ describe('App project setup flow', () => {
     );
 
     const queueHeading = screen.getByRole('heading', {
-      name: '새 위치를 정해야 하는 회원',
+      name: '보관함에 있는 회원',
+      level: 2,
     });
     const queueSection = queueHeading.closest('section');
     if (queueSection === null) {
       throw new Error('Reassignment queue section was not rendered');
     }
-    expect(screen.getByText('2개 대기')).toBeDefined();
+    expect(screen.getByText('2명')).toBeDefined();
     expect(within(queueSection).getByText('A')).toBeDefined();
     expect(within(queueSection).getByText('B')).toBeDefined();
     expect(
@@ -444,7 +468,7 @@ describe('App project setup flow', () => {
     );
 
     expect(screen.getByText('맨 위에 놓을 회원 카드를 만들어 주세요.')).toBeDefined();
-    expect(screen.getByText('2개 대기')).toBeDefined();
+    expect(screen.getByText('2명')).toBeDefined();
     const setRootButtons = screen.getAllByRole('button', {
       name: '맨 위 회원으로 정하기',
     });
@@ -459,7 +483,7 @@ describe('App project setup flow', () => {
     expect(
       screen.getByRole('button', { name: 'A 회원 상세 편집' }),
     ).toBeDefined();
-    expect(screen.getByText('1개 대기')).toBeDefined();
+    expect(screen.getByText('1명')).toBeDefined();
   });
 
   it('warns before replacing member data and starts with uncopied opening defaults', async () => {

@@ -81,12 +81,18 @@ export function deriveTopology(draft: ProjectSetupDraft): DerivedTopology {
         member.placement.parentMemberKey === null &&
         member.placement.sideAtParent === null,
     )
-    .map((member) => ({
-      memberKey: member.memberKey,
-      memberName: member.name,
-      reason: 'ACTIVE_SUBTREE_UNPLACED' as const,
-      message: '이 회원과 아래 회원들의 새 위치를 정해 주세요.',
-    }));
+    .map((member) => {
+      const hasConnectedMembers =
+        (childrenByParent.get(member.memberKey)?.length ?? 0) > 0;
+      return {
+        memberKey: member.memberKey,
+        memberName: member.name,
+        reason: 'ACTIVE_SUBTREE_UNPLACED' as const,
+        message: hasConnectedMembers
+          ? '아래에 연결된 회원들도 함께 이동합니다.'
+          : '이 회원을 조직도에 다시 넣을 수 있습니다.',
+      };
+    });
 
   return {
     activeMembers,

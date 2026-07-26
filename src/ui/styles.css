@@ -144,6 +144,12 @@ a {
   color: var(--color-accent-action);
 }
 
+.member-storage-notice__title {
+  margin: 0 0 4px;
+  color: var(--color-accent-action);
+  font-size: 1rem;
+}
+
 .workspace-grid,
 .setup-layout {
   display: grid;
@@ -953,11 +959,42 @@ fieldset {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
-  padding: 12px;
+  gap: 0;
+  overflow: hidden;
   border: 1px solid var(--color-accent);
   border-radius: var(--radius-control);
   background: var(--color-accent-soft);
+}
+
+.reassignment-queue__select {
+  flex: 1;
+  align-self: stretch;
+  min-width: 0;
+  padding: 12px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.reassignment-queue__select strong,
+.reassignment-queue__select .help-text {
+  display: block;
+}
+
+.reassignment-queue__select:hover,
+.reassignment-queue__select:focus-visible,
+.reassignment-queue__select[aria-pressed="true"] {
+  background: var(--color-panel);
+}
+
+.reassignment-queue__select[aria-pressed="true"] {
+  box-shadow: inset 3px 0 0 var(--color-accent-action);
+}
+
+.reassignment-queue__actions {
+  padding: 12px 12px 12px 0;
 }
 
 .validation-summary {
@@ -1325,6 +1362,20 @@ fieldset {
 
   .reassignment-queue__item {
     flex-direction: column;
+  }
+
+  .reassignment-queue__select,
+  .reassignment-queue__actions {
+    box-sizing: border-box;
+    width: 100%;
+  }
+
+  .reassignment-queue__actions {
+    padding: 0 12px 12px;
+  }
+
+  .reassignment-queue__actions > * {
+    width: 100%;
   }
 }
 

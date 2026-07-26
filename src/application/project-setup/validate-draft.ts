@@ -345,7 +345,7 @@ export function validateProjectSetupDraft(
         'REASSIGNMENT_REQUIRED',
         'ERROR',
         { area: 'QUEUE', memberKey: entry.memberKey, field: 'parentMemberKey' },
-        `${entry.memberName || entry.memberKey}님과 아래 회원들의 새 위치를 정해 주세요.`,
+        `${entry.memberName || entry.memberKey} 회원이 보관함에 있습니다. 조직도의 빈 자리에서 다시 넣어 주세요.`,
         '조직도에 비어 있는 자리에 연결하거나, 최상위 회원으로 정해 주세요.',
       ),
     );

@@ -6,6 +6,7 @@ import {
 export interface ReassignmentQueueProps {
   readonly entries: readonly ReassignmentQueueEntry[];
   readonly rootMissing: boolean;
+  readonly selectedMemberKey?: string | null;
   readonly onSelect: (memberKey: string) => void;
   readonly onSetRoot: (memberKey: string) => void;
 }
@@ -13,6 +14,7 @@ export interface ReassignmentQueueProps {
 export function ReassignmentQueue({
   entries,
   rootMissing,
+  selectedMemberKey = null,
   onSelect,
   onSetRoot,
 }: ReassignmentQueueProps) {
@@ -21,49 +23,51 @@ export function ReassignmentQueue({
       <div className="panel__header">
         <div>
           <h2 id="reassignment-title" className="panel__title">
-            새 위치를 정해야 하는 회원
+            보관함에 있는 회원
           </h2>
           <p className="panel__description">
-            아래에 연결된 회원들은 그대로 유지됩니다. 조직도의 비어있는 자리에서 다시 연결해 주세요.
+            다시 넣으려면 조직도에서 원하는 빈 자리의 + 버튼을 누르세요.
           </p>
         </div>
         <span className="status-badge status-badge--warning">
-          {entries.length}개 대기
+          {entries.length}명
         </span>
       </div>
 
       <ul className="reassignment-queue">
-        {entries.map((entry) => (
-          <li
-            id={queueEntryId(entry.memberKey)}
-            className="reassignment-queue__item"
-            key={entry.memberKey}
-            tabIndex={-1}
-          >
-            <div>
-              <strong>{entry.memberName.trim() || entry.memberKey}</strong>
-              <p className="help-text">{entry.message}</p>
-            </div>
-            <div className="button-row">
+        {entries.map((entry) => {
+          const displayName = entry.memberName.trim() || entry.memberKey;
+          return (
+            <li
+              id={queueEntryId(entry.memberKey)}
+              className="reassignment-queue__item"
+              key={entry.memberKey}
+              tabIndex={-1}
+            >
               <button
                 type="button"
-                className="secondary-button"
+                className="reassignment-queue__select"
+                aria-label={`${displayName} 정보 보기`}
+                aria-pressed={entry.memberKey === selectedMemberKey}
                 onClick={() => onSelect(entry.memberKey)}
               >
-                회원 정보 보기
+                <strong>{displayName}</strong>
+                <span className="help-text">{entry.message}</span>
               </button>
               {rootMissing ? (
-                <button
-                  type="button"
-                  className="primary-button"
-                  onClick={() => onSetRoot(entry.memberKey)}
-                >
-                  맨 위 회원으로 정하기
-                </button>
+                <div className="reassignment-queue__actions">
+                  <button
+                    type="button"
+                    className="primary-button"
+                    onClick={() => onSetRoot(entry.memberKey)}
+                  >
+                    맨 위 회원으로 정하기
+                  </button>
+                </div>
               ) : null}
-            </div>
-          </li>
-        ))}
+            </li>
+          );
+        })}
       </ul>
     </section>
   );

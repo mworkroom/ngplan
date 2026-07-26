@@ -392,7 +392,13 @@ describe('member topology controls', () => {
     const { rerender } = render(<MemberForm member={root} isRoot {...props} />);
     expect(screen.queryByText('이 회원의 위치 바꾸기')).toBeNull();
     rerender(<MemberForm member={member('queued')} isRoot={false} {...props} />);
-    expect(screen.getByText(/새 위치를 정해야 합니다/)).toBeTruthy();
+    expect(
+      screen.getByRole('heading', {
+        name: '보관함에 있는 회원',
+        level: 3,
+      }),
+    ).toBeTruthy();
+    expect(screen.getByText(/원하는 빈 자리의 \+ 버튼/)).toBeTruthy();
   });
 });
 
@@ -410,11 +416,16 @@ describe('queue, dialog, and validation feedback', () => {
       <ReassignmentQueue
         entries={[entry]}
         rootMissing
+        selectedMemberKey="queued"
         onSelect={onSelect}
         onSetRoot={onSetRoot}
       />,
     );
-    fireEvent.click(screen.getByRole('button', { name: '회원 정보 보기' }));
+    const queuedMemberButton = screen.getByRole('button', {
+      name: '대기 회원 정보 보기',
+    });
+    expect(queuedMemberButton.getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(queuedMemberButton);
     fireEvent.click(screen.getByRole('button', { name: '맨 위 회원으로 정하기' }));
     expect(onSelect).toHaveBeenCalledWith('queued');
     expect(onSetRoot).toHaveBeenCalledWith('queued');
