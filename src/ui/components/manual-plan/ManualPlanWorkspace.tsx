@@ -226,17 +226,23 @@ export function ManualPlanWorkspace({
         selectedMemberKey={selection.memberKey}
       />
 
-      <div className="manual-result-layout">
-        <DailyResultDetails
-          view={resultViews.daily}
-          blocked={calculation.status === 'BLOCKED'}
-        />
-        <MemberFortnightSummary
-          selected={resultViews.selectedMember}
-          rows={resultViews.allMembers}
-          blocked={calculation.status === 'BLOCKED'}
-        />
-      </div>
+      <details className="manual-result-disclosure">
+        <summary>상세 계산과 전체 현황 보기</summary>
+        <p className="help-text">
+          숫자가 계산된 과정이나 전체 회원의 보름 결과를 확인할 때만 열어보세요.
+        </p>
+        <div className="manual-result-layout">
+          <DailyResultDetails
+            view={resultViews.daily}
+            blocked={calculation.status === 'BLOCKED'}
+          />
+          <MemberFortnightSummary
+            selected={resultViews.selectedMember}
+            rows={resultViews.allMembers}
+            blocked={calculation.status === 'BLOCKED'}
+          />
+        </div>
+      </details>
 
     </main>
   );

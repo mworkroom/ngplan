@@ -145,6 +145,11 @@ describe('WP3 manual-plan workspace boundary', () => {
       'compact',
     );
     expect(screen.queryByLabelText('화면 크기')).toBeNull();
+    const resultSummary = screen.getByText('상세 계산과 전체 현황 보기');
+    const resultDisclosure = resultSummary.closest('details');
+    expect(resultDisclosure?.hasAttribute('open')).toBe(false);
+    await user.click(resultSummary);
+    expect(resultDisclosure?.hasAttribute('open')).toBe(true);
 
     await user.click(screen.getByRole('button', { name: '설정으로 돌아가기' }));
     expect(onReturnToSetup).toHaveBeenCalledOnce();
