@@ -77,6 +77,7 @@ export function restoreDerivedProjectTitle(draft: ProjectSetupDraft): ProjectSet
 }
 
 export interface MemberIdentityPatch {
+  readonly sourceMemberId?: string | null;
   readonly memberId?: string;
   readonly name?: string;
   readonly pvpTarget?: string;
@@ -91,8 +92,12 @@ export function editMemberIdentity(
   return replaceMember(draft, memberKey, (member) => {
     const name = patch.name ?? member.name;
     const nameChanged = name !== member.name;
+    const sourceMemberId = Object.hasOwn(patch, 'sourceMemberId')
+      ? patch.sourceMemberId ?? null
+      : member.sourceMemberId ?? null;
     const next = {
       ...member,
+      sourceMemberId,
       memberId: patch.memberId ?? member.memberId,
       name,
       pvpTarget: patch.pvpTarget ?? member.pvpTarget,
@@ -101,7 +106,8 @@ export function editMemberIdentity(
         ? { ...member.openingState, openingStateConfirmed: false }
         : member.openingState,
     };
-    return next.memberId === member.memberId &&
+    return next.sourceMemberId === (member.sourceMemberId ?? null) &&
+      next.memberId === member.memberId &&
       next.name === member.name &&
       next.pvpTarget === member.pvpTarget &&
       next.sheetMarker === member.sheetMarker

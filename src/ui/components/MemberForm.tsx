@@ -4,18 +4,32 @@ import {
   type MemberDraft,
   type ProjectSetupIssue,
 } from '../../application/project-setup';
+import type {
+  MemberDirectory,
+  MemberDirectoryEntry,
+} from '../../cloud/member-directory';
 import { SHEET_MARKER_OPTIONS } from '../member-marker';
+import {
+  MemberDirectoryPicker,
+  type MemberDirectorySelectionResult,
+} from './MemberDirectoryPicker';
 
 type Side = Exclude<MemberDraft['placement']['sideAtParent'], null>;
 type IdentityPatch = Partial<Pick<MemberDraft, 'memberId' | 'name' | 'sheetMarker'>>;
 
 export interface MemberFormProps {
   readonly member: MemberDraft;
+  readonly memberDirectory?: MemberDirectory | null;
+  readonly planMembers?: readonly MemberDraft[];
   readonly issues: readonly ProjectSetupIssue[];
   readonly isRoot: boolean;
   readonly candidateParents: readonly MemberDraft[];
   readonly isSlotAvailable: (parentMemberKey: string, side: Side) => boolean;
   readonly onIdentityChange: (patch: IdentityPatch) => void;
+  readonly onDirectoryAssign?: (
+    entry: MemberDirectoryEntry,
+    displayName: string,
+  ) => MemberDirectorySelectionResult;
   readonly onMove: (parentMemberKey: string, side: Side) => void;
   readonly onDetach: () => void;
   readonly onExclude: () => void;
@@ -34,11 +48,14 @@ function issueFor(
 
 export function MemberForm({
   member,
+  memberDirectory = null,
+  planMembers = [],
   issues,
   isRoot,
   candidateParents,
   isSlotAvailable,
   onIdentityChange,
+  onDirectoryAssign,
   onMove,
   onDetach,
   onExclude,
@@ -85,7 +102,7 @@ export function MemberForm({
           id={fieldId}
           inputMode={field === 'memberId' ? 'numeric' : undefined}
           pattern={field === 'memberId' ? '[0-9]*' : undefined}
-          placeholder={field === 'name' ? '이름' : undefined}
+          placeholder={field === 'name' ? '닉네임' : undefined}
           value={member[field]}
           aria-invalid={issue !== undefined}
           aria-describedby={showMessage ? errorId : undefined}
@@ -118,8 +135,16 @@ export function MemberForm({
           </div>
           <span className="status-badge">{isRoot ? '최상위 회원' : '등록된 회원'}</span>
         </div>
+        {memberDirectory === null || onDirectoryAssign === undefined ? null : (
+          <MemberDirectoryPicker
+            directory={memberDirectory}
+            member={member}
+            planMembers={planMembers}
+            onAssign={onDirectoryAssign}
+          />
+        )}
         <div className="form-grid form-grid--single">
-          {renderIdentityField('name', '이름', nameIssue)}
+          {renderIdentityField('name', '표시 이름 (닉네임)', nameIssue)}
           {renderIdentityField('memberId', 'ID', memberIdIssue)}
           <div className="field">
             <label htmlFor={memberFieldId(member.memberKey, 'sheetMarker')}>

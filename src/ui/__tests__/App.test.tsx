@@ -31,12 +31,13 @@ function createDeterministicIdGenerator(): NonNullable<AppProps['generateId']> {
   };
 }
 
-function renderApp(): User {
+function renderApp(props: Partial<AppProps> = {}): User {
   const user = userEvent.setup();
   render(
     <App
       generateId={createDeterministicIdGenerator()}
       initialDate={INITIAL_DATE}
+      {...props}
     />,
   );
   return user;
@@ -88,7 +89,7 @@ async function fillSelectedMember(
   values: SelectedMemberValues,
 ): Promise<void> {
   await replaceInput(user, 'ID', values.memberId);
-  await replaceInput(user, '이름', values.name);
+  await replaceInput(user, '표시 이름 (닉네임)', values.name);
   await user.selectOptions(
     screen.getByLabelText('이번 기간 PVP 목표'),
     values.pvpTarget ?? '700',
@@ -204,7 +205,7 @@ describe('App project setup flow', () => {
     );
     expect(screen.getByRole('heading', { name: '회원 정보 입력' })).toBeDefined();
     expect(inputByLabel('ID').value).toBe('');
-    expect(document.activeElement).toBe(inputByLabel('이름'));
+    expect(document.activeElement).toBe(inputByLabel('표시 이름 (닉네임)'));
   });
 
   it('adds a root and both child sides by keyboard using explicit accessible labels', async () => {
@@ -261,7 +262,7 @@ describe('App project setup flow', () => {
     ).toBeDefined();
     expect(screen.getByText('입력을 모두 확인했습니다. 계획표를 열 수 있습니다.')).toBeDefined();
 
-    await user.type(inputByLabel('이름'), ' 수정');
+    await user.type(inputByLabel('표시 이름 (닉네임)'), ' 수정');
 
     expect(screen.getAllByText('입력 중').length).toBeGreaterThanOrEqual(1);
     expect(
@@ -309,7 +310,7 @@ describe('App project setup flow', () => {
     expect(screen.getByText('1개 대기')).toBeDefined();
 
     await user.click(screen.getByRole('button', { name: '회원 정보 보기' }));
-    expect(inputByLabel('이름').value).toBe('Child');
+    expect(inputByLabel('표시 이름 (닉네임)').value).toBe('Child');
 
     await user.click(screen.getByRole('button', { name: '첫 항목으로 이동' }));
     const queueEntry = document.getElementById('queue-member-2');
@@ -580,6 +581,53 @@ describe('App project setup flow', () => {
         name: /1 \(수\).*Root.*PVP 계획 PV/,
       }) as HTMLInputElement).value,
     ).toBe('123');
+  });
+
+  it('imports only the nickname and member number and prevents selecting the same source UUID twice', async () => {
+    const memberDirectory = {
+      listMembers: vi.fn(async () => [
+        {
+          sourceMemberId: 'directory-1',
+          memberId: '1001',
+          fullName: 'Maria Beatriz Rodrigues de Almeida',
+          nickname: 'Bia',
+        },
+        {
+          sourceMemberId: 'directory-2',
+          memberId: '1002',
+          fullName: 'Ana Paula da Silva',
+          nickname: '',
+        },
+      ]),
+    };
+    const user = renderApp({ memberDirectory });
+
+    await addRootWithKeyboard(user);
+    await user.click(screen.getByRole('button', { name: '회원 DB에서 불러오기' }));
+    await user.type(await screen.findByLabelText('회원 검색'), 'Bia');
+    await user.click(screen.getByRole('button', { name: /Bia.*Maria Beatriz/ }));
+    expect(inputByLabel('표시 이름 (닉네임)').value).toBe('Bia');
+    expect(inputByLabel('ID').value).toBe('1001');
+    expect(screen.queryByDisplayValue('Maria Beatriz Rodrigues de Almeida')).toBeNull();
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Bia의 왼쪽 빈 자리에 회원 연결',
+      }),
+    );
+    await user.click(screen.getByRole('button', { name: '회원 DB에서 불러오기' }));
+    await user.type(await screen.findByLabelText('회원 검색'), 'Bia');
+    expect(
+      screen.getByRole('button', { name: /Bia.*이미 추가됨/ }).hasAttribute('disabled'),
+    ).toBe(true);
+
+    await user.clear(screen.getByLabelText('회원 검색'));
+    await user.type(screen.getByLabelText('회원 검색'), 'Ana Paula');
+    await user.click(screen.getByRole('button', { name: /닉네임 없음.*Ana Paula/ }));
+    await user.type(screen.getByLabelText('피라미드 표시 이름'), 'Aninha');
+    await user.click(screen.getByRole('button', { name: '이 이름으로 추가' }));
+    expect(inputByLabel('표시 이름 (닉네임)').value).toBe('Aninha');
+    expect(inputByLabel('ID').value).toBe('1002');
   });
 
   it('reorders a persisted mirrored draft before the restored plan is edited', async () => {

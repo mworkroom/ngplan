@@ -32,6 +32,7 @@ export interface PlacementDraft {
 export interface MemberDraft {
   readonly memberKey: string;
   readonly participation: MemberParticipation;
+  readonly sourceMemberId?: string | null;
   readonly memberId: string;
   readonly name: string;
   readonly pvpTarget: string;
@@ -111,6 +112,25 @@ export type TopologyCommandErrorCode =
   | 'SLOT_OCCUPIED'
   | 'ORGANIZATION_CYCLE'
   | 'PROMOTION_NOT_AVAILABLE';
+
+export interface MemberDirectoryIdentity {
+  readonly sourceMemberId: string;
+  readonly memberId: string;
+  readonly displayName: string;
+}
+
+export type MemberDirectoryAssignmentOutcome =
+  | {
+      readonly status: 'SUCCESS';
+      readonly draft: ProjectSetupDraft;
+    }
+  | {
+      readonly status: 'FAILURE';
+      readonly draft: ProjectSetupDraft;
+      readonly existingMemberKey: string;
+      readonly reason: 'SOURCE_MEMBER_DUPLICATE' | 'MEMBER_ID_DUPLICATE';
+      readonly message: string;
+    };
 
 export interface TopologyCommandError {
   readonly code: TopologyCommandErrorCode;

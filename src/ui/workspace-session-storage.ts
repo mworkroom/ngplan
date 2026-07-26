@@ -92,6 +92,9 @@ function looksLikeMemberDraft(value: unknown, version: StoredOpeningVersion): bo
   return (
     typeof value.memberKey === 'string' &&
     (value.participation === 'ACTIVE' || value.participation === 'EXCLUDED') &&
+    (value.sourceMemberId === undefined ||
+      value.sourceMemberId === null ||
+      typeof value.sourceMemberId === 'string') &&
     typeof value.memberId === 'string' &&
     typeof value.name === 'string' &&
     typeof value.pvpTarget === 'string' &&

@@ -16,6 +16,10 @@ import {
   IndexedDbPlanCache,
 } from '../cloud/indexeddb-plan-cache';
 import { PlanSaveCoordinator } from '../cloud/plan-save-coordinator';
+import {
+  SupabaseMemberDirectory,
+  type MemberDirectory,
+} from '../cloud/member-directory';
 import { supabaseClient } from '../cloud/supabase-client';
 import { SupabasePlanRepository } from '../cloud/supabase-plan-repository';
 import type {
@@ -38,6 +42,7 @@ interface EditorSelection {
 
 export interface CloudAppProps {
   readonly client?: SupabaseClient | null;
+  readonly memberDirectory?: MemberDirectory;
   readonly repository?: PlanRepository;
   readonly cache?: PlanCache;
 }
@@ -424,6 +429,7 @@ function CloudProjectEditor({
   user,
   workspace,
   selection,
+  memberDirectory,
   repository,
   cache,
   onBack,
@@ -433,6 +439,7 @@ function CloudProjectEditor({
   readonly user: User;
   readonly workspace: CloudWorkspace;
   readonly selection: EditorSelection;
+  readonly memberDirectory: MemberDirectory;
   readonly repository: PlanRepository;
   readonly cache: PlanCache;
   readonly onBack: () => void;
@@ -552,6 +559,7 @@ function CloudProjectEditor({
       <App
         key={selection.projectId}
         generateId={generateId}
+        memberDirectory={memberDirectory}
         initialWorkspaceSession={selection.initialSession}
         onWorkspaceSessionChange={handleSessionChange}
         onCreateNewPlan={() => void leaveEditor('NEW')}
@@ -562,11 +570,13 @@ function CloudProjectEditor({
 
 function AuthenticatedCloudWorkspace({
   user,
+  memberDirectory,
   repository,
   cache,
   onSignOut,
 }: {
   readonly user: User;
+  readonly memberDirectory: MemberDirectory;
   readonly repository: PlanRepository;
   readonly cache: PlanCache;
   readonly onSignOut: () => Promise<void>;
@@ -809,6 +819,7 @@ function AuthenticatedCloudWorkspace({
         user={user}
         workspace={workspace}
         selection={selection}
+        memberDirectory={memberDirectory}
         repository={repository}
         cache={cache}
         onBack={() => {
@@ -838,6 +849,7 @@ function AuthenticatedCloudWorkspace({
 
 export function CloudApp({
   client = supabaseClient,
+  memberDirectory: injectedMemberDirectory,
   repository: injectedRepository,
   cache: injectedCache,
 }: CloudAppProps = {}) {
@@ -849,6 +861,12 @@ export function CloudApp({
       injectedRepository ??
       (client === null ? null : new SupabasePlanRepository(client)),
     [client, injectedRepository],
+  );
+  const memberDirectory = useMemo(
+    () =>
+      injectedMemberDirectory ??
+      (client === null ? null : new SupabaseMemberDirectory(client)),
+    [client, injectedMemberDirectory],
   );
   const cache = useMemo(
     () => injectedCache ?? new IndexedDbPlanCache(),
@@ -880,7 +898,7 @@ export function CloudApp({
     };
   }, [client]);
 
-  if (client === null || repository === null) {
+  if (client === null || repository === null || memberDirectory === null) {
     return <ConfigurationScreen />;
   }
   if (checkingSession) {
@@ -912,6 +930,7 @@ export function CloudApp({
   return (
     <AuthenticatedCloudWorkspace
       user={user}
+      memberDirectory={memberDirectory}
       repository={repository}
       cache={cache}
       onSignOut={signOut}

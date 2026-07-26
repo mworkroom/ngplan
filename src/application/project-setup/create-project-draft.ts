@@ -26,6 +26,7 @@ export function createMemberDraft(memberKey: string): MemberDraft {
   return {
     memberKey,
     participation: 'ACTIVE',
+    sourceMemberId: null,
     memberId: '',
     name: '',
     pvpTarget: '',

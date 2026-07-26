@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   addRootMember,
+  assignMemberDirectoryIdentity,
   createProjectDraft,
   type ProjectSetupDraft,
 } from '../../application/project-setup';
@@ -83,6 +84,39 @@ describe('persistent workspace storage v3', () => {
       screen: 'SETUP',
       organizationScale: 0.8,
       automaticPlanCheckpoint: null,
+    });
+  });
+
+  it('persists the source member UUID used for directory duplicate protection', () => {
+    const withRoot = addRootMember(createDraft(), 'member-1');
+    if (withRoot.status !== 'SUCCESS') {
+      throw new Error(withRoot.error.message);
+    }
+    const assigned = assignMemberDirectoryIdentity(
+      withRoot.draft,
+      'member-1',
+      {
+        sourceMemberId: 'directory-member-1',
+        memberId: '1001',
+        displayName: 'Bia',
+      },
+    );
+    if (assigned.status !== 'SUCCESS') {
+      throw new Error(assigned.message);
+    }
+
+    writeWorkspaceSession({
+      version: WORKSPACE_SESSION_VERSION,
+      draft: assigned.draft,
+      manualPlanDraft: null,
+      screen: 'SETUP',
+      organizationScale: 1,
+    });
+
+    expect(readWorkspaceSession()?.draft.members[0]).toMatchObject({
+      sourceMemberId: 'directory-member-1',
+      memberId: '1001',
+      name: 'Bia',
     });
   });
 

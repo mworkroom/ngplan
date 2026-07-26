@@ -16,6 +16,7 @@ import {
 } from '../application/automatic-plan';
 import {
   activateProjectSetupBundle,
+  assignMemberDirectoryIdentity,
   addMemberToSlot,
   addRootMember,
   attachSubtree,
@@ -50,6 +51,10 @@ import {
   type ProjectSetupValidation,
   type TopologyCommandOutcome,
 } from '../application/project-setup';
+import type {
+  MemberDirectory,
+  MemberDirectoryEntry,
+} from '../cloud/member-directory';
 import {
   AUTOMATIC_PLAN_OBJECTIVE_STAGE_ORDER,
   AUTOMATIC_PLAN_PRODUCT_TIME_LIMIT_MS,
@@ -215,6 +220,7 @@ export function createSessionIdGenerator(
 export interface AppProps {
   readonly generateId?: IdGenerator;
   readonly initialDate?: Date;
+  readonly memberDirectory?: MemberDirectory | null;
   readonly createAutomaticPlanWorker?: AutomaticPlanWorkerFactory;
   readonly initialWorkspaceSession?: WorkspaceSessionSnapshot | null;
   readonly onWorkspaceSessionChange?: (
@@ -251,6 +257,7 @@ function createInitialDraft(generateId: IdGenerator, date: Date): ProjectSetupDr
 export function App({
   generateId: injectedGenerateId,
   initialDate,
+  memberDirectory = null,
   createAutomaticPlanWorker = defaultAutomaticPlanWorkerFactory,
   initialWorkspaceSession,
   onWorkspaceSessionChange,
@@ -1042,6 +1049,8 @@ export function App({
             <section className="panel">
               <MemberForm
                 member={selectedMember}
+                memberDirectory={memberDirectory}
+                planMembers={draft.members}
                 issues={displayedValidation.issues}
                 isRoot={draft.rootMemberKey === selectedMember.memberKey}
                 candidateParents={candidateParents}
@@ -1054,6 +1063,30 @@ export function App({
                 onIdentityChange={(patch) =>
                   commitDraft(editMemberIdentity(draft, selectedMember.memberKey, patch))
                 }
+                onDirectoryAssign={(
+                  entry: MemberDirectoryEntry,
+                  displayName: string,
+                ) => {
+                  const outcome = assignMemberDirectoryIdentity(
+                    draft,
+                    selectedMember.memberKey,
+                    {
+                      sourceMemberId: entry.sourceMemberId,
+                      memberId: entry.memberId,
+                      displayName,
+                    },
+                  );
+                  if (outcome.status === 'FAILURE') {
+                    setCommandError(outcome.message);
+                    setAnnouncement(`회원 추가 실패: ${outcome.message}`);
+                    return { status: 'FAILURE', message: outcome.message };
+                  }
+                  commitDraft(
+                    outcome.draft,
+                    `${displayName.trim()} 회원 정보를 DB에서 불러왔습니다.`,
+                  );
+                  return { status: 'SUCCESS' };
+                }}
                 onMove={(parentMemberKey, side) =>
                   applyTopologyOutcome(
                     moveSubtree(

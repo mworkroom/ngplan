@@ -5,6 +5,7 @@ export {
   deriveDefaultProjectTitle,
   draftHasMemberData,
 } from './create-project-draft';
+export { assignMemberDirectoryIdentity } from './assign-member-directory';
 export {
   addMemberToSlot,
   addRootMember,
