@@ -101,6 +101,129 @@ No actionable P0, P1, or P2 visual differences remain for the requested scope.
 - Selected-card emphasis remains a full 3 px blue border.
 - Findings: no actionable P0, P1, or P2 differences remain for the requested muted-color and spacing scope.
 
+## Previous final result
+
+The member-card scope passed.
+
+# Same-row Control Alignment QA
+
+## Comparison target
+
+- Source visual truth: `C:\Users\Marion\Desktop\IMG 001.png` (2048 × 861 px).
+- Implementation screenshot: `C:\Users\Marion\.codex\visualizations\2026\07\26\019f9f51-d43d-7e40-aac7-8ecebf987328\ngplan-button-alignment\01-button-alignment-implementation.png` (2048 × 862 px).
+- Combined focused comparison: `C:\Users\Marion\.codex\visualizations\2026\07\26\019f9f51-d43d-7e40-aac7-8ecebf987328\ngplan-button-alignment\02-source-implementation-comparison.png` (1824 × 530 px).
+- Browser viewport: 2048 × 861 CSS px requested; Chrome reported 2048 × 862 CSS px.
+- Density normalization: source and implementation were captured at the same 2048 px width. The comparison uses focused crops scaled within equal-width source and implementation columns.
+- State: signed-in planning controls reproduced with the production CSS and the same component class structure. The authenticated data screen itself was unavailable on the local origin, so no project data or login state was changed.
+
+## Full-view comparison evidence
+
+The implementation screenshot shows all three requested control groups in their desktop positions. The toolbar, page-header actions, and organization controls retain their existing hierarchy, colors, borders, and compact density.
+
+## Focused region comparison evidence
+
+Focused comparison was required because the requested differences were only a few pixels:
+
+- Toolbar button and save status share a 40 px computed height and a 4 px radius.
+- `새 계획`, `수동 플랜 열기`, and `자동 플랜 만들기` share a 40 px authored height. Inside the 90% compact workspace zoom, all three render at 36 px with the same top coordinate.
+- Participation status, four organization zoom buttons, and the current-scale output share a 34 px authored height. Inside the 90% compact workspace zoom, all six render at 30.6 px with the same top coordinate.
+- At a 700 × 900 px responsive viewport, the three groups retain uniform 40 px, 40 px, and 34 px heights respectively.
+
+## Required fidelity surfaces
+
+- Fonts and typography: the existing Noto Sans KR stack, weights, label sizes, and compact hierarchy were preserved. Status labels remain visually quieter than action buttons.
+- Spacing and layout rhythm: control heights, vertical centering, padding, and 4 px radii now align within each row. Existing inter-control gaps were preserved.
+- Colors and visual tokens: primary, secondary, saved-state, border, and muted-output tokens remain unchanged.
+- Image quality and asset fidelity: the target contains no component image assets. No image generation or replacement assets were needed.
+- Copy and content: all existing Korean button and status labels are unchanged.
+
+## Findings
+
+No actionable P0, P1, or P2 visual differences remain for the requested same-row alignment scope.
+
+## Interaction and browser checks
+
+- Verified computed geometry at desktop and 700 px responsive widths.
+- Confirmed no browser console warnings or errors on the focused verification screen.
+- Confirmed status elements remain non-buttons while matching adjacent control geometry.
+
+## Comparison history
+
+### Initial findings
+
+- P2: the saved-state label was shorter than the adjacent toolbar button.
+- P2: the participation badge was shorter than the organization zoom controls.
+- P3: compact-workspace scaling could expose one-pixel rounding differences unless the header buttons shared one explicit height.
+
+### Fixes made
+
+- Applied a 40 px row height and shared vertical centering to toolbar controls.
+- Applied a 40 px explicit height to the three page-header action buttons.
+- Applied a 34 px row height to participation, zoom, and scale controls.
+
+### Post-fix evidence
+
+- The combined focused comparison shows matching top and bottom edges in each row.
+- Browser geometry confirmed equal computed heights for every item in each group.
+
+## Previous final result
+
+The same-row control alignment scope passed.
+
+# Plan Header Status Alignment QA
+
+## Comparison target
+
+- Source visual truth: `C:\Users\Marion\Desktop\IMG 001.png` (1968 × 523 px).
+- Implementation screenshot: `C:\Users\Marion\.codex\visualizations\2026\07\26\019f9f51-d43d-7e40-aac7-8ecebf987328\ngplan-manual-header-alignment\01-header-alignment-implementation.png` (1968 × 523 px).
+- Combined focused comparison: `C:\Users\Marion\.codex\visualizations\2026\07\26\019f9f51-d43d-7e40-aac7-8ecebf987328\ngplan-manual-header-alignment\02-source-implementation-comparison.png` (1544 × 237 px).
+- Browser viewport: 1968 × 523 CSS px.
+- Density normalization: source and implementation use the same overall pixel dimensions. Focused header crops were contained within equal-width comparison columns.
+- State: shared manual-plan workspace header with the current calculation state. Additional audit-blocked and input-blocked labels were rendered below the source-matching header to check long-label geometry.
+
+## Full-view comparison evidence
+
+The implementation preserves the existing plan title, period, header actions, colors, typography, and compact 90% workspace density. Only the calculation-status geometry changed.
+
+## Focused region comparison evidence
+
+- `✓ 계산 완료` and `설정으로 돌아가기` share a 40 px authored height, 8 px vertical padding, and 4 px radius.
+- Inside the compact workspace's 90% zoom, both controls render at 36 px with the same top coordinate.
+- `⚠ 정산 자격 확인 필요` and `⚠ 입력 확인 필요` also remain 36 px high after workspace scaling and do not wrap.
+- The scoped selector applies to the shared manual-plan workspace header, covering both manual and automatic plan modes without changing member-card badges.
+
+## Required fidelity surfaces
+
+- Fonts and typography: existing font family, sizes, and weights were retained. Long status labels use the existing status typography and remain on one line.
+- Spacing and layout rhythm: status and return controls now share top and bottom edges, padding rhythm, and 4 px radii.
+- Colors and visual tokens: success and error status colors remain unchanged; the return control retains its secondary-button treatment.
+- Image quality and asset fidelity: no component imagery is present or required.
+- Copy and content: calculation and return labels are unchanged.
+
+## Findings
+
+No actionable P0, P1, or P2 visual differences remain for the plan-header status alignment scope.
+
+## Interaction and browser checks
+
+- Verified current, audit-blocked, and input-blocked status label geometry.
+- Verified the status remains a non-interactive `role="status"` element.
+- Confirmed no browser console warnings or errors.
+
+## Comparison history
+
+### Initial finding
+
+- P2: the global 28 px status-badge size was used beside a 40 px return button, creating visibly mismatched top and bottom edges.
+
+### Fix made
+
+- Scoped a 40 px status treatment to `.app-header__actions` inside `#manual-plan-workspace`.
+
+### Post-fix evidence
+
+- Browser measurements and the combined comparison show matching 36 px rendered heights after the shared 90% workspace zoom.
+
 ## Final result
 
 final result: passed
