@@ -3,6 +3,7 @@ import {
   calculateManualPlan,
   deriveAllManualPlanMemberSummaryRows,
   deriveManualPlanDailyAuditView,
+  deriveManualPlanMemberJumpOptions,
   deriveManualPlanMemberSummaryView,
   deriveManualPlanSchema,
   editManualPlanField,
@@ -74,6 +75,10 @@ export function ManualPlanWorkspace({
     date: schema.dates[0]!.date,
     memberKey: schema.members[0]!.memberKey,
   }));
+  const memberJumpOptions = useMemo(
+    () => deriveManualPlanMemberJumpOptions(schema),
+    [schema],
+  );
 
   const handleEdit = (
     date: string,
@@ -214,23 +219,53 @@ export function ManualPlanWorkspace({
         onEdit={handleEdit}
       />
 
-      <p className="manual-plan-selection" aria-live="polite">
-        선택: {schema.dateByIso.get(selection.date)?.displayLabel ?? selection.date} ·{' '}
-        {schema.memberByKey.get(selection.memberKey)?.displayLabel ?? '회원'}
-      </p>
-
-      <ManualPlanSelectedContextIssues
-        issues={visibleIssues}
-        schema={schema}
-        selectedDate={selection.date}
-        selectedMemberKey={selection.memberKey}
-      />
-
       <details className="manual-result-disclosure">
         <summary>상세 계산과 전체 현황 보기</summary>
         <p className="help-text">
           숫자가 계산된 과정이나 전체 회원의 보름 결과를 확인할 때만 열어보세요.
         </p>
+        <div className="manual-plan-jump-controls">
+          <label className="manual-plan-date-jump">
+            날짜 선택
+            <select
+              value={selection.date}
+              onChange={(event) =>
+                setSelection({
+                  date: event.currentTarget.value,
+                  memberKey: selection.memberKey,
+                })}
+            >
+              {schema.dates.map((date) => (
+                <option key={date.date} value={date.date}>
+                  {date.displayLabel}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="manual-plan-member-jump">
+            회원 선택
+            <select
+              value={selection.memberKey}
+              onChange={(event) =>
+                setSelection({
+                  date: selection.date,
+                  memberKey: event.currentTarget.value,
+                })}
+            >
+              {memberJumpOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <ManualPlanSelectedContextIssues
+          issues={visibleIssues}
+          schema={schema}
+          selectedDate={selection.date}
+          selectedMemberKey={selection.memberKey}
+        />
         <div className="manual-result-layout">
           <DailyResultDetails
             view={resultViews.daily}

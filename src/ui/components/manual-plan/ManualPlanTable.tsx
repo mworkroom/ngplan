@@ -1,7 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import {
   deriveManualPlanAchievementTargets,
-  deriveManualPlanMemberJumpOptions,
   deriveManualPlanWorksheetCellView,
   manualPlanCellKey,
   manualPlanColumnHeaderDomId,
@@ -204,13 +203,6 @@ export function ManualPlanTable({
     () => deriveManualPlanAchievementTargets(schema),
     [schema],
   );
-  const firstEditableDate = schema.dates.find(
-    (date) => date.settlementMode === 'SETTLE',
-  );
-  const memberJumpOptions = useMemo(
-    () => deriveManualPlanMemberJumpOptions(schema),
-    [schema],
-  );
   const rootMemberIndex = schema.members.findIndex(
     (member) => member.memberKey === schema.rootMemberKey,
   );
@@ -234,40 +226,6 @@ export function ManualPlanTable({
       inline: 'center',
     });
   }, [schema.rootMemberKey]);
-
-  const focusMember = (memberKey: string): void => {
-    const date = firstEditableDate;
-    if (date === undefined) {
-      return;
-    }
-    onSelect({ date: date.date, memberKey });
-    window.setTimeout(() => {
-      const heading = document.getElementById(manualPlanMemberGroupDomId(memberKey));
-      const field = document.getElementById(
-        manualPlanFieldDomId(date.date, memberKey, 'pvp'),
-      );
-      field?.focus({ preventScroll: true });
-      heading?.scrollIntoView?.({ block: 'nearest', inline: 'center' });
-    }, 0);
-  };
-
-  const focusDate = (dateValue: string): void => {
-    const date = schema.dateByIso.get(dateValue);
-    if (date === undefined) {
-      return;
-    }
-    onSelect({ date: date.date, memberKey: selection.memberKey });
-    window.setTimeout(() => {
-      const targetId =
-        date.settlementMode === 'SETTLE'
-          ? manualPlanFieldDomId(date.date, selection.memberKey, 'pvp')
-          : manualPlanDateHeaderDomId(date.date);
-      const target = document.getElementById(targetId);
-      const dateHeading = document.getElementById(manualPlanDateHeaderDomId(date.date));
-      target?.focus({ preventScroll: true });
-      dateHeading?.scrollIntoView?.({ block: 'center', inline: 'nearest' });
-    }, 0);
-  };
 
   const navigateVertical = (
     currentDate: string,
@@ -304,34 +262,6 @@ export function ManualPlanTable({
           <p className="help-text">
             {schema.dates.length}일 · {schema.members.length}명 계획표
           </p>
-        </div>
-        <div className="manual-plan-jump-controls">
-          <label className="manual-plan-date-jump">
-            날짜 결과 보기
-            <select
-              value={selection.date}
-              onChange={(event) => focusDate(event.currentTarget.value)}
-            >
-              {schema.dates.map((date) => (
-                <option key={date.date} value={date.date}>
-                  {date.displayLabel}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="manual-plan-member-jump">
-            회원으로 이동
-            <select
-              value={selection.memberKey}
-              onChange={(event) => focusMember(event.currentTarget.value)}
-            >
-              {memberJumpOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
         </div>
       </div>
 

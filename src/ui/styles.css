@@ -2006,6 +2006,10 @@ body {
   margin: 10px 0 0;
 }
 
+.manual-result-disclosure > .manual-plan-jump-controls {
+  margin-top: 14px;
+}
+
 .manual-result-panel {
   min-width: 0;
 }

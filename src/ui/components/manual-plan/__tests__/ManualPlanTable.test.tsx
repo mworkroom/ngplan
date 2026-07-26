@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { OpeningStateInput } from '../../../../engine';
@@ -379,47 +379,35 @@ describe('WP4 manual planning worksheet', () => {
     expect(document.activeElement).toBe(julyOne);
   });
 
-  it('P3-GRID-004 member jump scrolls the group and focuses its first editable cell', async () => {
+  it('keeps the member selector inside the detail disclosure and updates the summary', async () => {
     const { user } = renderWorkspace();
-    await user.selectOptions(screen.getByLabelText('회원으로 이동'), 'child');
-    await waitFor(() => {
-      expect(document.activeElement).toBe(
-        pvInput('1 (수) 하위 PVP 계획 PV'),
-      );
-    });
-    expect(HTMLElement.prototype.scrollIntoView).toHaveBeenCalled();
-    expect(screen.getByText('선택: 1 (수) · 하위')).toBeDefined();
+    await user.click(screen.getByText('상세 계산과 전체 현황 보기'));
+    const memberSelect = screen.getByLabelText('회원 선택');
+    await user.selectOptions(memberSelect, 'child');
+    expect((memberSelect as HTMLSelectElement).value).toBe('child');
+    expect(screen.getByText(/하위 · 목표/)).toBeDefined();
   });
 
-  it('selects and focuses a locked Sunday audit context using only the keyboard', async () => {
+  it('selects a locked Sunday audit context inside the detail disclosure', async () => {
     const { user } = renderWorkspace();
-    const dateSelect = screen.getByLabelText('날짜 결과 보기');
-    dateSelect.focus();
+    await user.click(screen.getByText('상세 계산과 전체 현황 보기'));
+    const dateSelect = screen.getByLabelText('날짜 선택');
     await user.selectOptions(dateSelect, '2026-07-05');
 
-    await waitFor(() => {
-      expect(document.activeElement?.textContent).toContain('5 (일)');
-    });
-    expect(screen.getByText('선택: 5 (일) · 하위')).toBeDefined();
+    expect((dateSelect as HTMLSelectElement).value).toBe('2026-07-05');
+    expect(screen.getByText('5 (일) · 하위')).toBeDefined();
     expect(screen.getAllByText('정산 제외').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('정산 제외 · 커미션 없음')).toBeDefined();
   });
 
-  it('moves the visible table row and focus when a working date is selected', async () => {
+  it('changes the detailed calculation date without moving focus back into the table', async () => {
     const { user } = renderWorkspace();
-    const dateSelect = screen.getByLabelText('날짜 결과 보기');
+    await user.click(screen.getByText('상세 계산과 전체 현황 보기'));
+    const dateSelect = screen.getByLabelText('날짜 선택');
     await user.selectOptions(dateSelect, '2026-07-10');
 
-    await waitFor(() => {
-      expect(document.activeElement).toBe(
-        pvInput('10 (금) 하위 PVP 계획 PV'),
-      );
-    });
-    expect(HTMLElement.prototype.scrollIntoView).toHaveBeenCalledWith({
-      block: 'center',
-      inline: 'nearest',
-    });
-    expect(screen.getByText('선택: 10 (금) · 하위')).toBeDefined();
+    expect(document.activeElement).toBe(dateSelect);
+    expect(screen.getByText('10 (금) · 하위')).toBeDefined();
   });
 
   it('returns to setup immediately after an edit because the controlled draft is preserved', async () => {
