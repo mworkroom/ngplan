@@ -75,20 +75,18 @@ export function AutomaticPlanPreview({
     <section className="automatic-plan-preview" aria-labelledby="automatic-plan-preview-title">
       <div className="panel__header">
         <div>
-          <p className="app-header__eyebrow">검증된 자동 계획</p>
-          <h2 id="automatic-plan-preview-title" className="panel__title">적용 전 확인</h2>
+          <h2 id="automatic-plan-preview-title" className="panel__title">자동 계산 결과</h2>
           <p className="panel__description">
-            {formatDiscoveryTime(metrics.foundAtElapsedMs)}에 찾음 ·{' '}
-            {metrics.runStatusLabel}
+            {formatDiscoveryTime(metrics.foundAtElapsedMs)}에 계산됨
           </p>
         </div>
       </div>
 
       {newerCandidateAvailable ? (
         <div className="automatic-plan-preview__newer" role="status">
-          <span>더 나은 새 계획을 찾았습니다. 지금 보는 계획은 바뀌지 않았습니다.</span>
+          <span>새 계산 결과가 준비되었습니다.</span>
           <button type="button" className="text-button" onClick={onSwitchToLatest}>
-            새 계획 보기
+            새 결과 보기
           </button>
         </div>
       ) : null}
@@ -187,8 +185,8 @@ export function AutomaticPlanPreview({
       </div>
 
       <div className="form-actions">
-        <button type="button" className="secondary-button" onClick={onClose}>닫기</button>
-        <button type="button" className="primary-button" onClick={onApply}>이 계획을 계획표에 적용</button>
+        <button type="button" className="secondary-button" onClick={onClose}>돌아가기</button>
+        <button type="button" className="primary-button" onClick={onApply}>이 결과를 계획표에 넣기</button>
       </div>
       <span className="visually-hidden">후보 ID {metrics.candidateId}</span>
     </section>

@@ -77,7 +77,7 @@ describe('automatic plan operator components', () => {
       />,
     );
     expect(screen.queryByRole('progressbar')).toBeNull();
-    await user.click(screen.getByRole('button', { name: '자동 계획 만들기' }));
+    await user.click(screen.getByRole('button', { name: '자동으로 계산하기' }));
     expect(onStart).toHaveBeenCalledOnce();
   });
 
@@ -93,7 +93,11 @@ describe('automatic plan operator components', () => {
       />,
     );
 
-    expect(screen.getByText('현재까지 찾은 가장 좋은 검증 계획')).toBeTruthy();
+    expect(
+      screen.getByText(
+        '자동 계산 결과를 찾았습니다. 더 나은 결과를 계산하고 있습니다.',
+      ),
+    ).toBeTruthy();
     expect(screen.getByText('2분 05초 / 최대 30분 00초')).toBeTruthy();
     expect(screen.getByText('현재 총 신규 PV 5,000')).toBeTruthy();
   });
@@ -110,15 +114,15 @@ describe('automatic plan operator components', () => {
     expect(screen.getByText('계산 전')).toBeTruthy();
 
     const cases = [
-      ['RUNNING', false, '사용 가능한 계획 찾는 중'],
-      ['OPTIMAL', true, '최소값 확인 완료'],
-      ['TIME_LIMIT', false, '30분 안에 사용할 계획을 찾지 못함'],
-      ['TIME_LIMIT', true, '30분 동안 찾은 검증 계획'],
-      ['CANCELLED', false, '계산 중지됨'],
-      ['CANCELLED', true, '중지 전까지 찾은 검증 계획'],
+      ['RUNNING', false, '자동으로 계산하고 있습니다.'],
+      ['OPTIMAL', true, '자동 계산이 끝났습니다.'],
+      ['TIME_LIMIT', false, '계산 시간이 끝났지만 결과를 만들지 못했습니다.'],
+      ['TIME_LIMIT', true, '자동 계산 결과가 준비되었습니다.'],
+      ['CANCELLED', false, '계산을 멈췄습니다.'],
+      ['CANCELLED', true, '계산을 멈췄습니다. 지금까지 찾은 결과를 사용할 수 있습니다.'],
       ['INFEASIBLE', false, '현재 조건으로 계획을 만들 수 없음'],
-      ['FAILED', false, '계산을 계속하지 못함'],
-      ['FAILED', true, '계산은 멈췄지만 검증 계획은 사용 가능'],
+      ['FAILED', false, '계산을 완료하지 못했습니다.'],
+      ['FAILED', true, '계산이 멈췄습니다. 지금까지 찾은 결과를 사용할 수 있습니다.'],
     ] as const;
     for (const [status, hasCandidate, label] of cases) {
       rerender(
@@ -158,9 +162,9 @@ describe('automatic plan operator components', () => {
       />,
     );
 
-    expect(screen.getByRole('status').textContent).toContain(
-      '정확한 최소값 확인만 중단됐습니다. 찾은 검증 계획은 사용할 수 있습니다.',
-    );
+    expect(screen.getByText(
+      '계산이 멈췄습니다. 지금까지 찾은 결과를 사용할 수 있습니다.',
+    )).toBeTruthy();
     expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.queryByText('기술적인 증명 도구 오류')).toBeNull();
   });
@@ -179,7 +183,7 @@ describe('automatic plan operator components', () => {
         onPreview={onPreview}
       />,
     );
-    await user.click(screen.getByRole('button', { name: '자동 계획 만들기' }));
+    await user.click(screen.getByRole('button', { name: '자동으로 계산하기' }));
     expect(onStart).toHaveBeenCalledOnce();
 
     rerender(
@@ -191,8 +195,8 @@ describe('automatic plan operator components', () => {
         onPreview={onPreview}
       />,
     );
-    await user.click(screen.getByRole('button', { name: '계산 중지' }));
-    await user.click(screen.getByRole('button', { name: '검증 계획 확인·적용' }));
+    await user.click(screen.getByRole('button', { name: '계산 멈추기' }));
+    await user.click(screen.getByRole('button', { name: '결과 확인하기' }));
     expect(onStop).toHaveBeenCalledOnce();
     expect(onPreview).toHaveBeenCalledOnce();
     expect(screen.queryByText(/3시간|사용자 지정/)).toBeNull();
@@ -207,7 +211,7 @@ describe('automatic plan operator components', () => {
           onPreview={onPreview}
         />,
       );
-      expect(screen.getByRole('button', { name: '다시 계산' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: '다시 계산하기' })).toBeTruthy();
     }
     for (const status of ['OPTIMAL', 'INFEASIBLE'] as const) {
       rerender(
@@ -237,7 +241,7 @@ describe('automatic plan operator components', () => {
       />,
     );
 
-    expect(screen.getByText(/지금 보는 계획은 바뀌지 않았습니다/)).toBeTruthy();
+    expect(screen.getByText('새 계산 결과가 준비되었습니다.')).toBeTruthy();
     expect(screen.getByText('200 (폐기 아님)')).toBeTruthy();
     expect(screen.getByText('그 외 700 목표 중 환산 8회 이상')).toBeTruthy();
     const memberResults = screen.getByRole('table', {
@@ -258,8 +262,8 @@ describe('automatic plan operator components', () => {
     expect(
       screen.getByText(/기준 상한은 현재 목표 총량으로 계산한 이론상 최대치/),
     ).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: '새 계획 보기' }));
-    await user.click(screen.getByRole('button', { name: '이 계획을 계획표에 적용' }));
+    await user.click(screen.getByRole('button', { name: '새 결과 보기' }));
+    await user.click(screen.getByRole('button', { name: '이 결과를 계획표에 넣기' }));
     expect(onSwitch).toHaveBeenCalledOnce();
     expect(onApply).toHaveBeenCalledOnce();
   });
@@ -288,14 +292,14 @@ describe('automatic plan operator components', () => {
         onClose={onClose}
       />,
     );
-    expect(screen.getByText(/최소값 확인 완료/)).toBeTruthy();
+    expect(screen.getByRole('heading', { name: '자동 계산 결과' })).toBeTruthy();
     expect(screen.getByText('✓ 모든 회원의 보름 목표를 확인했습니다.')).toBeTruthy();
     expect(screen.getByText('✓ 모든 정산일의 수당 자격을 확인했습니다.')).toBeTruthy();
     expect(screen.queryByText(/수당 목표가 .* 부족합니다/)).toBeNull();
     expect(screen.queryByRole('table', {
       name: '회원별 수당 발생일과 환산 횟수',
     })).toBeNull();
-    await user.click(screen.getByRole('button', { name: '닫기' }));
+    await user.click(screen.getByRole('button', { name: '돌아가기' }));
     expect(onClose).toHaveBeenCalledOnce();
   });
 
@@ -382,9 +386,9 @@ describe('automatic plan operator components', () => {
         onClosePreview={onClose}
       />,
     );
-    await user.click(screen.getByRole('button', { name: '새 계획 보기' }));
-    await user.click(screen.getByRole('button', { name: '이 계획을 계획표에 적용' }));
-    await user.click(screen.getByRole('button', { name: '닫기' }));
+    await user.click(screen.getByRole('button', { name: '새 결과 보기' }));
+    await user.click(screen.getByRole('button', { name: '이 결과를 계획표에 넣기' }));
+    await user.click(screen.getByRole('button', { name: '돌아가기' }));
     expect(onSwitch).toHaveBeenCalledOnce();
     expect(onApply).toHaveBeenCalledOnce();
     expect(onClose).toHaveBeenCalledOnce();
@@ -403,8 +407,8 @@ describe('automatic plan operator components', () => {
     );
 
     expect(screen.getByRole('dialog')).toBeTruthy();
-    expect(screen.getByText(/현재 수동 입력은 자동 계획 값으로 교체됩니다/)).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: '적용' }));
+    expect(screen.getByText(/직접 입력한 값이 자동 계산 결과로 바뀝니다/)).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: '계획표에 넣기' }));
     expect(onConfirm).toHaveBeenCalledOnce();
     fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
     expect(onCancel).toHaveBeenCalledOnce();
@@ -419,7 +423,7 @@ describe('automatic plan operator components', () => {
         onCancel={onCancel}
       />,
     );
-    expect(screen.getByText('선택한 검증 계획만 계획표에 들어갑니다.')).toBeTruthy();
+    expect(screen.getByText('확인한 자동 계산 결과가 계획표에 들어갑니다.')).toBeTruthy();
     const backdrop = screen.getByRole('dialog').parentElement!;
     fireEvent.mouseDown(backdrop);
     expect(onCancel).toHaveBeenCalledOnce();

@@ -146,7 +146,7 @@ function seedWorkspace(
     version: WORKSPACE_SESSION_VERSION,
     draft: workspace.draft,
     manualPlanDraft: workspace.manualDraft,
-    screen: 'MANUAL_PLAN',
+    screen: 'AUTOMATIC_PLAN',
     organizationScale: 1,
     automaticPlanCheckpoint: checkpoint,
   });
@@ -220,7 +220,7 @@ function emitIncumbent(
 
 function previewRegion(): HTMLElement {
   const preview = screen
-    .getByRole('heading', { name: '적용 전 확인' })
+    .getByRole('heading', { name: '자동 계산 결과' })
     .closest('section');
   if (preview === null) throw new Error('automatic plan preview missing');
   return preview;
@@ -294,6 +294,9 @@ describe('App automatic-plan integration', () => {
     expect(factory.workers).toHaveLength(1);
     const planTitle = await screen.findByRole('heading', { name: '202607A' });
     await waitFor(() => expect(document.activeElement).toBe(planTitle));
+    expect(screen.getByRole('heading', { name: '자동 계획 만들기' })).toBeDefined();
+    expect(screen.getByRole('heading', { name: '자동 계획표' })).toBeDefined();
+    expect(screen.queryByRole('heading', { name: '수동 계획표' })).toBeNull();
     expect(
       screen.getByText('입력을 확인하고 자동 플랜 만들기를 시작했습니다.'),
     ).toBeDefined();
@@ -307,7 +310,7 @@ describe('App automatic-plan integration', () => {
     render(<App createAutomaticPlanWorker={factory.create} />);
 
     expect(pvpInput().value).toBe('123');
-    await user.click(screen.getByRole('button', { name: '자동 계획 만들기' }));
+    await user.click(screen.getByRole('button', { name: '자동으로 계산하기' }));
     expect(factory.workers).toHaveLength(1);
     const firstWorker = factory.workers[0]!;
     const constructive = buildConstructive(firstWorker.startMessage().request);
@@ -334,7 +337,9 @@ describe('App automatic-plan integration', () => {
     const pinnedRootGoal = pinnedVerification.candidate.display.rootCommissionGoal;
 
     act(() => emitIncumbent(firstWorker, pinnedRaw, 1, 1_000));
-    await screen.findByText('현재까지 찾은 가장 좋은 검증 계획');
+    await screen.findByText(
+      '자동 계산 결과를 찾았습니다. 더 나은 결과를 계산하고 있습니다.',
+    );
     act(() => {
       firstWorker.emit({
         protocolVersion: AUTOMATIC_PLAN_WORKER_PROTOCOL_VERSION,
@@ -350,16 +355,15 @@ describe('App automatic-plan integration', () => {
       });
     });
 
-    expect(await screen.findByText('계산은 멈췄지만 검증 계획은 사용 가능')).toBeDefined();
     expect(
-      screen.getByText(
-        '정확한 최소값 확인만 중단됐습니다. 찾은 검증 계획은 사용할 수 있습니다.',
+      await screen.findByText(
+        '계산이 멈췄습니다. 지금까지 찾은 결과를 사용할 수 있습니다.',
       ),
     ).toBeDefined();
     expect(screen.queryByRole('alert')).toBeNull();
     expect(firstWorker.terminated).toBe(true);
-    expect(screen.getByText(/아래 계획표와 확인 안내는 아직 기존 입력 기준/)).toBeDefined();
-    await user.click(screen.getByRole('button', { name: '검증 계획 확인·적용' }));
+    expect(screen.queryByText(/아래 계획표와 확인 안내는 아직 기존 입력 기준/)).toBeNull();
+    await user.click(screen.getByRole('button', { name: '결과 확인하기' }));
     expect(within(previewRegion()).getByText(`후보 ID ${pinnedCandidateId}`)).toBeDefined();
     expect(
       within(previewRegion()).getByText(formatPv(pinnedTotalNewPv)),
@@ -377,14 +381,14 @@ describe('App automatic-plan integration', () => {
       within(previewRegion()).getByText('계획 영업일').nextElementSibling?.textContent,
     ).toBe(`${pinnedRootGoal.businessDayCount}일`);
 
-    await user.click(screen.getByRole('button', { name: '다시 계산' }));
+    await user.click(screen.getByRole('button', { name: '다시 계산하기' }));
     expect(factory.workers).toHaveLength(2);
     const secondWorker = factory.workers[1]!;
     const betterRaw = buildConstructive(secondWorker.startMessage().request);
     const betterTotalNewPv = directAllocationTotal(betterRaw);
     act(() => emitIncumbent(secondWorker, betterRaw, 1, 2_000));
 
-    expect(await screen.findByText(/더 나은 새 계획을 찾았습니다/)).toBeDefined();
+    expect(await screen.findByText('새 계산 결과가 준비되었습니다.')).toBeDefined();
     expect(
       screen.getByText(`현재 총 신규 PV ${formatPv(betterTotalNewPv)}`),
     ).toBeDefined();
@@ -395,14 +399,14 @@ describe('App automatic-plan integration', () => {
 
     await user.click(
       within(previewRegion()).getByRole('button', {
-        name: '이 계획을 계획표에 적용',
+        name: '이 결과를 계획표에 넣기',
       }),
     );
     const dialog = screen.getByRole('dialog', {
-      name: '입력한 계획을 자동 계획으로 바꿀까요?',
+      name: '이 결과를 계획표에 넣을까요?',
     });
-    expect(within(dialog).getByText(/현재 수동 입력은 자동 계획 값으로 교체/)).toBeDefined();
-    await user.click(within(dialog).getByRole('button', { name: '적용' }));
+    expect(within(dialog).getByText(/직접 입력한 값이 자동 계산 결과로 바뀝니다/)).toBeDefined();
+    await user.click(within(dialog).getByRole('button', { name: '계획표에 넣기' }));
 
     await waitFor(() =>
       expect(pvpInput().value).toBe(String(pinnedFirstDay.pvp)),
@@ -414,9 +418,9 @@ describe('App automatic-plan integration', () => {
       String(pinnedFirstDay.selfRight ?? 0),
     );
     expect(screen.queryByRole('dialog')).toBeNull();
-    expect(screen.queryByRole('heading', { name: '적용 전 확인' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: '자동 계산 결과' })).toBeNull();
     expect(
-      screen.getByText('선택한 자동 계획을 계획표에 적용했습니다. 이제 각 값을 직접 수정할 수 있습니다.'),
+      screen.getByText('자동 계산 결과를 계획표에 넣었습니다. 필요한 값은 직접 수정할 수 있습니다.'),
     ).toBeDefined();
     expect(screen.queryByText(/확인이 필요한 안내/)).toBeNull();
     expect(secondWorker.sent.at(-1)).toMatchObject({ type: 'CANCEL' });
@@ -430,7 +434,7 @@ describe('App automatic-plan integration', () => {
     const user = userEvent.setup();
     render(<App createAutomaticPlanWorker={factory.create} />);
 
-    await user.click(screen.getByRole('button', { name: '자동 계획 만들기' }));
+    await user.click(screen.getByRole('button', { name: '자동으로 계산하기' }));
     const worker = factory.workers[0]!;
     const constructive = buildConstructive(worker.startMessage().request);
     const incumbent = withExtraFirstPvp(constructive);
@@ -441,18 +445,24 @@ describe('App automatic-plan integration', () => {
       incumbent.allocations,
     );
     act(() => emitIncumbent(worker, incumbent, 1, 100));
-    await screen.findByText('현재까지 찾은 가장 좋은 검증 계획');
+    await screen.findByText(
+      '자동 계산 결과를 찾았습니다. 더 나은 결과를 계산하고 있습니다.',
+    );
 
-    await user.click(screen.getByRole('button', { name: '계산 중지' }));
+    await user.click(screen.getByRole('button', { name: '계산 멈추기' }));
     expect(worker.sent.at(-1)).toMatchObject({
       type: 'CANCEL',
       runId: worker.startMessage().runId,
     });
-    expect(screen.getByText('중지 전까지 찾은 검증 계획')).toBeDefined();
+    expect(
+      screen.getByText(
+        '계산을 멈췄습니다. 지금까지 찾은 결과를 사용할 수 있습니다.',
+      ),
+    ).toBeDefined();
     act(() => emitIncumbent(worker, constructive, 2, 200));
 
-    expect(screen.queryByText(/더 나은 새 계획을 찾았습니다/)).toBeNull();
-    await user.click(screen.getByRole('button', { name: '검증 계획 확인·적용' }));
+    expect(screen.queryByText('새 계산 결과가 준비되었습니다.')).toBeNull();
+    await user.click(screen.getByRole('button', { name: '결과 확인하기' }));
     expect(within(previewRegion()).getByText(`후보 ID ${incumbentId}`)).toBeDefined();
     expect(
       within(previewRegion()).getByText(formatPv(incumbentTotalNewPv)),
@@ -471,9 +481,9 @@ describe('App automatic-plan integration', () => {
     const user = userEvent.setup();
     render(<App createAutomaticPlanWorker={factory.create} />);
 
-    await screen.findByRole('button', { name: '검증 계획 확인·적용' });
+    await screen.findByRole('button', { name: '결과 확인하기' });
     expect(factory.workers).toHaveLength(0);
-    await user.click(screen.getByRole('button', { name: '검증 계획 확인·적용' }));
+    await user.click(screen.getByRole('button', { name: '결과 확인하기' }));
     expect(
       within(previewRegion()).getByText(`후보 ID ${candidate.candidateId}`),
     ).toBeDefined();
@@ -482,6 +492,6 @@ describe('App automatic-plan integration', () => {
         formatPv(candidate.objective.totalNewPv),
       ),
     ).toBeDefined();
-    expect(screen.getByText(/복원된 검증 계획 · 새 계산 전/)).toBeDefined();
+    expect(screen.getByRole('heading', { name: '자동 계산 결과' })).toBeDefined();
   });
 });

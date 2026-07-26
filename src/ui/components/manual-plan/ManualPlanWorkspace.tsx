@@ -29,6 +29,7 @@ export interface ManualPlanWorkspaceProps {
   readonly setupWarnings: readonly ManualPlanIssue[];
   readonly onDraftChange: (draft: ManualPlanDraft) => void;
   readonly onReturnToSetup: () => void;
+  readonly planMode?: 'MANUAL' | 'AUTOMATIC';
   readonly automaticPlanPanel?: ReactNode;
   readonly announcement?: string;
   readonly storageMode?: 'LOCAL' | 'CLOUD';
@@ -59,6 +60,7 @@ export function ManualPlanWorkspace({
   setupWarnings,
   onDraftChange,
   onReturnToSetup,
+  planMode = 'MANUAL',
   automaticPlanPanel,
   announcement = '',
   storageMode = 'LOCAL',
@@ -207,6 +209,7 @@ export function ManualPlanWorkspace({
         draft={draft}
         calculation={calculation}
         selection={selection}
+        planMode={planMode}
         onSelect={setSelection}
         onEdit={handleEdit}
       />

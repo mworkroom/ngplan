@@ -128,12 +128,9 @@ export function MemberForm({
     <section className="member-form" aria-labelledby="member-form-title">
       <div>
         <div className="panel__header">
-          <div>
-            <h2 id="member-form-title" className="panel__title">
-              회원 정보 입력
-            </h2>
-          </div>
-          <span className="status-badge">{isRoot ? '최상위 회원' : '등록된 회원'}</span>
+          <h2 id="member-form-title" className="panel__title">
+            회원 정보 입력
+          </h2>
         </div>
         {memberDirectory === null || onDirectoryAssign === undefined ? null : (
           <MemberDirectoryPicker

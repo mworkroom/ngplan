@@ -16,7 +16,7 @@ export interface WorkspaceSessionSnapshot {
   readonly version: typeof WORKSPACE_SESSION_VERSION;
   readonly draft: ProjectSetupDraft;
   readonly manualPlanDraft: ManualPlanDraft | null;
-  readonly screen: 'SETUP' | 'MANUAL_PLAN';
+  readonly screen: 'SETUP' | 'MANUAL_PLAN' | 'AUTOMATIC_PLAN';
   readonly organizationScale: number;
   readonly automaticPlanCheckpoint: WorkspaceAutomaticPlanCheckpoint | null;
 }
@@ -25,7 +25,7 @@ export interface WorkspaceSessionWriteSnapshot {
   readonly version: typeof WORKSPACE_SESSION_VERSION;
   readonly draft: ProjectSetupDraft;
   readonly manualPlanDraft: ManualPlanDraft | null;
-  readonly screen: 'SETUP' | 'MANUAL_PLAN';
+  readonly screen: 'SETUP' | 'MANUAL_PLAN' | 'AUTOMATIC_PLAN';
   readonly organizationScale: number;
   readonly automaticPlanCheckpoint?: WorkspaceAutomaticPlanCheckpoint | null;
 }
@@ -239,10 +239,14 @@ function normalizeV3Snapshot(value: unknown): WorkspaceSessionSnapshot | null {
   const manualPlanDraft = looksLikeManualPlanDraft(value.manualPlanDraft)
     ? value.manualPlanDraft
     : null;
-  const screen = value.screen === 'MANUAL_PLAN' &&
+  const requestedPlanScreen =
+    value.screen === 'MANUAL_PLAN' || value.screen === 'AUTOMATIC_PLAN'
+      ? value.screen
+      : null;
+  const screen = requestedPlanScreen !== null &&
       draft.activeBundle !== null &&
       manualPlanDraft !== null
-    ? 'MANUAL_PLAN' as const
+    ? requestedPlanScreen
     : 'SETUP' as const;
   const automaticPlanCheckpoint = isRecord(value.automaticPlanCheckpoint)
     ? value.automaticPlanCheckpoint

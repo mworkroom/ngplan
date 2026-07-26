@@ -115,7 +115,7 @@ export function MemberDirectoryPicker({
     <section className="member-directory" aria-labelledby="member-directory-title">
       <div className="member-directory__summary">
         <div>
-          <h3 id="member-directory-title">회원 DB</h3>
+          <h3 id="member-directory-title">간편 입력</h3>
           <p>
             {member.sourceMemberId
               ? '회원 DB에서 불러온 회원입니다.'
@@ -235,11 +235,11 @@ export function MemberDirectoryPicker({
             <div className="member-directory__short-name">
               <strong>이 회원은 닉네임이 없습니다.</strong>
               <p className="help-text">
-                피라미드에 표시할 짧은 이름을 입력해 주세요. 원본 회원 DB는 수정하지 않습니다.
+                시트에 표시할 짧은 이름을 입력해 주세요. 원본 회원 DB는 수정하지 않습니다.
               </p>
               <div className="field">
                 <label htmlFor={`member-directory-short-name-${member.memberKey}`}>
-                  피라미드 표시 이름
+                  시트 표시 이름
                 </label>
                 <input
                   id={`member-directory-short-name-${member.memberKey}`}

@@ -33,17 +33,25 @@ function statusLabel(status: AutomaticPlanUiStatus, hasCandidate: boolean): stri
     case 'IDLE':
       return '계산 전';
     case 'RUNNING':
-      return hasCandidate ? '현재까지 찾은 가장 좋은 검증 계획' : '사용 가능한 계획 찾는 중';
+      return hasCandidate
+        ? '자동 계산 결과를 찾았습니다. 더 나은 결과를 계산하고 있습니다.'
+        : '자동으로 계산하고 있습니다.';
     case 'OPTIMAL':
-      return '최소값 확인 완료';
+      return '자동 계산이 끝났습니다.';
     case 'TIME_LIMIT':
-      return hasCandidate ? '30분 동안 찾은 검증 계획' : '30분 안에 사용할 계획을 찾지 못함';
+      return hasCandidate
+        ? '자동 계산 결과가 준비되었습니다.'
+        : '계산 시간이 끝났지만 결과를 만들지 못했습니다.';
     case 'CANCELLED':
-      return hasCandidate ? '중지 전까지 찾은 검증 계획' : '계산 중지됨';
+      return hasCandidate
+        ? '계산을 멈췄습니다. 지금까지 찾은 결과를 사용할 수 있습니다.'
+        : '계산을 멈췄습니다.';
     case 'INFEASIBLE':
       return '현재 조건으로 계획을 만들 수 없음';
     case 'FAILED':
-      return hasCandidate ? '계산은 멈췄지만 검증 계획은 사용 가능' : '계산을 계속하지 못함';
+      return hasCandidate
+        ? '계산이 멈췄습니다. 지금까지 찾은 결과를 사용할 수 있습니다.'
+        : '계산을 완료하지 못했습니다.';
   }
 }
 
@@ -53,7 +61,6 @@ export function AutomaticPlanProgress({
   maximumMs,
   hasCandidate,
   bestTotalNewPv,
-  phaseLabel,
   errorMessage = null,
   proofOnlyFailure = false,
 }: AutomaticPlanProgressProps) {
@@ -62,7 +69,6 @@ export function AutomaticPlanProgress({
     <div className="automatic-plan-progress" aria-live="polite">
       <div className="automatic-plan-progress__status">
         <strong>{statusLabel(status, hasCandidate)}</strong>
-        <span>{phaseLabel}</span>
       </div>
       <progress
         aria-label="자동 계획 계산 시간"
@@ -76,11 +82,7 @@ export function AutomaticPlanProgress({
         )}
         <span className="visually-hidden">진행률 {Math.round(progress * 100)}%</span>
       </div>
-      {errorMessage === null ? null : proofOnlyFailure && hasCandidate ? (
-        <p role="status">
-          정확한 최소값 확인만 중단됐습니다. 찾은 검증 계획은 사용할 수 있습니다.
-        </p>
-      ) : (
+      {errorMessage === null || (proofOnlyFailure && hasCandidate) ? null : (
         <p role="alert">{errorMessage}</p>
       )}
     </div>

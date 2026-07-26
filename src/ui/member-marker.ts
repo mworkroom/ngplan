@@ -4,7 +4,7 @@ export const SHEET_MARKER_OPTIONS: readonly {
   readonly value: SheetMarker;
   readonly label: string;
 }[] = [
-  { value: 'NONE', label: '표시 없음' },
+  { value: 'NONE', label: '강조 없음' },
   { value: 'PINK_1', label: '1 · 분홍색' },
   { value: 'GREEN_2', label: '2 · 연두색' },
   { value: 'BLUE_3', label: '3 · 하늘색' },

@@ -23,22 +23,22 @@ export function AutomaticPlanControls({
     <div className="automatic-plan-controls">
       {status === 'IDLE' ? (
         <button type="button" className="primary-button" onClick={onStart}>
-          자동 계획 만들기
+          자동으로 계산하기
         </button>
       ) : null}
       {running ? (
         <button type="button" className="secondary-button" onClick={onStop}>
-          계산 중지
+          계산 멈추기
         </button>
       ) : null}
       {hasCandidate ? (
         <button type="button" className="primary-button" onClick={onPreview}>
-          검증 계획 확인·적용
+          결과 확인하기
         </button>
       ) : null}
       {canRestart ? (
         <button type="button" className="secondary-button" onClick={onStart}>
-          다시 계산
+          다시 계산하기
         </button>
       ) : null}
     </div>

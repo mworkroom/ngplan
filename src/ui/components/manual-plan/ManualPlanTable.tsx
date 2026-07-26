@@ -38,6 +38,7 @@ export interface ManualPlanTableProps {
   readonly draft: ManualPlanDraft;
   readonly calculation: ManualPlanCalculationState;
   readonly selection: ManualPlanSelection;
+  readonly planMode?: 'MANUAL' | 'AUTOMATIC';
   readonly onSelect: (selection: ManualPlanSelection) => void;
   readonly onEdit: (
     date: string,
@@ -194,6 +195,7 @@ export function ManualPlanTable({
   draft,
   calculation,
   selection,
+  planMode = 'MANUAL',
   onSelect,
   onEdit,
 }: ManualPlanTableProps) {
@@ -292,10 +294,12 @@ export function ManualPlanTable({
       <div className="manual-plan-toolbar">
         <div>
           <h2 id="manual-plan-table-title" className="panel__title">
-            수동 계획표
+            {planMode === 'AUTOMATIC' ? '자동 계획표' : '수동 계획표'}
           </h2>
           <p className="panel__description">
-            날짜별 PVP와 직접 입력 가능한 좌·우 PV를 입력합니다.
+            {planMode === 'AUTOMATIC'
+              ? '자동 계산 결과를 확인하고 필요한 값만 조정할 수 있습니다.'
+              : '날짜별 PVP와 직접 입력 가능한 좌·우 PV를 입력합니다.'}
           </p>
           <p className="help-text">
             {schema.dates.length}일 · {schema.members.length}명 계획표
@@ -333,7 +337,7 @@ export function ManualPlanTable({
 
       <div
         className="manual-plan-scroll"
-        aria-label="수동 계획표 가로 스크롤 영역"
+        aria-label={`${planMode === 'AUTOMATIC' ? '자동' : '수동'} 계획표 가로 스크롤 영역`}
         tabIndex={0}
       >
         <table

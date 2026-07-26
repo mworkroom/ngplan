@@ -297,7 +297,7 @@ export function OrganizationTree({
         <div className="organization-error-bar" role="alert">
           <span>⚠ 미입력 항목이 {errors.length}개 있습니다</span>
           <button type="button" className="text-button" onClick={() => onNavigateIssue(errors[0]!)}>
-            첫 번째 문제 보기
+            문제 보기
           </button>
         </div>
       )}

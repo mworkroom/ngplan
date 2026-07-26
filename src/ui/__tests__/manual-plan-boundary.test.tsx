@@ -85,6 +85,9 @@ describe('WP3 App setup handoff', () => {
 
     expect(document.getElementById('project-setup')).toBeNull();
     expect(document.getElementById('manual-plan-workspace')).not.toBeNull();
+    expect(screen.getByRole('heading', { name: '수동 계획표' })).toBeDefined();
+    expect(screen.queryByRole('heading', { name: '자동 계획 만들기' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '자동으로 계산하기' })).toBeNull();
     expect(screen.queryByRole('heading', { name: '기간 설정' })).toBeNull();
     expect(screen.getByText('✓ 계산 완료')).toBeDefined();
     const planTitle = screen.getByRole('heading', { name: '202607A' });

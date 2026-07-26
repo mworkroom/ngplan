@@ -30,16 +30,16 @@ export function ApplyAutomaticPlanDialog({
         }}
       >
         <h2 id="apply-automatic-plan-title">
-          {manualDraftModified ? '입력한 계획을 자동 계획으로 바꿀까요?' : '자동 계획을 계획표에 넣을까요?'}
+          이 결과를 계획표에 넣을까요?
         </h2>
         <p>
           {manualDraftModified
-            ? '현재 수동 입력은 자동 계획 값으로 교체됩니다. 취소하면 지금 입력은 그대로 유지됩니다.'
-            : '선택한 검증 계획만 계획표에 들어갑니다.'}
+            ? '직접 입력한 값이 자동 계산 결과로 바뀝니다. 취소하면 지금 입력은 그대로 유지됩니다.'
+            : '확인한 자동 계산 결과가 계획표에 들어갑니다.'}
         </p>
         <div className="form-actions">
           <button ref={cancelRef} type="button" className="secondary-button" onClick={onCancel}>취소</button>
-          <button type="button" className="primary-button" onClick={onConfirm}>적용</button>
+          <button type="button" className="primary-button" onClick={onConfirm}>계획표에 넣기</button>
         </div>
       </section>
     </div>

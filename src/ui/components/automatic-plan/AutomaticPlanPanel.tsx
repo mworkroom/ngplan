@@ -45,8 +45,7 @@ export function AutomaticPlanPanel({
     <section className="automatic-plan-panel" aria-labelledby="automatic-plan-title">
       <div className="automatic-plan-panel__heading">
         <div>
-          <h2 id="automatic-plan-title">자동 계획</h2>
-          <p>현재 설정으로 검증 가능한 계획을 찾습니다. 한 번의 계산은 최대 30분입니다.</p>
+          <h2 id="automatic-plan-title">자동 계획 만들기</h2>
         </div>
         <AutomaticPlanControls
           status={status}
@@ -68,13 +67,6 @@ export function AutomaticPlanPanel({
           errorMessage={errorMessage}
           proofOnlyFailure={proofOnlyFailure}
         />
-      )}
-
-      {latestCandidate === null || pinnedCandidate !== null ? null : (
-        <p className="automatic-plan-panel__apply-notice" role="status">
-          검증 계획을 찾았습니다. 아래 계획표와 확인 안내는 아직 기존 입력 기준입니다.{' '}
-          <strong>검증 계획 확인·적용</strong>을 눌러 계획표에 넣어 주세요.
-        </p>
       )}
 
       {pinnedCandidate === null ? null : (

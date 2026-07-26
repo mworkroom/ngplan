@@ -83,7 +83,7 @@ import {
 } from './workspace-session-storage';
 
 type Side = ChildSlotState['side'];
-type AppScreen = 'SETUP' | 'MANUAL_PLAN';
+type AppScreen = 'SETUP' | 'MANUAL_PLAN' | 'AUTOMATIC_PLAN';
 
 const EMPTY_AUTOMATIC_PLAN_PROOF: AutomaticPlanProofProgress = Object.freeze({
   stage: AUTOMATIC_PLAN_OBJECTIVE_STAGE_ORDER[0],
@@ -299,10 +299,11 @@ export function App({
   const [excludedMemberKey, setExcludedMemberKey] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState('');
   const [screenState, setScreenState] = useState<AppScreen>(() =>
-    restoredSession?.screen === 'MANUAL_PLAN' &&
+    (restoredSession?.screen === 'MANUAL_PLAN' ||
+      restoredSession?.screen === 'AUTOMATIC_PLAN') &&
     restoredSession.draft.activeBundle !== null &&
     restoredSession.manualPlanDraft !== null
-      ? 'MANUAL_PLAN'
+      ? restoredSession.screen
       : 'SETUP',
   );
   const [organizationScale, setOrganizationScale] = useState(
@@ -365,7 +366,7 @@ export function App({
     if (previousScreen === screenState) return;
 
     const titleId =
-      screenState === 'MANUAL_PLAN' ? 'manual-plan-title' : 'project-setup-title';
+      screenState === 'SETUP' ? 'project-setup-title' : 'manual-plan-title';
     document.getElementById(titleId)?.focus();
   }, [screenState]);
 
@@ -426,7 +427,7 @@ export function App({
     );
     if (restored.status === 'RESTORED') {
       setCheckpointCandidate(restored.candidate);
-      setAnnouncement('새로고침 전에 찾은 검증 계획을 다시 확인했습니다. 새 계산은 별도의 30분으로 시작합니다.');
+      setAnnouncement('새로고침 전에 찾은 자동 계산 결과를 복원했습니다.');
     }
   }, [draft.activeBundle, workspaceAutomaticPlanCheckpoint]);
 
@@ -714,7 +715,7 @@ export function App({
     if (activeBundle === null) return;
     setManualPlanDraft(reconcileManualPlanDraft(activeBundle, manualPlanDraft));
     setAnnouncement('입력을 확인하고 자동 플랜 만들기를 시작했습니다.');
-    setScreenState('MANUAL_PLAN');
+    setScreenState('AUTOMATIC_PLAN');
     startAutomaticPlanForBundle(activeBundle);
   };
 
@@ -757,7 +758,7 @@ export function App({
     automaticPlanControllerRef.current?.cancel();
     automaticPlanControllerRef.current?.dispose();
     automaticPlanControllerRef.current = null;
-    setAnnouncement('선택한 자동 계획을 계획표에 적용했습니다. 이제 각 값을 직접 수정할 수 있습니다.');
+    setAnnouncement('자동 계산 결과를 계획표에 넣었습니다. 필요한 값은 직접 수정할 수 있습니다.');
   };
 
   const candidateParents = useMemo(() => {
@@ -805,7 +806,7 @@ export function App({
       : null);
 
   if (
-    screenState === 'MANUAL_PLAN' &&
+    screenState !== 'SETUP' &&
     draft.activeBundle !== null &&
     manualPlanDraft !== null
   ) {
@@ -821,7 +822,8 @@ export function App({
           onReturnToSetup={() => setScreenState('SETUP')}
           announcement={announcement}
           storageMode={cloudStorageEnabled ? 'CLOUD' : 'LOCAL'}
-          automaticPlanPanel={(
+          planMode={screenState === 'AUTOMATIC_PLAN' ? 'AUTOMATIC' : 'MANUAL'}
+          automaticPlanPanel={screenState === 'AUTOMATIC_PLAN' ? (
             <AutomaticPlanPanel
               status={automaticPlanUiStatus}
               elapsedMs={automaticPlanState?.elapsedMs ?? 0}
@@ -847,7 +849,7 @@ export function App({
               onApplyPinned={handleApplyPinnedCandidate}
               onClosePreview={() => setPinnedCandidate(null)}
             />
-          )}
+          ) : null}
         />
         {applyAutomaticPlanRequested ? (
           <ApplyAutomaticPlanDialog

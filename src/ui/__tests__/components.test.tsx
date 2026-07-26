@@ -391,7 +391,9 @@ describe('member topology controls', () => {
     };
     const { rerender } = render(<MemberForm member={root} isRoot {...props} />);
     expect(screen.queryByText('이 회원의 위치 바꾸기')).toBeNull();
+    expect(screen.queryByText('최상위 회원')).toBeNull();
     rerender(<MemberForm member={member('queued')} isRoot={false} {...props} />);
+    expect(screen.queryByText('등록된 회원')).toBeNull();
     expect(
       screen.getByRole('heading', {
         name: '보관함에 있는 회원',
