@@ -72,7 +72,7 @@ describe('MemberDirectoryPicker', () => {
     const confirm = screen.getByRole('button', { name: '이 이름으로 추가' });
     expect(confirm.hasAttribute('disabled')).toBe(true);
 
-    await user.type(screen.getByLabelText('피라미드 표시 이름'), 'Aninha');
+    await user.type(screen.getByLabelText('시트 표시 이름'), 'Aninha');
     await user.click(confirm);
     expect(onAssign).toHaveBeenCalledWith(directoryEntries[1], 'Aninha');
   });

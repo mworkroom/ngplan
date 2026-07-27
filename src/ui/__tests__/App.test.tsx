@@ -281,7 +281,7 @@ describe('App project setup flow', () => {
 
     const organizationPanel = screen.getByRole('region', { name: '조직 구조' });
     await user.click(
-      within(organizationPanel).getByRole('button', { name: '첫 번째 문제 보기' }),
+      within(organizationPanel).getByRole('button', { name: '문제 보기' }),
     );
     await waitFor(() => {
       expect(document.activeElement?.getAttribute('aria-invalid')).toBe('true');
@@ -324,7 +324,7 @@ describe('App project setup flow', () => {
       }),
     ).toBeDefined();
 
-    await user.click(screen.getByRole('button', { name: '첫 번째 문제 보기' }));
+    await user.click(screen.getByRole('button', { name: '문제 보기' }));
     const queueEntry = document.getElementById('queue-member-2');
     expect(queueEntry).not.toBeNull();
     await waitFor(() => {
@@ -642,7 +642,7 @@ describe('App project setup flow', () => {
     await user.clear(screen.getByLabelText('회원 검색'));
     await user.type(screen.getByLabelText('회원 검색'), 'Ana Paula');
     await user.click(screen.getByRole('button', { name: /닉네임 없음.*Ana Paula/ }));
-    await user.type(screen.getByLabelText('피라미드 표시 이름'), 'Aninha');
+    await user.type(screen.getByLabelText('시트 표시 이름'), 'Aninha');
     await user.click(screen.getByRole('button', { name: '이 이름으로 추가' }));
     expect(inputByLabel('이름 (닉네임이 표시됨)').value).toBe('Aninha');
     expect(inputByLabel('ID').value).toBe('1002');
