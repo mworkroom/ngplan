@@ -138,9 +138,10 @@ describe('WP3 manual-plan workspace boundary', () => {
 
     expect(screen.getByRole('heading', { name: '2026년 7월 상반기 수당 계획' }))
       .toBeDefined();
-    expect(screen.getByText('2026년 7월 1일 ~ 15일')).toBeDefined();
+    expect(screen.getByRole('heading', { name: '수동 계획표' })).toBeDefined();
+    expect(screen.queryByText('2026년 7월 1일 ~ 15일')).toBeNull();
     expect(screen.queryByText('✓ 계산 완료')).toBeNull();
-    expect(screen.getByText('15일 · 1명 계획표')).toBeDefined();
+    expect(screen.queryByText('15일 · 1명 계획표')).toBeNull();
     expect(document.getElementById('manual-plan-workspace')?.dataset.density).toBe(
       'compact',
     );
@@ -156,7 +157,7 @@ describe('WP3 manual-plan workspace boundary', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  it('keeps the completed calculation status visible in automatic plan mode', () => {
+  it('uses the automatic page label without a repeated calculation badge', () => {
     render(
       <ManualPlanWorkspace
         bundle={createBundle()}
@@ -168,7 +169,8 @@ describe('WP3 manual-plan workspace boundary', () => {
       />,
     );
 
-    expect(screen.getByText('✓ 계산 완료')).toBeDefined();
+    expect(screen.getByRole('heading', { name: '자동 계획표' })).toBeDefined();
+    expect(screen.queryByText('✓ 계산 완료')).toBeNull();
   });
 
   it('P3-DRAFT-005/006 renders duplicate names, optional IDs, and special keys safely', () => {

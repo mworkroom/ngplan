@@ -1574,6 +1574,39 @@ body {
   letter-spacing: -0.045em;
 }
 
+.setup-command-header h1,
+.cloud-projects__header h1 {
+  font-size: 1.45rem;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+
+#project-setup.app-shell,
+#manual-plan-workspace.app-shell {
+  padding: 0 24px 48px;
+}
+
+#project-setup > .setup-command-header,
+#manual-plan-workspace > .setup-command-header {
+  margin: 0 -24px 22px;
+  padding: 14px 24px;
+  border: 0;
+}
+
+.plan-command-header__context {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.plan-command-header__eyebrow {
+  margin: 0;
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
 .storage-notice {
   border: 0;
   border-left: 3px solid var(--color-accent);
@@ -2481,10 +2514,10 @@ body {
 }
 
 .cloud-projects {
-  width: min(100%, 1120px);
+  width: 100%;
   min-height: 100vh;
   margin: 0 auto;
-  padding: 32px 24px 64px;
+  padding: 0 24px 64px;
 }
 
 .cloud-projects__header,
@@ -2499,19 +2532,14 @@ body {
 }
 
 .cloud-projects__header {
-  align-items: flex-start;
-  padding-bottom: 24px;
-  border-bottom: 2px solid var(--color-text);
+  margin: 0 -24px 28px;
+  padding: 14px 24px;
+  border-bottom: 0;
 }
 
 .cloud-projects__header h1 {
   margin: 0;
-  font-size: clamp(1.8rem, 4vw, 2.5rem);
-}
-
-.cloud-projects__header p:not(.app-header__eyebrow) {
-  margin: 7px 0 0;
-  color: var(--color-muted);
+  font-size: 1.45rem;
 }
 
 .cloud-projects__header-actions,
@@ -2683,10 +2711,9 @@ body {
 
 @media (max-width: 720px) {
   .cloud-projects {
-    padding: 20px 14px 48px;
+    padding: 0 14px 48px;
   }
 
-  .cloud-projects__header,
   .cloud-project-card,
   .cloud-message,
   .cloud-toolbar {
@@ -2704,6 +2731,24 @@ body {
   .cloud-project-card__actions > button,
   .cloud-projects__header-actions > button {
     flex: 1 1 180px;
+  }
+
+  .cloud-projects__header {
+    align-items: flex-start;
+    flex-direction: column;
+    margin: 0 -14px 20px;
+    padding-inline: 14px;
+  }
+
+  #project-setup.app-shell,
+  #manual-plan-workspace.app-shell {
+    padding-inline: 16px;
+  }
+
+  #project-setup > .setup-command-header,
+  #manual-plan-workspace > .setup-command-header {
+    margin-inline: -16px;
+    padding-inline: 16px;
   }
 
   .cloud-toolbar {

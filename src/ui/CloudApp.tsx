@@ -295,7 +295,6 @@ function ProjectCard({
 }
 
 function ProjectListScreen({
-  user,
   visible,
   hidden,
   offline,
@@ -306,7 +305,6 @@ function ProjectListScreen({
   onRefresh,
   onSignOut,
 }: {
-  readonly user: User;
   readonly visible: readonly CloudProjectSummary[];
   readonly hidden: readonly CloudProjectSummary[];
   readonly offline: boolean;
@@ -331,19 +329,15 @@ function ProjectListScreen({
 
   return (
     <main className="cloud-projects">
-      <header className="cloud-projects__header">
-        <div>
-          <p className="app-header__eyebrow">애터미 직급 계획표</p>
-          <h1>저장된 계획</h1>
-          <p>{user.email ?? '등록된 계정'}</p>
-        </div>
+      <header className="cloud-projects__header setup-command-header">
+        <h1>애터미 직급 계획표</h1>
         <div className="cloud-projects__header-actions">
-          <button type="button" className="primary-button" onClick={onNew}>
+          <button type="button" className="setup-command-header__action" onClick={onNew}>
             새 계획 만들기
           </button>
           <button
             type="button"
-            className="secondary-button"
+            className="setup-command-header__action"
             onClick={() => void onSignOut()}
           >
             로그아웃
@@ -789,7 +783,6 @@ function AuthenticatedCloudWorkspace({
   }
   return (
     <ProjectListScreen
-      user={user}
       visible={visible}
       hidden={hidden}
       offline={offline}

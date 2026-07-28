@@ -316,7 +316,7 @@ describe('WP4 manual planning worksheet', () => {
 
     await user.clear(pvp);
     await user.type(pvp, 'bad');
-    expect(screen.getByText('⚠ 입력 확인 필요')).toBeDefined();
+    expect(screen.queryByText('⚠ 입력 확인 필요')).toBeNull();
     expect(screen.getAllByText(/0 이상의 숫자만/)).toHaveLength(3);
     expect(screen.getByRole('heading', { name: '선택한 입력 확인' })).toBeDefined();
     expect(

@@ -36,25 +36,6 @@ export interface ManualPlanWorkspaceProps {
   readonly storageMode?: 'LOCAL' | 'CLOUD';
 }
 
-function formatDateRange(startDate: string, endDate: string): string {
-  const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
-  const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
-  if (
-    startYear === undefined ||
-    startMonth === undefined ||
-    startDay === undefined ||
-    endYear === undefined ||
-    endMonth === undefined ||
-    endDay === undefined
-  ) {
-    return `${startDate} ~ ${endDate}`;
-  }
-  if (startYear === endYear && startMonth === endMonth) {
-    return `${startYear}년 ${startMonth}월 ${startDay}일 ~ ${endDay}일`;
-  }
-  return `${startYear}년 ${startMonth}월 ${startDay}일 ~ ${endYear}년 ${endMonth}월 ${endDay}일`;
-}
-
 export function ManualPlanWorkspace({
   bundle,
   draft,
@@ -64,7 +45,6 @@ export function ManualPlanWorkspace({
   planMode = 'MANUAL',
   automaticPlanPanel,
   announcement = '',
-  storageMode = 'LOCAL',
 }: ManualPlanWorkspaceProps) {
   const schema = useMemo(() => deriveManualPlanSchema(bundle), [bundle]);
   const calculation: ManualPlanCalculationState = useMemo(
@@ -134,61 +114,25 @@ export function ManualPlanWorkspace({
       data-density="compact"
       tabIndex={-1}
     >
-      <header className="app-header">
-        <div className="app-header__copy">
-          <p className="app-header__eyebrow">애터미 직급 계획표</p>
+      <header className="setup-command-header plan-command-header">
+        <div className="setup-command-header__context plan-command-header__context">
+          <h2 className="plan-command-header__eyebrow">
+            {planMode === 'AUTOMATIC' ? '자동 계획표' : '수동 계획표'}
+          </h2>
           <h1 id="manual-plan-title" tabIndex={-1}>
             {bundle.project.title}
           </h1>
-          <p className="app-header__description">
-            {formatDateRange(schema.period.startDate, schema.period.endDate)}
-          </p>
         </div>
-        <div className="app-header__actions">
-          {planMode === 'AUTOMATIC' || calculation.status !== 'CURRENT' ? (
-            <span
-              className={`status-badge ${
-                calculation.status === 'CURRENT'
-                  ? 'status-badge--ready'
-                  : 'status-badge--error'
-              }`}
-              role="status"
-            >
-              {calculation.status === 'CURRENT'
-                ? '✓ 계산 완료'
-                : calculation.status === 'AUDIT_BLOCKED'
-                  ? '⚠ 정산 자격 확인 필요'
-                  : '⚠ 입력 확인 필요'}
-            </span>
-          ) : null}
+        <div className="setup-command-header__actions">
           <button
             type="button"
-            className="secondary-button"
+            className="setup-command-header__action"
             onClick={onReturnToSetup}
           >
             설정으로 돌아가기
           </button>
         </div>
       </header>
-
-      <aside className="storage-notice" aria-label="저장 안내">
-        <span aria-hidden="true">ⓘ</span>
-        <div>
-          {storageMode === 'CLOUD' ? (
-            <>
-              <strong>클라우드와 이 기기에 자동으로 저장됩니다.</strong>
-              <div>인터넷이 잠시 끊겨도 이 기기에 보관한 뒤 자동으로 다시 저장합니다.</div>
-            </>
-          ) : (
-            <>
-              <strong>이 브라우저에 자동으로 저장됩니다.</strong>
-              <div>
-                브라우저를 닫아도 입력 내용이 유지됩니다. 사이트 데이터를 삭제하면 저장 자료도 삭제됩니다.
-              </div>
-            </>
-          )}
-        </div>
-      </aside>
 
       {automaticPlanPanel}
 

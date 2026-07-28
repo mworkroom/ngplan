@@ -307,7 +307,7 @@ describe('CloudApp', () => {
       screen.getByRole('button', { name: '전체 목록으로' }),
     );
     expect(
-      await screen.findByRole('heading', { name: '저장된 계획' }),
+      await screen.findByRole('heading', { name: '애터미 직급 계획표' }),
     ).toBeDefined();
   });
 
@@ -528,7 +528,7 @@ describe('CloudApp', () => {
       screen.getByRole('button', { name: '다시 시도' }),
     );
     expect(
-      await screen.findByRole('heading', { name: '저장된 계획' }),
+      await screen.findByRole('heading', { name: '애터미 직급 계획표' }),
     ).toBeDefined();
   });
 
@@ -608,7 +608,7 @@ describe('CloudApp', () => {
     render(<CloudApp client={client} repository={repository} cache={cache} />);
 
     expect(
-      await screen.findByRole('heading', { name: '저장된 계획' }),
+      await screen.findByRole('heading', { name: '애터미 직급 계획표' }),
     ).toBeDefined();
     expect(saveProject).toHaveBeenCalledTimes(1);
     expect(await cache.get(WORKSPACE_ID, PROJECT_ID, USER.id)).toMatchObject({
@@ -796,7 +796,7 @@ describe('CloudApp', () => {
       />,
     );
     expect(
-      await screen.findByRole('heading', { name: '저장된 계획' }),
+      await screen.findByRole('heading', { name: '애터미 직급 계획표' }),
     ).toBeDefined();
 
     act(() => {
@@ -872,7 +872,7 @@ describe('CloudApp', () => {
     expect((await screen.findByRole('alert')).textContent).toContain(
       'stored document malformed',
     );
-    expect(screen.getByRole('heading', { name: '저장된 계획' })).toBeDefined();
+    expect(screen.getByRole('heading', { name: '애터미 직급 계획표' })).toBeDefined();
   });
 });
 
