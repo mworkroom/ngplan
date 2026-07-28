@@ -80,6 +80,113 @@ a {
   zoom: 0.9;
 }
 
+#project-setup.app-shell {
+  width: 100%;
+  max-width: none;
+  padding-top: 0;
+}
+
+.setup-command-header {
+  display: flex;
+  min-height: 72px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin: 0 -24px 20px;
+  padding: 12px 24px;
+  background: var(--color-accent-action);
+  color: #fff;
+}
+
+.setup-command-header__context,
+.setup-command-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.setup-command-header__context {
+  min-width: 0;
+}
+
+.setup-command-header h1 {
+  margin: 0;
+  font-size: clamp(1.45rem, 2.2vw, 2rem);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.setup-command-header button {
+  min-height: 42px;
+  border-radius: 4px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.setup-command-header__period-button {
+  padding: 8px 11px;
+  border: 1px solid rgb(255 255 255 / 58%);
+  background: transparent;
+  color: #fff;
+}
+
+.setup-command-header__action {
+  padding: 8px 14px;
+  border: 1px solid rgb(255 255 255 / 72%);
+  background: #fff;
+  color: var(--color-text);
+}
+
+.setup-command-header__action:first-child {
+  border-color: var(--color-action);
+  background: var(--color-action);
+  color: #fff;
+}
+
+.setup-command-header button:hover,
+.setup-command-header button:focus-visible {
+  filter: brightness(0.96);
+}
+
+.period-dialog-backdrop {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(17 24 39 / 48%);
+}
+
+.period-dialog {
+  width: min(720px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 20px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 6px;
+  background: var(--color-panel);
+  box-shadow: 0 20px 50px rgb(17 24 39 / 22%);
+}
+
+.period-dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.period-dialog__header h2 {
+  margin: 0;
+}
+
+.period-dialog > .panel {
+  margin: 0;
+  border: 0;
+  box-shadow: none;
+}
+
 .app-header,
 .app-shell__header {
   display: flex;
@@ -482,9 +589,11 @@ fieldset {
   gap: 10px;
 }
 
-.organization-tree__header-actions > .status-badge {
-  min-height: 34px;
-  padding-block: 5px;
+.organization-participation {
+  color: var(--color-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .organization-zoom {
@@ -497,21 +606,29 @@ fieldset {
 .organization-zoom button {
   height: 34px;
   min-height: 34px;
-  padding: 5px 9px;
-  border: 1px solid var(--color-line-strong);
-  border-radius: 7px;
-  background: var(--color-panel);
+  min-width: 34px;
+  padding: 5px 7px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
   color: var(--color-text);
   font: inherit;
-  font-size: 0.78rem;
+  font-size: 1rem;
   font-weight: 800;
   cursor: pointer;
 }
 
 .organization-zoom button:hover:not(:disabled),
 .organization-zoom button:focus-visible {
-  border-color: var(--color-accent-action);
   background: var(--color-accent-soft);
+}
+
+.organization-zoom .organization-zoom__home {
+  width: auto;
+  padding-inline: 9px;
+  border: 1px solid var(--color-line-strong);
+  background: var(--color-panel);
+  font-size: 0.78rem;
 }
 
 .organization-zoom button:disabled {
@@ -523,12 +640,12 @@ fieldset {
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
-  min-width: 68px;
+  min-width: 50px;
   min-height: 34px;
   color: var(--color-muted);
   font-size: 0.75rem;
   font-weight: 800;
-  text-align: right;
+  text-align: center;
 }
 
 .organization-tree__viewport {
@@ -682,27 +799,26 @@ fieldset {
   word-break: normal;
 }
 
-.organization-error-bar {
+.organization-issue-nav {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
   flex-wrap: wrap;
   gap: 6px;
-  margin-bottom: 12px;
-  padding: 7px 10px;
-  border: 1px solid var(--color-danger);
-  border-radius: var(--radius-control);
-  background: var(--color-danger-soft);
   color: var(--color-danger);
   font-size: 0.82rem;
-  font-weight: 700;
-  text-align: right;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
-.organization-error-bar .text-button {
-  min-height: 30px;
-  padding: 4px 7px;
+.organization-issue-nav button {
+  min-height: 34px;
+  padding: 4px 2px;
+  border: 0;
+  background: transparent;
   color: var(--color-danger);
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
   white-space: nowrap;
 }
 
@@ -1292,6 +1408,18 @@ fieldset {
   .app-header,
   .app-shell__header {
     flex-direction: column;
+  }
+
+  .setup-command-header {
+    align-items: flex-start;
+    flex-direction: column;
+    margin-inline: -16px;
+    padding-inline: 16px;
+  }
+
+  .setup-command-header__actions {
+    width: 100%;
+    flex-wrap: wrap;
   }
 
   .workspace-grid,

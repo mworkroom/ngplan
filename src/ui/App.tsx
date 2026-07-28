@@ -23,7 +23,6 @@ import {
   createProjectDraft,
   deriveTopology,
   detachSubtree,
-  draftHasMemberData,
   editMemberIdentity,
   editOpeningState,
   editProjectPeriod,
@@ -75,7 +74,6 @@ import { AutomaticPlanPanel } from './components/automatic-plan/AutomaticPlanPan
 import type { AutomaticPlanPreviewMetrics } from './components/automatic-plan/AutomaticPlanPreview';
 import type { AutomaticPlanUiStatus } from './components/automatic-plan/AutomaticPlanProgress';
 import {
-  clearWorkspaceSession,
   readWorkspaceSession,
   WORKSPACE_SESSION_VERSION,
   writeWorkspaceSession,
@@ -227,7 +225,7 @@ export interface AppProps {
   readonly onWorkspaceSessionChange?: (
     snapshot: WorkspaceSessionSnapshot,
   ) => void;
-  readonly onCreateNewPlan?: () => void;
+  readonly onBackToPlanList?: () => void;
 }
 
 interface SlotAction {
@@ -262,7 +260,7 @@ export function App({
   createAutomaticPlanWorker = defaultAutomaticPlanWorkerFactory,
   initialWorkspaceSession,
   onWorkspaceSessionChange,
-  onCreateNewPlan,
+  onBackToPlanList,
 }: AppProps = {}) {
   const generateIdRef = useRef<IdGenerator | null>(null);
   if (generateIdRef.current === null) {
@@ -297,6 +295,7 @@ export function App({
     () => new Set(),
   );
   const [excludedMemberKey, setExcludedMemberKey] = useState<string | null>(null);
+  const [periodDialogOpen, setPeriodDialogOpen] = useState(false);
   const [announcement, setAnnouncement] = useState('');
   const [screenState, setScreenState] = useState<AppScreen>(() =>
     (restoredSession?.screen === 'MANUAL_PLAN' ||
@@ -518,40 +517,6 @@ export function App({
       target?.focus();
       target?.scrollIntoView?.({ block: 'center', inline: 'nearest' });
     }, 0);
-  };
-
-  const handleNewProject = (): void => {
-    if (
-      draftHasMemberData(draft) &&
-      !window.confirm(
-        onCreateNewPlan === undefined
-          ? '지금까지 입력한 회원과 숫자를 모두 지우고 새로 시작할까요?'
-          : '현재 계획은 그대로 저장한 채 새 계획을 만들까요?',
-      )
-    ) {
-      return;
-    }
-    if (onCreateNewPlan !== undefined) {
-      onCreateNewPlan();
-      return;
-    }
-    invalidateAutomaticPlan();
-    const next = createProjectDraft({
-      year: draft.year,
-      month: draft.month,
-      half: draft.half,
-      generateId,
-    });
-    setDraft(next);
-    setSubmittedValidation(null);
-    setCommandError(null);
-    setSlotAction(null);
-    setCollapsedMemberKeys(new Set());
-    setExcludedMemberKey(null);
-    setManualPlanDraft(null);
-    setScreenState('SETUP');
-    clearWorkspaceSession();
-    setAnnouncement('새 플랜을 시작했습니다. 이전에 입력한 회원 정보는 가져오지 않았습니다.');
   };
 
   const handleAddRoot = (): void => {
@@ -869,49 +834,42 @@ export function App({
       data-density="compact"
       tabIndex={-1}
     >
-      <header className="app-header">
-        <div className="app-header__copy">
-          <p className="app-header__eyebrow">애터미 직급 계획표</p>
+      <header className="setup-command-header">
+        <div className="setup-command-header__context">
           <h1 id="project-setup-title" tabIndex={-1}>
-            애터미 직급 플랜 설정
+            {draft.year}년 {draft.month}월{' '}
+            {draft.half === 'FIRST_HALF' ? '상반기' : '하반기'}
           </h1>
-          <p className="app-header__description">기간과 회원 정보를 차례대로 입력해 주세요.</p>
-        </div>
-        <div className="app-header__actions">
-          <button type="button" className="secondary-button" onClick={handleNewProject}>
-            {cloudStorageEnabled ? '새 계획' : '초기화'}
+          <button
+            type="button"
+            className="setup-command-header__period-button"
+            onClick={() => setPeriodDialogOpen(true)}
+          >
+            기간 변경
           </button>
-          <button type="button" className="primary-button" onClick={handleOpenManualPlan}>
-            수동 플랜 열기
+        </div>
+        <div className="setup-command-header__actions">
+          <button type="button" className="setup-command-header__action" onClick={handleOpenManualPlan}>
+            수동 플랜 만들기
           </button>
           <button
             type="button"
-            className="secondary-button"
+            className="setup-command-header__action"
             onClick={handleStartAutomaticPlanFromSetup}
           >
             자동 플랜 만들기
           </button>
-        </div>
-      </header>
-
-      <aside className="storage-notice" aria-label="저장 안내">
-        <span aria-hidden="true">ⓘ</span>
-        <div>
-          {cloudStorageEnabled ? (
-            <>
-              <strong>클라우드와 이 기기에 자동으로 저장됩니다.</strong>
-              <div>인터넷이 잠시 끊겨도 이 기기에 보관한 뒤 자동으로 다시 저장합니다.</div>
-            </>
-          ) : (
-            <>
-              <strong>이 브라우저에 자동으로 저장됩니다.</strong>
-              <div>
-                브라우저를 닫아도 입력 내용이 유지됩니다. 사이트 데이터를 삭제하면 저장 자료도 삭제됩니다.
-              </div>
-            </>
+          {onBackToPlanList === undefined ? null : (
+            <button
+              type="button"
+              className="setup-command-header__action"
+              onClick={onBackToPlanList}
+            >
+              전체 목록으로
+            </button>
           )}
         </div>
-      </aside>
+      </header>
 
       <p className="visually-hidden" aria-live="polite" aria-atomic="true">
         {announcement}
@@ -924,15 +882,34 @@ export function App({
         </section>
       )}
 
-      <div className="project-period-row">
-        <ProjectPeriodForm
-          draft={draft}
-          issues={displayedValidation.issues}
-          onPeriodChange={(patch) => commitDraft(editProjectPeriod(draft, patch))}
-          onTitleChange={(title) => commitDraft(editProjectTitle(draft, title))}
-          onRestoreDerivedTitle={() => commitDraft(restoreDerivedProjectTitle(draft))}
-        />
-      </div>
+      {periodDialogOpen ? (
+        <div className="period-dialog-backdrop" role="presentation">
+          <section
+            className="period-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="period-dialog-title"
+          >
+            <div className="period-dialog__header">
+              <h2 id="period-dialog-title">기간 변경</h2>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => setPeriodDialogOpen(false)}
+              >
+                닫기
+              </button>
+            </div>
+            <ProjectPeriodForm
+              draft={draft}
+              issues={displayedValidation.issues}
+              onPeriodChange={(patch) => commitDraft(editProjectPeriod(draft, patch))}
+              onTitleChange={(title) => commitDraft(editProjectTitle(draft, title))}
+              onRestoreDerivedTitle={() => commitDraft(restoreDerivedProjectTitle(draft))}
+            />
+          </section>
+        </div>
+      ) : null}
 
       <div className="workspace-grid">
 

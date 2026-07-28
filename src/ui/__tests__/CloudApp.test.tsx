@@ -275,12 +275,10 @@ describe('CloudApp', () => {
     );
 
     expect(
-      await screen.findByRole('heading', { name: '애터미 직급 플랜 설정' }),
+      await screen.findByRole('heading', { name: /\d{4}년 \d{1,2}월 (상반기|하반기)/ }),
     ).toBeDefined();
-    expect(screen.getByText('클라우드와 이 기기에 자동으로 저장됩니다.')).toBeDefined();
-    expect(
-      screen.getByText('저장됨', { selector: '.cloud-save-status' }),
-    ).toBeDefined();
+    expect(screen.queryByText('클라우드와 이 기기에 자동으로 저장됩니다.')).toBeNull();
+    expect(screen.queryByText('저장됨', { selector: '.cloud-save-status' })).toBeNull();
     expect(window.localStorage.length).toBe(0);
     expect(saveProject).not.toHaveBeenCalled();
 
@@ -306,7 +304,7 @@ describe('CloudApp', () => {
     }
 
     await userEvent.setup().click(
-      screen.getByRole('button', { name: '전체 목록으로 돌아가기' }),
+      screen.getByRole('button', { name: '전체 목록으로' }),
     );
     expect(
       await screen.findByRole('heading', { name: '저장된 계획' }),
@@ -480,7 +478,7 @@ describe('CloudApp', () => {
       screen.getByRole('button', { name: '계획 열기' }),
     );
     expect(
-      await screen.findByRole('heading', { name: '애터미 직급 플랜 설정' }),
+      await screen.findByRole('heading', { level: 1 }),
     ).toBeDefined();
     if (onlineDescriptor === undefined) {
       Reflect.deleteProperty(navigator, 'onLine');
@@ -657,15 +655,16 @@ describe('CloudApp', () => {
       screen.getByRole('button', { name: '계획 열기' }),
     );
     expect(
-      await screen.findByRole('heading', { name: '애터미 직급 플랜 설정' }),
+      await screen.findByRole('heading', { name: /\d{4}년 \d{1,2}월 (상반기|하반기)/ }),
     ).toBeDefined();
+    await userEvent.setup().click(screen.getByRole('button', { name: '기간 변경' }));
     expect(screen.getByLabelText('프로젝트명')).toHaveProperty(
       'value',
       '아직 동기화되지 않은 계획',
     );
   });
 
-  it('creates a new UUID plan, surfaces a save failure, and retries without a conflict choice', async () => {
+  it('creates a new UUID plan and retries a hidden save failure without exposing editor status', async () => {
     const { client, signOut } = authenticatedClient();
     let saveAttempt = 0;
     const saveProject = vi.fn(async () => {
@@ -699,30 +698,20 @@ describe('CloudApp', () => {
       await screen.findByRole('button', { name: '새 계획 만들기' }),
     );
     expect(
-      await screen.findByRole('heading', { name: '애터미 직급 플랜 설정' }),
+      await screen.findByRole('heading', { name: /\d{4}년 \d{1,2}월 (상반기|하반기)/ }),
     ).toBeDefined();
-    expect(
-      await screen.findByText('저장 실패', {
-        selector: '.cloud-save-status',
-      }, {
-        timeout: 4_000,
-      }),
-    ).toBeDefined();
-    expect(screen.queryByText(/원격본|오프라인본|선택/)).toBeNull();
-
     await userEvent.setup().click(
-      screen.getByRole('button', { name: '다시 저장' }),
+      screen.getByRole('button', { name: '최상위 회원 만들기' }),
     );
-    expect(
-      await screen.findByText('저장됨', {
-        selector: '.cloud-save-status',
-      }),
-    ).toBeDefined();
-    expect(saveProject).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(saveProject).toHaveBeenCalledTimes(1), {
+      timeout: 4_000,
+    });
+    expect(screen.queryByText('저장 실패', { selector: '.cloud-save-status' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: /원격본|오프라인본/ })).toBeNull();
 
-    await userEvent.setup().click(
-      screen.getByRole('button', { name: '새 계획' }),
-    );
+    window.dispatchEvent(new Event('online'));
+    await waitFor(() => expect(saveProject).toHaveBeenCalledTimes(2));
+    await userEvent.setup().click(screen.getByRole('button', { name: '전체 목록으로' }));
     await userEvent.setup().click(
       screen.getByRole('button', { name: '로그아웃' }),
     );

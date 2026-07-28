@@ -67,13 +67,10 @@ export function OrganizationTree({
 
   const fitTreeToViewport = (): void => {
     const viewport = viewportRef.current;
-    const canvas = canvasRef.current;
-    if (viewport === null || canvas === null || canvas.scrollWidth === 0) {
+    if (viewport === null) {
       return;
     }
-    const availableWidth = Math.max(1, viewport.clientWidth - 24);
-    const fittedScale = Math.min(1, availableWidth / canvas.scrollWidth);
-    onScaleChange(Math.max(0.25, Math.floor(fittedScale * 20) / 20));
+    onScaleChange(1);
     viewport.scrollTo?.({ left: 0, behavior: 'smooth' });
   };
 
@@ -272,35 +269,44 @@ export function OrganizationTree({
           </h2>
         </div>
         <div className="organization-tree__header-actions">
-          <span className="status-badge">
-            {topology.activeMembers.length}명 참여중
-          </span>
+          <span className="organization-participation">{topology.activeMembers.length}명 참여중</span>
           <div className="organization-zoom" aria-label="조직 그림 크기">
-            <button type="button" onClick={() => changeScale(-0.1)} disabled={scale <= 0.25}>
-              − 작게
+            <button
+              type="button"
+              aria-label="작게"
+              onClick={() => changeScale(-0.1)}
+              disabled={scale <= 0.25}
+            >
+              −
             </button>
-            <button type="button" onClick={() => onScaleChange(1)}>
-              100%
+            <output aria-live="polite">{Math.round(scale * 100)}%</output>
+            <button
+              type="button"
+              aria-label="크게"
+              onClick={() => changeScale(0.1)}
+              disabled={scale >= 1.5}
+            >
+              +
             </button>
-            <button type="button" onClick={() => changeScale(0.1)} disabled={scale >= 1.5}>
-              + 크게
+            <button
+              type="button"
+              className="organization-zoom__home"
+              onClick={fitTreeToViewport}
+              disabled={root === undefined}
+            >
+              처음 위치
             </button>
-            <button type="button" onClick={fitTreeToViewport} disabled={root === undefined}>
-              화면에 맞추기
-            </button>
-            <output aria-live="polite">현재 {Math.round(scale * 100)}%</output>
           </div>
+          {errors.length === 0 ? null : (
+            <div className="organization-issue-nav" role="alert">
+              <span>입력 확인 {errors.length}건</span>
+              <button type="button" onClick={() => onNavigateIssue(errors[0]!)}>
+                다음 문제
+              </button>
+            </div>
+          )}
         </div>
       </div>
-
-      {errors.length === 0 ? null : (
-        <div className="organization-error-bar" role="alert">
-          <span>⚠ 미입력 항목이 {errors.length}개 있습니다</span>
-          <button type="button" className="text-button" onClick={() => onNavigateIssue(errors[0]!)}>
-            문제 보기
-          </button>
-        </div>
-      )}
 
       <div
         id={projectFieldId('rootMemberKey')}

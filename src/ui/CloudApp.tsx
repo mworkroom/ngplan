@@ -437,8 +437,6 @@ function CloudProjectEditor({
   repository,
   cache,
   onBack,
-  onNew,
-  onSignOut,
 }: {
   readonly user: User;
   readonly workspace: CloudWorkspace;
@@ -447,10 +445,8 @@ function CloudProjectEditor({
   readonly repository: PlanRepository;
   readonly cache: PlanCache;
   readonly onBack: () => void;
-  readonly onNew: () => void;
-  readonly onSignOut: () => Promise<void>;
 }) {
-  const [status, setStatus] = useState<CloudSaveStatus>(() => ({
+  const [, setStatus] = useState<CloudSaveStatus>(() => ({
     state:
       selection.initialRecord?.pendingRemote === true
         ? navigator.onLine
@@ -470,7 +466,6 @@ function CloudProjectEditor({
           ? '저장 중'
           : '저장됨',
   }));
-  const [navigating, setNavigating] = useState(false);
   const coordinatorRef = useRef<PlanSaveCoordinator | null>(null);
   if (coordinatorRef.current === null) {
     coordinatorRef.current = new PlanSaveCoordinator({
@@ -514,61 +509,20 @@ function CloudProjectEditor({
     };
   }, [coordinator]);
 
-  const leaveEditor = async (destination: 'LIST' | 'NEW'): Promise<void> => {
-    setNavigating(true);
+  const leaveEditor = async (): Promise<void> => {
     await coordinator.flushNow();
-    if (destination === 'LIST') onBack();
-    else onNew();
+    onBack();
   };
 
   return (
-    <>
-      <nav className="cloud-toolbar" aria-label="클라우드 저장 도구">
-        <div className="cloud-toolbar__actions">
-          <button
-            type="button"
-            className="secondary-button"
-            onClick={() => void leaveEditor('LIST')}
-            disabled={navigating}
-          >
-            전체 목록으로 돌아가기
-          </button>
-          <span
-            className={`cloud-save-status cloud-save-status--${status.state.toLowerCase()}`}
-            role="status"
-          >
-            {status.message}
-          </span>
-          {status.state === 'FAILED' || status.state === 'OFFLINE' ? (
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={() => void coordinator.retryNow()}
-            >
-              다시 저장
-            </button>
-          ) : null}
-        </div>
-        <div className="cloud-toolbar__account">
-          <span>{user.email ?? '등록된 계정'}</span>
-          <button
-            type="button"
-            className="secondary-button"
-            onClick={() => void onSignOut()}
-          >
-            로그아웃
-          </button>
-        </div>
-      </nav>
-      <App
-        key={selection.projectId}
-        generateId={generateId}
-        memberDirectory={memberDirectory}
-        initialWorkspaceSession={selection.initialSession}
-        onWorkspaceSessionChange={handleSessionChange}
-        onCreateNewPlan={() => void leaveEditor('NEW')}
-      />
-    </>
+    <App
+      key={selection.projectId}
+      generateId={generateId}
+      memberDirectory={memberDirectory}
+      initialWorkspaceSession={selection.initialSession}
+      onWorkspaceSessionChange={handleSessionChange}
+      onBackToPlanList={() => void leaveEditor()}
+    />
   );
 }
 
@@ -830,8 +784,6 @@ function AuthenticatedCloudWorkspace({
           setSelection(null);
           void refresh();
         }}
-        onNew={createNewProject}
-        onSignOut={onSignOut}
       />
     );
   }

@@ -317,11 +317,11 @@ describe('tree cards and child slots', () => {
     expect(
       container.querySelector('.tree-node[data-member-key="root-tree"]'),
     ).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: '− 작게' }));
+    fireEvent.click(screen.getByRole('button', { name: '작게' }));
     expect(sharedProps.onScaleChange).toHaveBeenCalledWith(0.9);
-    fireEvent.click(screen.getByRole('button', { name: '+ 크게' }));
+    fireEvent.click(screen.getByRole('button', { name: '크게' }));
     expect(sharedProps.onScaleChange).toHaveBeenCalledWith(1.1);
-    fireEvent.click(screen.getByRole('button', { name: '100%' }));
+    fireEvent.click(screen.getByRole('button', { name: '처음 위치' }));
     expect(sharedProps.onScaleChange).toHaveBeenCalledWith(1);
     fireEvent.click(screen.getByRole('button', { name: '접기' }));
     expect(sharedProps.onToggleCollapsed).toHaveBeenCalledWith('root-tree');

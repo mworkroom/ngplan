@@ -180,6 +180,7 @@ describe('App project setup flow', () => {
 
     const user = userEvent.setup();
     render(<App initialDate={new Date('2026-07-15T15:30:00.000Z')} />);
+    await user.click(screen.getByRole('button', { name: '기간 변경' }));
     expect(inputByLabel('연도').value).toBe('2026');
     expect(inputByLabel('월').value).toBe('7');
     expect((screen.getByLabelText('기간') as HTMLSelectElement).value).toBe(
@@ -211,6 +212,7 @@ describe('App project setup flow', () => {
   it('adds a root and both child sides by keyboard using explicit accessible labels', async () => {
     const user = renderApp();
 
+    await user.click(screen.getByRole('button', { name: '기간 변경' }));
     expect(inputByLabel('연도').value).toBe('2026');
     expect(inputByLabel('월').value).toBe('7');
     expect(inputByLabel('프로젝트명').value).toBe(
@@ -259,7 +261,7 @@ describe('App project setup flow', () => {
 
     await activateWithKeyboard(
       user,
-      screen.getByRole('button', { name: '수동 플랜 열기' }),
+      screen.getByRole('button', { name: '수동 플랜 만들기' }),
     );
 
     const planTitle = await screen.findByRole('heading', { name: '202607A' });
@@ -270,18 +272,20 @@ describe('App project setup flow', () => {
   it('blocks invalid completion and lets the compact summary focus the first error', async () => {
     const user = renderApp();
     await addRootWithKeyboard(user);
+    await user.click(screen.getByRole('button', { name: '기간 변경' }));
     await replaceInput(user, '프로젝트명', '');
+    await user.click(screen.getByRole('button', { name: '닫기' }));
 
-    await user.click(screen.getByRole('button', { name: '수동 플랜 열기' }));
+    await user.click(screen.getByRole('button', { name: '수동 플랜 만들기' }));
 
     expect(screen.getByText(/설정을 완료하지 못했습니다/)).toBeDefined();
     expect(screen.queryByText('입력 중')).toBeNull();
-    expect(screen.getByText(/미입력 항목이 4개 있습니다/)).toBeDefined();
+    expect(screen.getByText('입력 확인 4건')).toBeDefined();
     expect(screen.queryByLabelText('현재 회원 입력 확인 결과')).toBeNull();
 
     const organizationPanel = screen.getByRole('region', { name: '조직 구조' });
     await user.click(
-      within(organizationPanel).getByRole('button', { name: '문제 보기' }),
+      within(organizationPanel).getByRole('button', { name: '다음 문제' }),
     );
     await waitFor(() => {
       expect(document.activeElement?.getAttribute('aria-invalid')).toBe('true');
@@ -324,7 +328,7 @@ describe('App project setup flow', () => {
       }),
     ).toBeDefined();
 
-    await user.click(screen.getByRole('button', { name: '문제 보기' }));
+    await user.click(screen.getByRole('button', { name: '다음 문제' }));
     const queueEntry = document.getElementById('queue-member-2');
     expect(queueEntry).not.toBeNull();
     await waitFor(() => {
@@ -486,40 +490,19 @@ describe('App project setup flow', () => {
     expect(screen.getByText('1명')).toBeDefined();
   });
 
-  it('warns before replacing member data and starts with uncopied opening defaults', async () => {
-    const confirmSpy = vi
-      .spyOn(window, 'confirm')
-      .mockReturnValueOnce(false)
-      .mockReturnValueOnce(true);
+  it('changes the period in a separate dialog without replacing member data', async () => {
     const user = renderApp();
     await createNamedRoot(user, 'Legacy', '1000');
     await replaceInput(user, 'PVP 시작값', '42');
 
-    await user.click(screen.getByRole('button', { name: '초기화' }));
+    await user.click(screen.getByRole('button', { name: '기간 변경' }));
+    expect(screen.getByRole('dialog', { name: '기간 변경' })).toBeDefined();
+    await replaceInput(user, '월', '8');
+    await user.click(screen.getByRole('button', { name: '닫기' }));
 
-    expect(confirmSpy).toHaveBeenCalledWith(
-      '지금까지 입력한 회원과 숫자를 모두 지우고 새로 시작할까요?',
-    );
-    expect(
-      screen.getByRole('button', { name: 'Legacy 회원 상세 편집' }),
-    ).toBeDefined();
+    expect(screen.getByRole('heading', { name: '2026년 8월 상반기' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Legacy 회원 상세 편집' })).toBeDefined();
     expect(inputByLabel('PVP 시작값').value).toBe('42');
-
-    await user.click(screen.getByRole('button', { name: '초기화' }));
-
-    expect(confirmSpy).toHaveBeenCalledTimes(2);
-    expect(
-      screen.queryByRole('button', { name: 'Legacy 회원 상세 편집' }),
-    ).toBeNull();
-    expect(screen.getByText('맨 위에 놓을 회원 카드를 만들어 주세요.')).toBeDefined();
-    expect(
-      screen.getByText(
-        '새 플랜을 시작했습니다. 이전에 입력한 회원 정보는 가져오지 않았습니다.',
-      ),
-    ).toBeDefined();
-
-    await addRootWithKeyboard(user);
-    expectZeroOpeningDefaults();
   });
 
   it('exposes a focusable wide-tree viewport and collapse controls with a real controlled region', async () => {
@@ -534,10 +517,10 @@ describe('App project setup flow', () => {
     expect(viewport.querySelector('.organization-tree__canvas')).not.toBeNull();
     expect(viewport.querySelectorAll('.member-card')).toHaveLength(3);
     expect(screen.getByLabelText('조직 그림 크기')).toBeDefined();
-    await user.click(screen.getByRole('button', { name: '− 작게' }));
-    expect(screen.getByText('현재 90%')).toBeDefined();
-    await user.click(screen.getByRole('button', { name: '100%' }));
-    expect(screen.getByText('현재 100%')).toBeDefined();
+    await user.click(screen.getByRole('button', { name: '작게' }));
+    expect(screen.getByText('90%')).toBeDefined();
+    await user.click(screen.getByRole('button', { name: '처음 위치' }));
+    expect(screen.getByText('100%')).toBeDefined();
 
     const collapseButton = screen.getByRole('button', {
       name: '접기',
@@ -570,7 +553,7 @@ describe('App project setup flow', () => {
   it('keeps manual entries while moving between setup and the plan in the same tab', async () => {
     const user = renderApp();
     await createNamedRoot(user);
-    await user.click(screen.getByRole('button', { name: '수동 플랜 열기' }));
+    await user.click(screen.getByRole('button', { name: '수동 플랜 만들기' }));
 
     const pvpInput = screen.getByRole('textbox', {
       name: /1 \(수\).*Root.*PVP 계획 PV/,
@@ -579,8 +562,8 @@ describe('App project setup flow', () => {
     expect(pvpInput.value).toBe('123');
 
     await user.click(screen.getByRole('button', { name: '설정으로 돌아가기' }));
-    expect(screen.getByRole('heading', { name: '애터미 직급 플랜 설정' })).toBeDefined();
-    await user.click(screen.getByRole('button', { name: '수동 플랜 열기' }));
+    expect(screen.getByRole('heading', { name: '2026년 7월 상반기' })).toBeDefined();
+    await user.click(screen.getByRole('button', { name: '수동 플랜 만들기' }));
 
     expect(
       (screen.getByRole('textbox', {
@@ -653,7 +636,7 @@ describe('App project setup flow', () => {
     await createNamedRoot(user);
     await addNamedChild(user, 'Root', '오른쪽', 'Kelly', '1001');
     await addNamedChild(user, 'Kelly', '왼쪽', 'Yuri', '1002');
-    await user.click(screen.getByRole('button', { name: '수동 플랜 열기' }));
+    await user.click(screen.getByRole('button', { name: '수동 플랜 만들기' }));
     expect(
       Array.from(
         document.querySelectorAll('.manual-plan-table__member-heading strong'),
