@@ -227,3 +227,89 @@ No actionable P0, P1, or P2 visual differences remain for the plan-header status
 ## Final result
 
 final result: passed
+
+---
+
+# 2026-08-01 Opening State Form Copy and Layout QA
+
+## Evidence
+
+- Source visual truth: `C:/Users/Marion/Desktop/IMG 006.png`
+- Implementation screenshot: unavailable
+- Intended state: member input form with the goal and opening-value sections visible
+
+## Findings
+
+- [P1] Browser-rendered evidence is unavailable. The local browser policy rejected both localhost and loopback navigation, and the terminal execution limit prevented starting a new verification flow.
+  Location: member input form.
+  Impact: the changed labels and three-column opening-value layout cannot be visually confirmed in the rendered app during this turn.
+  Fix: rerun the browser capture when local navigation and test execution are available.
+
+## Required fidelity surfaces
+
+- Fonts and typography: source CSS tokens were retained; rendered comparison was not available.
+- Spacing and layout rhythm: the opening-value grid was changed to three columns; rendered comparison was not available.
+- Colors and visual tokens: no color changes were made.
+- Image quality and asset fidelity: no image assets are involved.
+- Copy and content: source inspection confirms the old repeated labels are removed and the new labels are `PVP 목표`, `좌우 목표`, `PVP`, `좌`, and `우`.
+
+## Comparison history
+
+- No browser iteration was possible because the implementation screenshot could not be captured.
+
+## Final result
+
+final result: blocked
+
+---
+
+# 2026-08-01 Member Card Information Order QA
+
+## Evidence
+
+- Source visual truth: `C:/Users/Marion/Desktop/IMG 004.png`
+- Implementation screenshot: `C:/Users/Marion/.codex/visualizations/2026/07/31/019fb94f-0cfd-7602-b40f-f76145d05295/member-card-after.png`
+- Combined comparison: `C:/Users/Marion/.codex/visualizations/2026/07/31/019fb94f-0cfd-7602-b40f-f76145d05295/member-card-comparison.png`
+- Browser viewport: 1280 x 720 CSS px, device pixel ratio 1.25
+- Source pixels: 321 x 299; implementation crop: 270 x 260
+- State: completed green member card for `2. 베로나카`
+
+## Full-view and focused comparison
+
+The source and implementation were placed side by side. The implementation preserves the existing card, completion status, color, buttons, and hierarchy while replacing the mixed metadata with the requested three information rows. A focused card crop was sufficient because the requested change is confined to one card and every affected string is legible at native capture size.
+
+## Required fidelity surfaces
+
+- Fonts and typography: existing family, weight, 12 px detail size, and 16.2 px line height are retained. All three information rows render on one line.
+- Spacing and layout rhythm: the completion badge is anchored beside the title, leaving the full 212 px detail width to each row. The row gap is consistently 2 px.
+- Colors and visual tokens: the existing green marker color `rgb(217, 234, 211)`, text colors, borders, and status treatment are unchanged.
+- Image quality and asset fidelity: this component contains no image assets.
+- Copy and content: visible order is `ID`, `목표`, `시작값`; target and opening values match the requested labels and separators.
+
+## Findings
+
+No actionable P0, P1, or P2 visual differences remain within the requested information-order scope.
+
+## Interaction and browser checks
+
+- Confirmed the member-detail button has one unique accessible target and can be clicked.
+- Confirmed the three rows do not overflow or wrap at the existing 236 px card width.
+- Confirmed no browser console warnings or errors.
+
+## Comparison history
+
+### Initial finding
+
+- P2: the completion badge reduced the information column to about 168 px, making the `시작값` row wrap to two lines.
+
+### Fix made
+
+- Anchored the completion badge to the title corner and restored the full card width for the detail rows.
+
+### Post-fix evidence
+
+- All three rows measure 212 px wide and 16.2 px high, with no wrapping in the revised browser capture.
+
+## Final result
+
+final result: passed

@@ -17,9 +17,9 @@ type User = ReturnType<typeof userEvent.setup>;
 
 const INITIAL_DATE = new Date(2026, 6, 10, 12, 0, 0);
 const OPENING_FIELD_LABELS = [
-  'PVP 시작값',
-  '좌 시작값',
-  '우 시작값',
+  'PVP',
+  '좌',
+  '우',
 ] as const;
 
 function createDeterministicIdGenerator(): NonNullable<AppProps['generateId']> {
@@ -47,7 +47,7 @@ function renderApp(props: Partial<AppProps> = {}): User {
 }
 
 function inputByLabel(label: string | RegExp): HTMLInputElement {
-  const element = screen.getByLabelText(label);
+  const element = screen.getByLabelText(label, { exact: true });
   if (!(element instanceof HTMLInputElement)) {
     throw new TypeError('Expected an input for label ' + String(label));
   }
@@ -95,12 +95,12 @@ async function fillSelectedMember(
   await replaceInput(user, 'ID', values.memberId);
   await replaceInput(user, '이름 (닉네임이 표시됨)', values.name);
   await user.selectOptions(
-    screen.getByLabelText('이번 기간 PVP 목표'),
+    screen.getByLabelText('PVP 목표'),
     values.pvpTarget ?? '700',
   );
   if (values.fortnightSideTarget !== undefined) {
     await user.selectOptions(
-      screen.getByLabelText('이번 기간 좌·우 목표'),
+    screen.getByLabelText('좌우 목표'),
       values.fortnightSideTarget,
     );
   }
@@ -525,7 +525,7 @@ describe('App project setup flow', () => {
   it('changes the period in a separate dialog without replacing member data', async () => {
     const user = renderApp();
     await createNamedRoot(user, 'Legacy', '1000');
-    await replaceInput(user, 'PVP 시작값', '42');
+    await replaceInput(user, 'PVP', '42');
 
     await user.click(screen.getByRole('button', { name: '기간 변경' }));
     expect(
@@ -535,7 +535,7 @@ describe('App project setup flow', () => {
     await user.click(screen.getByRole('button', { name: '닫기' }));
 
     expect(screen.getByRole('heading', { name: '202607A' })).toBeDefined();
-    expect(inputByLabel('PVP 시작값').value).toBe('42');
+    expect(inputByLabel('PVP').value).toBe('42');
 
     await user.click(screen.getByRole('button', { name: '기간 변경' }));
     await replaceInput(user, '월', '8');
@@ -543,7 +543,7 @@ describe('App project setup flow', () => {
 
     expect(screen.getByRole('heading', { name: '202608A' })).toBeDefined();
     expect(screen.getByRole('button', { name: 'Legacy 회원 상세 편집' })).toBeDefined();
-    expect(inputByLabel('PVP 시작값').value).toBe('42');
+    expect(inputByLabel('PVP').value).toBe('42');
   });
 
   it('exposes a focusable wide-tree viewport and collapse controls with a real controlled region', async () => {
@@ -625,7 +625,7 @@ describe('App project setup flow', () => {
     ).toBe('123');
   });
 
-  it('keeps the original plan and creates a clean new-period copy when entered cells exist', async () => {
+  it('keeps the original plan and creates a completely blank plan for a corrected period', async () => {
     const onCreatePlanCopy = vi.fn(
       async (_snapshot: WorkspaceSessionSnapshot) => undefined,
     );
@@ -643,11 +643,15 @@ describe('App project setup flow', () => {
     await user.click(screen.getByRole('button', { name: '기간 변경' }));
     await replaceInput(user, '월', '8');
     expect(
-      screen.getByText(/입력한 숫자가 있으므로 원본 기간은 바꾸지 않습니다/),
+      screen.getByText(/이미 계획표에 숫자를 입력했기 때문에 이 계획의 기간은 바꿀 수 없습니다/),
     ).toBeDefined();
+    expect(
+      screen.getByText(/원래 계획은 그대로 남고, 선택한 기간으로 빈 계획이 새로 만들어집니다/),
+    ).toBeDefined();
+    expect(screen.getByText('새 계획에서 회원을 다시 입력해 주세요.')).toBeDefined();
     await user.click(
       screen.getByRole('button', {
-        name: '원본을 두고 새 기간 사본 만들기',
+        name: '새 기간 계획 처음부터 만들기',
       }),
     );
 
@@ -662,7 +666,9 @@ describe('App project setup flow', () => {
         year: '2026',
         month: '8',
         half: 'FIRST_HALF',
-        members: [{ name: 'Root' }],
+        members: [],
+        rootMemberKey: null,
+        selectedMemberKey: null,
         activeBundle: null,
       },
       manualPlanDraft: null,
@@ -691,18 +697,58 @@ describe('App project setup flow', () => {
     await replaceInput(user, '월', '8');
 
     expect(
-      screen.getByText(/수동 계획표가 이미 만들어졌으므로 원본 기간은 바꾸지 않습니다/),
+      screen.getByText(/이미 계획표 사용을 시작했기 때문에 이 계획의 기간은 바꿀 수 없습니다/),
     ).toBeDefined();
     await user.click(
       screen.getByRole('button', {
-        name: '원본을 두고 새 기간 사본 만들기',
+        name: '새 기간 계획 처음부터 만들기',
       }),
     );
     await waitFor(() => expect(onCreatePlanCopy).toHaveBeenCalledTimes(1));
     expect(onCreatePlanCopy.mock.calls[0]?.[0]).toMatchObject({
-      draft: { month: '8' },
+      draft: { month: '8', members: [] },
       manualPlanDraft: null,
     });
+  });
+
+  it('explains the next action when a separate blank plan cannot be created', async () => {
+    const user = renderApp();
+    await createNamedRoot(user);
+    await user.click(screen.getByRole('button', { name: '수동 플랜 만들기' }));
+    await user.click(screen.getByRole('button', { name: '설정으로 돌아가기' }));
+    await user.click(screen.getByRole('button', { name: '기간 변경' }));
+    await replaceInput(user, '월', '8');
+    await user.click(
+      screen.getByRole('button', { name: '새 기간 계획 처음부터 만들기' }),
+    );
+
+    expect(
+      screen.getByText(
+        '이 계획의 기간은 바꿀 수 없습니다. 전체 목록으로 돌아가 새 계획을 만들어 주세요.',
+      ),
+    ).toBeDefined();
+  });
+
+  it('keeps the original open when blank-plan creation fails', async () => {
+    const onCreatePlanCopy = vi.fn(async () => {
+      throw new Error('새 계획을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+    });
+    const user = renderApp({ onCreatePlanCopy });
+    await createNamedRoot(user);
+    await user.click(screen.getByRole('button', { name: '수동 플랜 만들기' }));
+    await user.click(screen.getByRole('button', { name: '설정으로 돌아가기' }));
+    await user.click(screen.getByRole('button', { name: '기간 변경' }));
+    await replaceInput(user, '월', '8');
+    await user.click(
+      screen.getByRole('button', { name: '새 기간 계획 처음부터 만들기' }),
+    );
+
+    expect(
+      await screen.findByText(
+        '새 계획을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+      ),
+    ).toBeDefined();
+    expect(screen.getByRole('heading', { name: '202607A' })).toBeDefined();
   });
 
   it('does not delete a member when the safety backup fails', async () => {

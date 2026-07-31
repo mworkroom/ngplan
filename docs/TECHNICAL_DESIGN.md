@@ -762,7 +762,7 @@ Phase 6A에서는 기존 Supabase 프로젝트의 계정·동기화형 저장을
 | 하루 보관본 | `public.ngplan_daily_backups`의 `(project_id, business_date)`를 기본 키로 사용한다. 현재 작업본 저장과 같은 transaction의 trigger가 상파울루 당일 행을 upsert한다. |
 | 최근 순환 보관본 | `public.ngplan_recovery_backups`에 15분 슬롯 672개를 계획별 순환 사용한다. 각 슬롯의 첫 변경 직전 문서를 잡아 최대 7일의 짧은 복구 지점을 제공하고 행 수를 고정한다. |
 | 중요 작업 보관본 | 기간 변경, 자동 계산 결과 적용, 회원 삭제 직전 서버 최신 문서를 저장한다. 계획별 최근 50개만 유지한다. 기간 메타데이터 변경은 DB trigger가 이전 문서를 자동 보관한다. |
-| 복구 계약 | 보관본은 현재 행에 덮어쓰지 않는다. 새 `projectId`와 `organizationSnapshotId`를 가진 `복구본` 계획으로만 연다. 새 기간 사본에는 날짜별 수동 셀을 옮기지 않고 회원별 좌·우 목표를 모두 기본값 2,500으로 초기화한다. 같은 기간의 복구본은 저장 당시 선택값을 보존한다. |
+| 복구 계약 | 보관본은 현재 행에 덮어쓰지 않는다. 새 `projectId`와 `organizationSnapshotId`를 가진 `복구본` 계획으로만 연다. 계획표 사용 후 기간을 잘못 선택했다면 이전 회원·배치·시작값·날짜별 숫자를 옮기지 않고, 선택한 기간과 확인한 제목만 가진 빈 계획을 새 ID로 만든다. 같은 기간의 복구본은 저장 당시 회원 정보와 숫자를 보존한다. |
 | 접근 권한 | 기존 `workspaces`·`workspace_members`의 별도 `ngplan` 작업공간을 사용한다. 두 등록 계정은 동일 권한이며 RLS와 명시적 grant를 함께 적용한다. 익명 접근과 클라이언트 DELETE는 허용하지 않는다. |
 | 로컬 사본 | `src/cloud/indexeddb-plan-cache.ts`가 사용자·작업공간에 결합된 최신 로컬 문서, 원격 대기 상태와 기기 전용 UI 복원 정보를 저장한다. |
 | 저장 순서 | `src/cloud/plan-save-coordinator.ts`가 약 0.5초 뒤 로컬 저장, 입력 정지 약 2초 뒤 원격 저장, 단일 in-flight 요청, 최신 대기본 후속 저장과 지수형 재시도를 담당한다. |

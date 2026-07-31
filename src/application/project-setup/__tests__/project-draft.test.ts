@@ -166,8 +166,8 @@ describe('P2-OPEN / P2-MEMBER 회원 편집과 파싱', () => {
 
   it('P2-OPEN-002/005: 한 시작값과 확인 상태만 바꾸며 다른 필드는 유지한다', () => {
     const root = expectTopologySuccess(addRootMember(createEmptyDraft(), 'A')).draft;
-    const edited = editOpeningState(root, 'A', {
-      dailyCarryLeft: '39',
+    const changed = editOpeningState(root, 'A', { dailyCarryLeft: '39' });
+    const edited = editOpeningState(changed, 'A', {
       openingStateConfirmed: true,
     });
     const opening = edited.members[0]!.openingState;
@@ -273,16 +273,39 @@ describe('P2-OPEN / P2-MEMBER 회원 편집과 파싱', () => {
     expect(editMemberIdentity(edited, 'UNKNOWN', { name: '없음' })).toBe(edited);
   });
 
-  it('확인한 회원의 이름을 바꾸면 시작값 확인을 다시 받는다', () => {
+  it('확인한 회원의 입력값을 하나라도 바꾸면 시작값 확인을 다시 받는다', () => {
     const root = expectTopologySuccess(addRootMember(createEmptyDraft(), 'A')).draft;
     const confirmed = editOpeningState(root, 'A', {
       openingStateConfirmed: true,
     });
-    const renamed = editMemberIdentity(confirmed, 'A', { name: '새 이름' });
+    const identityPatches = [
+      { name: '새 이름' },
+      { memberId: '1000' },
+      { pvpTarget: '1500' },
+      { fortnightSideTarget: '1500' },
+      { sheetMarker: 'GREEN_2' as const },
+    ];
 
-    expect(renamed.members[0]?.openingState.openingStateConfirmed).toBe(false);
-    expect(editMemberIdentity(confirmed, 'A', { memberId: '1000' }).members[0]
-      ?.openingState.openingStateConfirmed).toBe(true);
+    for (const patch of identityPatches) {
+      expect(
+        editMemberIdentity(confirmed, 'A', patch).members[0]?.openingState
+          .openingStateConfirmed,
+      ).toBe(false);
+    }
+    expect(
+      editOpeningState(confirmed, 'A', { cumulativePvp: '1' }).members[0]
+        ?.openingState.openingStateConfirmed,
+    ).toBe(false);
+    expect(
+      editOpeningState(confirmed, 'A', { dailyCarryLeft: '1' }).members[0]
+        ?.openingState.openingStateConfirmed,
+    ).toBe(false);
+    expect(
+      editOpeningState(confirmed, 'A', { dailyCarryRight: '1' }).members[0]
+        ?.openingState.openingStateConfirmed,
+    ).toBe(false);
+    expect(editMemberIdentity(confirmed, 'A', { name: '' })).toBe(confirmed);
+    expect(editOpeningState(confirmed, 'A', { cumulativePvp: '0' })).toBe(confirmed);
   });
 });
 

@@ -103,6 +103,14 @@ export function editMemberIdentity(
       : manuallyChangedDirectoryIdentity
         ? null
         : member.sourceMemberId ?? null;
+    const memberInputChanged =
+      sourceMemberId !== (member.sourceMemberId ?? null) ||
+      memberId !== member.memberId ||
+      nameChanged ||
+      (patch.pvpTarget ?? member.pvpTarget) !== member.pvpTarget ||
+      (patch.fortnightSideTarget ?? member.fortnightSideTarget) !==
+        member.fortnightSideTarget ||
+      (patch.sheetMarker ?? member.sheetMarker) !== member.sheetMarker;
     const next = {
       ...member,
       sourceMemberId,
@@ -112,7 +120,7 @@ export function editMemberIdentity(
       fortnightSideTarget:
         patch.fortnightSideTarget ?? member.fortnightSideTarget,
       sheetMarker: patch.sheetMarker ?? member.sheetMarker,
-      openingState: nameChanged
+      openingState: memberInputChanged
         ? { ...member.openingState, openingStateConfirmed: false }
         : member.openingState,
     };
@@ -139,7 +147,21 @@ export function editOpeningState(
     const unchanged = (Object.keys(patch) as (keyof OpeningStateDraft)[]).every(
       (key) => openingState[key] === member.openingState[key],
     );
-    return unchanged ? member : { ...member, openingState };
+    if (unchanged) {
+      return member;
+    }
+    const openingValueChanged =
+      (Object.keys(patch) as (keyof OpeningStateDraft)[]).some(
+        (key) =>
+          key !== 'openingStateConfirmed' &&
+          openingState[key] !== member.openingState[key],
+      );
+    return {
+      ...member,
+      openingState: openingValueChanged
+        ? { ...openingState, openingStateConfirmed: false }
+        : openingState,
+    };
   });
 }
 

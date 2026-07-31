@@ -401,6 +401,10 @@ a {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.opening-state-form__fields--opening {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .field {
   display: grid;
   min-width: 0;
@@ -750,6 +754,20 @@ fieldset {
   gap: 8px;
 }
 
+.member-card__header {
+  position: relative;
+}
+
+.member-card__header .member-card__name {
+  padding-right: 48px;
+}
+
+.member-card__header .status-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
 .member-card__footer {
   padding: 0 12px 10px;
 }
@@ -784,12 +802,21 @@ fieldset {
   text-underline-offset: 2px;
 }
 
-.member-card__meta {
+.member-card__details {
   margin: 4px 0 0;
   color: var(--color-muted);
   font-size: 0.75rem;
   line-height: 1.35;
   overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+.member-card__details p {
+  margin: 0;
+}
+
+.member-card__details p + p {
+  margin-top: 2px;
 }
 
 .member-card .status-badge {
@@ -827,14 +854,6 @@ fieldset {
   text-decoration: underline;
   text-underline-offset: 3px;
   white-space: nowrap;
-}
-
-.member-card__opening {
-  margin: 8px 0 0;
-  color: var(--color-muted);
-  font-size: 0.72rem;
-  line-height: 1.3;
-  font-variant-numeric: tabular-nums;
 }
 
 .member-card__select {
@@ -1445,6 +1464,10 @@ fieldset {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .opening-state-form__fields--opening {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .project-period-row .form-grid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -1597,6 +1620,14 @@ body {
   background: #fff7df;
   color: #5d4300;
   line-height: 1.55;
+}
+
+.period-confirmation__warning p {
+  margin: 0;
+}
+
+.period-confirmation__warning p + p {
+  margin-top: 6px;
 }
 
 .period-confirmation__fields {

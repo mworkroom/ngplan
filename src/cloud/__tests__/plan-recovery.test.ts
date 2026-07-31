@@ -5,7 +5,7 @@ import {
   type IdGenerator,
 } from '../../application/project-setup';
 import {
-  createPeriodCopySession,
+  createBlankPeriodSession,
   createRecoveryCopySession,
   deriveRecommendedPlanningPeriod,
   formatPlanningPeriodRange,
@@ -101,24 +101,12 @@ describe('plan recovery rules', () => {
     ).toBe(true);
   });
 
-  it('creates a new-period shell without moving date-bound numbers', () => {
-    const original = sourceSession();
-    const source = {
-      ...original,
-      draft: {
-        ...original.draft,
-        members: original.draft.members.map((member) => ({
-          ...member,
-          fortnightSideTarget: '1500',
-        })),
-      },
-    };
-    const copy = createPeriodCopySession(
-      source,
+  it('creates a blank new-period plan without carrying members or numbers', () => {
+    const blank = createBlankPeriodSession(
       { year: 2026, month: 8, half: 'FIRST_HALF' },
       { projectId: 'period-copy', organizationSnapshotId: 'org-copy' },
     );
-    expect(copy).toMatchObject({
+    expect(blank).toMatchObject({
       draft: {
         projectId: 'period-copy',
         organizationSnapshotId: 'org-copy',
@@ -126,17 +114,16 @@ describe('plan recovery rules', () => {
         month: '8',
         half: 'FIRST_HALF',
         title: '202608A',
+        members: [],
+        rootMemberKey: null,
+        selectedMemberKey: null,
         activeBundle: null,
       },
       manualPlanDraft: null,
       screen: 'SETUP',
-      organizationScale: 0.8,
+      organizationScale: 1,
       automaticPlanCheckpoint: null,
     });
-    expect(source.manualPlanDraft?.cells[0]?.pvp).toBe('123');
-    expect(copy.draft.members.every(
-      (member) => member.fortnightSideTarget === '2500',
-    )).toBe(true);
   });
 
   it('opens a recovery point as a separately identified plan copy', () => {

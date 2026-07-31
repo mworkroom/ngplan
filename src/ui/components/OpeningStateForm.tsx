@@ -9,19 +9,18 @@ import {
 const OPENING_FIELDS: readonly {
   readonly field: OpeningStateField;
   readonly label: string;
-  readonly help?: string;
 }[] = [
   {
     field: 'cumulativePvp',
-    label: 'PVP 시작값',
+    label: 'PVP',
   },
   {
     field: 'dailyCarryLeft',
-    label: '좌 시작값',
+    label: '좌',
   },
   {
     field: 'dailyCarryRight',
-    label: '우 시작값',
+    label: '우',
   },
 ];
 
@@ -77,7 +76,7 @@ export function OpeningStateForm({
       <div className="form-grid opening-state-form__fields">
         <div className="field">
           <label htmlFor={memberFieldId(member.memberKey, 'pvpTarget')}>
-            이번 기간 PVP 목표
+            PVP 목표
           </label>
           <select
             id={memberFieldId(member.memberKey, 'pvpTarget')}
@@ -95,7 +94,7 @@ export function OpeningStateForm({
           <label
             htmlFor={memberFieldId(member.memberKey, 'fortnightSideTarget')}
           >
-            이번 기간 좌·우 목표
+            좌우 목표
           </label>
           <select
             id={memberFieldId(member.memberKey, 'fortnightSideTarget')}
@@ -105,10 +104,9 @@ export function OpeningStateForm({
               onFortnightSideTargetChange(event.currentTarget.value)
             }
           >
-            <option value="2500">좌/우 각 2,500 PV (기본)</option>
-            <option value="1500">좌/우 각 1,500 PV</option>
+            <option value="2500">2,500 PV</option>
+            <option value="1500">1,500 PV</option>
           </select>
-          <p className="field-help">선택한 값이 좌·우 각각에 적용됩니다.</p>
           {fortnightSideTargetIssue === undefined ? null : (
             <p className="field-error">{fortnightSideTargetIssue.message}</p>
           )}
@@ -120,8 +118,8 @@ export function OpeningStateForm({
         <h2 id="opening-state-title">시작값</h2>
       </div>
 
-      <div className="form-grid opening-state-form__fields">
-        {OPENING_FIELDS.map(({ field, label, help }) => {
+      <div className="form-grid opening-state-form__fields opening-state-form__fields--opening">
+        {OPENING_FIELDS.map(({ field, label }) => {
           const fieldIssue = issueFor(issues, member.memberKey, field);
           const fieldId = memberFieldId(member.memberKey, field);
           const errorId = `${fieldId}-error`;
@@ -146,7 +144,6 @@ export function OpeningStateForm({
                 aria-describedby={fieldIssue === undefined ? undefined : errorId}
                 onChange={(event) => onChange({ [field]: event.currentTarget.value })}
               />
-              {help === undefined ? null : <p className="field-help">{help}</p>}
               {fieldIssue !== undefined ? (
                 <p id={errorId} className="field-error">
                   {fieldIssue.message}

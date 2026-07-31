@@ -56,7 +56,7 @@ import type {
   MemberDirectoryEntry,
 } from '../cloud/member-directory';
 import {
-  createPeriodCopySession,
+  createBlankPeriodSession,
   formatPlanningPeriodRange,
   isValidPlanningPeriod,
   manualPlanDraftHasEnteredValues,
@@ -412,7 +412,7 @@ export function App({
     (periodEditDraft.year !== draft.year ||
       periodEditDraft.month !== draft.month ||
       periodEditDraft.half !== draft.half);
-  const periodRequiresCopy = periodChanged && manualPlanDraft !== null;
+  const periodRequiresNewPlan = periodChanged && manualPlanDraft !== null;
 
   useEffect(() => {
     slotFirstActionRef.current?.focus();
@@ -544,58 +544,42 @@ export function App({
     }
   };
 
-  const currentWorkspaceSnapshot = (): WorkspaceSessionSnapshot => ({
-    version: WORKSPACE_SESSION_VERSION,
-    draft,
-    manualPlanDraft,
-    screen: screenState,
-    organizationScale,
-    automaticPlanCheckpoint: workspaceAutomaticPlanCheckpoint,
-  });
-
   const applyPeriodEdit = async (): Promise<void> => {
     if (periodEditDraft === null || periodEditPeriod === null) return;
     if (!isValidPlanningPeriod(periodEditPeriod)) {
       setCommandError('연도와 월을 다시 확인해 주세요.');
       return;
     }
-    if (periodRequiresCopy) {
+    if (periodRequiresNewPlan) {
       if (onCreatePlanCopy === undefined) {
         setCommandError(
-          '입력한 숫자가 있는 계획은 기간을 직접 바꿀 수 없습니다. 클라우드 계획 목록에서 새 계획을 만든 뒤 옮겨 주세요.',
+          '이 계획의 기간은 바꿀 수 없습니다. 전체 목록으로 돌아가 새 계획을 만들어 주세요.',
         );
         return;
       }
       setRiskActionPending(true);
       setCommandError(null);
       try {
-        let copy = createPeriodCopySession(
-          currentWorkspaceSnapshot(),
+        const blankSession = createBlankPeriodSession(
           periodEditPeriod,
           {
             projectId: generateId('PROJECT'),
             organizationSnapshotId: generateId('ORGANIZATION_SNAPSHOT'),
           },
         );
-        if (
-          periodEditDraft.title !== draft.title ||
-          periodEditDraft.titleSource !== draft.titleSource
-        ) {
-          copy = {
-            ...copy,
-            draft: {
-              ...copy.draft,
-              title: periodEditDraft.title,
-              titleSource: periodEditDraft.titleSource,
-            },
-          };
-        }
-        await onCreatePlanCopy(copy);
+        await onCreatePlanCopy({
+          ...blankSession,
+          draft: {
+            ...blankSession.draft,
+            title: periodEditDraft.title,
+            titleSource: periodEditDraft.titleSource,
+          },
+        });
       } catch (copyError) {
         setCommandError(
           copyError instanceof Error
             ? copyError.message
-            : '새 기간 사본을 만들지 못했습니다.',
+            : '새 기간 계획을 만들지 못했습니다.',
         );
       } finally {
         setRiskActionPending(false);
@@ -1098,13 +1082,24 @@ export function App({
                 닫기
               </button>
             </div>
-            <p className="period-confirmation__warning">
-              {periodRequiresCopy
-                ? manualPlanHasEnteredValues
-                  ? '입력한 숫자가 있으므로 원본 기간은 바꾸지 않습니다. 적용하면 조직 정보만 복사한 새 기간 계획을 만듭니다.'
-                  : '수동 계획표가 이미 만들어졌으므로 원본 기간은 바꾸지 않습니다. 적용하면 조직 정보만 복사한 새 기간 계획을 만듭니다.'
-                : '아래 값을 고치는 동안에는 저장되지 않습니다. 날짜를 확인한 뒤 적용해 주세요.'}
-            </p>
+            <div className="period-confirmation__warning">
+              {periodRequiresNewPlan ? (
+                <>
+                  <p>
+                    {manualPlanHasEnteredValues
+                      ? '이미 계획표에 숫자를 입력했기 때문에 이 계획의 기간은 바꿀 수 없습니다.'
+                      : '이미 계획표 사용을 시작했기 때문에 이 계획의 기간은 바꿀 수 없습니다.'}
+                  </p>
+                  <p>기간을 잘못 선택했다면 아래 버튼을 누르세요.</p>
+                  <p>
+                    원래 계획은 그대로 남고, 선택한 기간으로 빈 계획이 새로 만들어집니다.
+                  </p>
+                  <p>새 계획에서 회원을 다시 입력해 주세요.</p>
+                </>
+              ) : (
+                <p>아래 값을 고치는 동안에는 저장되지 않습니다. 날짜를 확인한 뒤 적용해 주세요.</p>
+              )}
+            </div>
             <ProjectPeriodForm
               draft={periodEditDraft}
               issues={periodEditValidation?.issues ?? []}
@@ -1145,9 +1140,9 @@ export function App({
                 onClick={() => void applyPeriodEdit()}
               >
                 {riskActionPending
-                  ? '사본 만드는 중…'
-                  : periodRequiresCopy
-                    ? '원본을 두고 새 기간 사본 만들기'
+                  ? '새 계획 만드는 중…'
+                  : periodRequiresNewPlan
+                    ? '새 기간 계획 처음부터 만들기'
                     : '변경 적용'}
               </button>
             </div>

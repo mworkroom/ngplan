@@ -155,9 +155,10 @@ describe('project and opening forms', () => {
       />,
     );
 
-    expect((screen.getByLabelText('이번 기간 PVP 목표') as HTMLSelectElement).value).toBe('700');
+    expect((screen.getByLabelText('PVP 목표') as HTMLSelectElement).value).toBe('700');
+    expect((screen.getByLabelText('좌우 목표') as HTMLSelectElement).value).toBe('2500');
 
-    const openingPvp = screen.getByLabelText('PVP 시작값') as HTMLInputElement;
+    const openingPvp = screen.getByLabelText('PVP', { exact: true }) as HTMLInputElement;
     fireEvent.focus(openingPvp);
     expect(openingPvp.selectionStart).toBe(0);
     expect(openingPvp.selectionEnd).toBe(1);
@@ -166,13 +167,13 @@ describe('project and opening forms', () => {
     expect(openingPvp.selectionEnd).toBe(1);
     fireEvent.change(openingPvp, { target: { value: '33' } });
 
-    fireEvent.change(screen.getByLabelText('이번 기간 PVP 목표'), {
+    fireEvent.change(screen.getByLabelText('PVP 목표'), {
       target: { value: '1500' },
     });
-    fireEvent.change(screen.getByLabelText('이번 기간 좌·우 목표'), {
+    fireEvent.change(screen.getByLabelText('좌우 목표'), {
       target: { value: '1500' },
     });
-    fireEvent.change(screen.getByLabelText('좌 시작값'), { target: { value: '39' } });
+    fireEvent.change(screen.getByLabelText('좌'), { target: { value: '39' } });
     fireEvent.click(
       screen.getByRole('checkbox', { name: /시작값이 맞게 입력되었으면 확인 버튼을 클릭해주세요/ }),
     );
@@ -270,7 +271,13 @@ describe('tree cards and child slots', () => {
     );
     expect(container.querySelector('.member-card__summary')).toBeTruthy();
     expect(screen.getByText('확인')).toBeTruthy();
-    expect(screen.getByLabelText('세 시작값').textContent).toContain('PVP 0');
+    expect(screen.getByText('ID: root-id')).toBeTruthy();
+    expect(screen.getByLabelText('회원 목표').textContent).toBe(
+      '목표: PVP 700 | 좌/우 2500',
+    );
+    expect(screen.getByLabelText('세 시작값').textContent).toBe(
+      '시작값: PVP 0 | 좌 0 | 우 0',
+    );
     expect(screen.getAllByText('스스로')).toHaveLength(2);
     const collapse = screen.getByRole('button', { name: '펼치기' });
     expect(collapse.getAttribute('aria-controls')).toBe('root-children');

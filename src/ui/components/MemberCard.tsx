@@ -69,14 +69,21 @@ export function MemberCard({
             onClick={() => onSelect(member.memberKey)}
           >
             <h3 className="member-card__name">{displayName}</h3>
-            <p className="member-card__meta">
-              ID {member.memberId.trim() || '미입력'} · PVP{' '}
-              {member.pvpTarget === ''
-                ? '미선택'
-                : `${Number(member.pvpTarget).toLocaleString('ko-KR')} PV`}{' '}
-              · 좌/우 각{' '}
-              {Number(member.fortnightSideTarget).toLocaleString('ko-KR')} PV
-            </p>
+            <div className="member-card__details">
+              <p>ID: {member.memberId.trim() || '미입력'}</p>
+              <p aria-label="회원 목표">
+                목표: PVP {member.pvpTarget || '미선택'}
+                <span aria-hidden="true"> | </span>
+                좌/우 {member.fortnightSideTarget || '미선택'}
+              </p>
+              <p aria-label="세 시작값">
+                시작값: PVP {member.openingState.cumulativePvp || '0'}
+                <span aria-hidden="true"> | </span>
+                좌 {member.openingState.dailyCarryLeft || '0'}
+                <span aria-hidden="true"> | </span>
+                우 {member.openingState.dailyCarryRight || '0'}
+              </p>
+            </div>
           </button>
           <span
             className={`status-badge ${
@@ -87,13 +94,6 @@ export function MemberCard({
           </span>
         </div>
 
-        <p className="member-card__opening" aria-label="세 시작값">
-          PVP {member.openingState.cumulativePvp || '0'}
-          <span aria-hidden="true"> | </span>
-          좌 {member.openingState.dailyCarryLeft || '0'}
-          <span aria-hidden="true"> | </span>
-          우 {member.openingState.dailyCarryRight || '0'}
-        </p>
       </div>
 
       <div className="member-card__slots">

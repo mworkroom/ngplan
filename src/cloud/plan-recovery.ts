@@ -1,6 +1,9 @@
 import type { Half } from '../engine';
 import type { ManualPlanDraft } from '../application/manual-plan';
-import { deriveDefaultProjectTitle } from '../application/project-setup';
+import {
+  createProjectDraft,
+  type IdGenerator,
+} from '../application/project-setup';
 import type { CloudPlanDocumentV2 } from './cloud-plan-document';
 import {
   WORKSPACE_SESSION_VERSION,
@@ -87,42 +90,21 @@ export function manualPlanDraftHasEnteredValues(
   );
 }
 
-export function createPeriodCopySession(
-  source: WorkspaceSessionSnapshot,
+export function createBlankPeriodSession(
   period: PlanningPeriod,
   ids: PlanCopyIds,
 ): WorkspaceSessionSnapshot {
-  const year = String(period.year);
-  const month = String(period.month);
-  const derivedTitle = deriveDefaultProjectTitle(year, month, period.half);
-  const sourceTitle = source.draft.title.trim();
-  const title =
-    source.draft.titleSource === 'DERIVED' || sourceTitle === ''
-      ? derivedTitle
-      : `${sourceTitle} · ${derivedTitle}`;
+  const generateId: IdGenerator = (kind) => {
+    if (kind === 'PROJECT') return ids.projectId;
+    if (kind === 'ORGANIZATION_SNAPSHOT') return ids.organizationSnapshotId;
+    throw new Error('빈 새 계획을 만들 때 회원 ID를 요청할 수 없습니다.');
+  };
   return {
     version: WORKSPACE_SESSION_VERSION,
-    draft: {
-      ...source.draft,
-      projectId: ids.projectId,
-      organizationSnapshotId: ids.organizationSnapshotId,
-      year,
-      month,
-      half: period.half,
-      title,
-      titleSource:
-        source.draft.titleSource === 'DERIVED' || sourceTitle === ''
-          ? 'DERIVED'
-          : 'MANUAL',
-      members: source.draft.members.map((member) => ({
-        ...member,
-        fortnightSideTarget: '2500',
-      })),
-      activeBundle: null,
-    },
+    draft: createProjectDraft({ ...period, generateId }),
     manualPlanDraft: null,
     screen: 'SETUP',
-    organizationScale: source.organizationScale,
+    organizationScale: 1,
     automaticPlanCheckpoint: null,
   };
 }
