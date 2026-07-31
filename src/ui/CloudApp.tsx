@@ -49,6 +49,26 @@ interface EditorSelection {
   readonly initialRemoteDocument: CloudPlanDocumentV2 | null;
 }
 
+const CLOUD_HISTORY_VIEW_KEY = 'ngplanView';
+const CLOUD_EDITOR_HISTORY_VIEW = 'EDITOR';
+
+function isCloudEditorHistoryEntry(state: unknown): boolean {
+  return (
+    state !== null &&
+    typeof state === 'object' &&
+    Reflect.get(state, CLOUD_HISTORY_VIEW_KEY) === CLOUD_EDITOR_HISTORY_VIEW
+  );
+}
+
+function pushCloudEditorHistoryEntry(): void {
+  const currentState = window.history.state;
+  const nextState =
+    currentState !== null && typeof currentState === 'object'
+      ? { ...currentState, [CLOUD_HISTORY_VIEW_KEY]: CLOUD_EDITOR_HISTORY_VIEW }
+      : { [CLOUD_HISTORY_VIEW_KEY]: CLOUD_EDITOR_HISTORY_VIEW };
+  window.history.pushState(nextState, '', window.location.href);
+}
+
 export interface CloudAppProps {
   readonly client?: SupabaseClient | null;
   readonly memberDirectory?: MemberDirectory;
@@ -252,6 +272,7 @@ function ProjectCard({
   project,
   onOpen,
   onOpenRecovery,
+  onRetrySave,
   onToggleHidden,
   actionPending,
 }: {
@@ -260,6 +281,7 @@ function ProjectCard({
   readonly onOpenRecovery?:
     | ((project: CloudProjectSummary) => void)
     | undefined;
+  readonly onRetrySave: (project: CloudProjectSummary) => void;
   readonly onToggleHidden: (project: CloudProjectSummary) => void;
   readonly actionPending: boolean;
 }) {
@@ -277,9 +299,18 @@ function ProjectCard({
           </span>
         </p>
         {project.pendingRemote ? (
-          <span className="cloud-project-card__pending">
-            이 기기에 저장됨 · 동기화 대기
-          </span>
+          <div className="cloud-project-card__pending" role="alert">
+            <strong>아직 인터넷에 저장되지 않았습니다.</strong>
+            <span>내용은 이 기기에 남아 있습니다.</span>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => onRetrySave(project)}
+              disabled={actionPending}
+            >
+              {actionPending ? '저장하는 중…' : '다시 저장하기'}
+            </button>
+          </div>
         ) : null}
       </div>
       <div className="cloud-project-card__actions">
@@ -308,7 +339,7 @@ function ProjectCard({
           disabled={actionPending || project.localOnly}
           title={
             project.localOnly
-              ? '클라우드 저장이 끝난 뒤 숨길 수 있습니다.'
+              ? '인터넷 저장이 끝난 뒤 숨길 수 있습니다.'
               : undefined
           }
         >
@@ -327,6 +358,7 @@ function ProjectListScreen({
   onNew,
   onOpen,
   onOpenRecovery,
+  onRetrySave,
   onToggleHidden,
   onRefresh,
   onSignOut,
@@ -340,6 +372,7 @@ function ProjectListScreen({
   readonly onOpenRecovery?:
     | ((project: CloudProjectSummary) => void)
     | undefined;
+  readonly onRetrySave: (project: CloudProjectSummary) => Promise<void>;
   readonly onToggleHidden: (project: CloudProjectSummary) => Promise<void>;
   readonly onRefresh: () => Promise<void>;
   readonly onSignOut: () => Promise<void>;
@@ -351,6 +384,15 @@ function ProjectListScreen({
     setActionProjectId(project.id);
     try {
       await onToggleHidden(project);
+    } finally {
+      setActionProjectId(null);
+    }
+  };
+
+  const retrySave = async (project: CloudProjectSummary): Promise<void> => {
+    setActionProjectId(project.id);
+    try {
+      await onRetrySave(project);
     } finally {
       setActionProjectId(null);
     }
@@ -377,7 +419,7 @@ function ProjectListScreen({
       {offline ? (
         <p className="cloud-message" role="status">
           인터넷 연결을 확인하는 동안 이 기기에 저장된 계획을 보여드립니다.
-          연결되면 자동으로 동기화합니다.
+          인터넷이 연결되면 자동으로 저장합니다.
         </p>
       ) : null}
       {error === null ? null : (
@@ -413,6 +455,7 @@ function ProjectListScreen({
                 project={project}
                 onOpen={onOpen}
                 onOpenRecovery={onOpenRecovery}
+                onRetrySave={(item) => void retrySave(item)}
                 onToggleHidden={(item) => void toggleHidden(item)}
                 actionPending={actionProjectId === project.id}
               />
@@ -442,6 +485,7 @@ function ProjectListScreen({
                   project={project}
                   onOpen={onOpen}
                   onOpenRecovery={onOpenRecovery}
+                  onRetrySave={(item) => void retrySave(item)}
                   onToggleHidden={(item) => void toggleHidden(item)}
                   actionPending={actionProjectId === project.id}
                 />
@@ -751,6 +795,11 @@ function AuthenticatedCloudWorkspace({
   const [recoveryError, setRecoveryError] = useState<string | null>(null);
   const [recoveryPendingKey, setRecoveryPendingKey] = useState<string | null>(null);
 
+  const openEditorFromList = useCallback((nextSelection: EditorSelection): void => {
+    pushCloudEditorHistoryEntry();
+    setSelection(nextSelection);
+  }, []);
+
   const loadLists = useCallback(
     async (activeWorkspace: CloudWorkspace): Promise<void> => {
       const cachedRecords = await cache.list(activeWorkspace.id, user.id);
@@ -778,7 +827,7 @@ function AuthenticatedCloudWorkspace({
       setError(
         remoteAvailable
           ? null
-          : '클라우드 목록을 불러오지 못해 이 기기의 사본을 보여드립니다.',
+          : '인터넷에서 목록을 불러오지 못해 이 기기에 남은 계획을 보여드립니다.',
       );
     },
     [cache, repository, user.id],
@@ -845,7 +894,7 @@ function AuthenticatedCloudWorkspace({
     };
   }, [initialize]);
 
-  const refresh = async (): Promise<void> => {
+  const refresh = useCallback(async (): Promise<void> => {
     if (workspace === null) {
       await initialize();
       return;
@@ -857,7 +906,17 @@ function AuthenticatedCloudWorkspace({
     } catch (refreshError) {
       setError(messageFromError(refreshError));
     }
-  };
+  }, [initialize, loadLists, synchronizePendingRecords, workspace]);
+
+  useEffect(() => {
+    const handlePopState = (): void => {
+      if (selection === null) return;
+      setSelection(null);
+      void refresh();
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [refresh, selection]);
 
   const openProject = async (project: CloudProjectSummary): Promise<void> => {
     if (workspace === null) return;
@@ -866,7 +925,7 @@ function AuthenticatedCloudWorkspace({
     try {
       const cached = await cache.get(workspace.id, project.id, user.id);
       if (cached?.pendingRemote === true) {
-        setSelection({
+        openEditorFromList({
           projectId: project.id,
           initialPeriod: null,
           initialSession: cached.workspaceSession,
@@ -897,7 +956,7 @@ function AuthenticatedCloudWorkspace({
           localUpdatedAt: new Date().toISOString(),
         });
         await cache.put(nextCache);
-        setSelection({
+        openEditorFromList({
           projectId: project.id,
           initialPeriod: null,
           initialSession: session,
@@ -907,7 +966,7 @@ function AuthenticatedCloudWorkspace({
       } catch (remoteError) {
         if (cached === null) throw remoteError;
         setOffline(true);
-        setSelection({
+        openEditorFromList({
           projectId: project.id,
           initialPeriod: null,
           initialSession: cached.workspaceSession,
@@ -929,7 +988,7 @@ function AuthenticatedCloudWorkspace({
   const createNewProject = (period: PlanningPeriod): void => {
     const projectId = crypto.randomUUID();
     setNewPlanPeriod(null);
-    setSelection({
+    openEditorFromList({
       projectId,
       initialPeriod: period,
       initialSession: null,
@@ -984,7 +1043,7 @@ function AuthenticatedCloudWorkspace({
         organizationSnapshotId: crypto.randomUUID(),
       });
       setRecoveryProject(null);
-      setSelection({
+      openEditorFromList({
         projectId: session.draft.projectId,
         initialPeriod: null,
         initialSession: session,
@@ -1063,6 +1122,10 @@ function AuthenticatedCloudWorkspace({
           });
         }}
         onBack={() => {
+          if (isCloudEditorHistoryEntry(window.history.state)) {
+            window.history.back();
+            return;
+          }
           setSelection(null);
           void refresh();
         }}
@@ -1085,6 +1148,7 @@ function AuthenticatedCloudWorkspace({
             : openRecovery
         }
         onToggleHidden={toggleHidden}
+        onRetrySave={async () => refresh()}
         onRefresh={refresh}
         onSignOut={onSignOut}
       />

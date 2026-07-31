@@ -196,6 +196,7 @@ afterEach(() => {
   cleanup();
   window.localStorage.clear();
   window.sessionStorage.clear();
+  window.history.replaceState(null, '', window.location.href);
   vi.restoreAllMocks();
 });
 
@@ -309,6 +310,37 @@ describe('CloudApp', () => {
     expect(
       await screen.findByRole('heading', { name: '애터미 직급 계획표' }),
     ).toBeDefined();
+  });
+
+  it('returns from the member setup screen to the plan list with the browser back button', async () => {
+    const snapshot = createSnapshot();
+    const document = cloudDocumentFromWorkspaceSession(snapshot);
+    const remote = projectRecord(document);
+    const { client } = authenticatedClient();
+    const { repository } = mutableRepository(remote);
+
+    render(
+      <CloudApp
+        client={client}
+        repository={repository}
+        cache={new MemoryCache()}
+      />,
+    );
+
+    await userEvent.setup().click(
+      await screen.findByRole('button', { name: '계획 열기' }),
+    );
+    expect(
+      await screen.findByRole('heading', { name: '브라질 7월 계획' }),
+    ).toBeDefined();
+    expect(window.history.state).toMatchObject({ ngplanView: 'EDITOR' });
+
+    act(() => window.history.back());
+
+    expect(
+      await screen.findByRole('heading', { name: '애터미 직급 계획표' }),
+    ).toBeDefined();
+    expect(window.location.href).not.toContain('www.nangok.app');
   });
 
   it('shows Korean time before Brazil time for each saved plan', async () => {
@@ -632,6 +664,9 @@ describe('CloudApp', () => {
       }),
     );
     const remote = projectRecord(document);
+    const saveProject = vi.fn(async () => {
+      throw new Error('network still unavailable');
+    });
     const repository: PlanRepository = {
       findWorkspace: async () => ({ id: WORKSPACE_ID, name: 'ngplan' }),
       listProjects: async (_workspaceId, visibility) =>
@@ -639,18 +674,24 @@ describe('CloudApp', () => {
       loadProject: async () => {
         throw new Error('pending local record must win');
       },
-      saveProject: async () => {
-        throw new Error('network still unavailable');
-      },
+      saveProject,
       setProjectHidden: async () => undefined,
     };
     const { client } = authenticatedClient();
 
     render(<CloudApp client={client} repository={repository} cache={cache} />);
 
-    expect(
-      await screen.findByText('이 기기에 저장됨 · 동기화 대기'),
-    ).toBeDefined();
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      '아직 인터넷에 저장되지 않았습니다.',
+    );
+    expect(screen.getByRole('alert').textContent).toContain(
+      '내용은 이 기기에 남아 있습니다.',
+    );
+    expect(screen.queryByText('이 기기에 저장됨 · 동기화 대기')).toBeNull();
+    await userEvent.setup().click(
+      screen.getByRole('button', { name: '다시 저장하기' }),
+    );
+    await waitFor(() => expect(saveProject).toHaveBeenCalledTimes(2));
     await userEvent.setup().click(
       screen.getByRole('button', { name: '계획 열기' }),
     );
@@ -718,6 +759,9 @@ describe('CloudApp', () => {
     window.dispatchEvent(new Event('online'));
     await waitFor(() => expect(saveProject).toHaveBeenCalledTimes(2));
     await userEvent.setup().click(screen.getByRole('button', { name: '전체 목록으로' }));
+    expect(
+      await screen.findByRole('heading', { name: '애터미 직급 계획표' }),
+    ).toBeDefined();
     await userEvent.setup().click(
       screen.getByRole('button', { name: '로그아웃' }),
     );

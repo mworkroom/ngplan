@@ -2697,13 +2697,23 @@ body {
 }
 
 .cloud-project-card__pending {
-  display: inline-block;
+  display: grid;
+  justify-items: start;
+  gap: 3px;
   margin-top: 9px;
-  padding: 3px 7px;
+  padding: 10px 12px;
   background: #fff6d8;
   color: #735800;
-  font-size: 0.78rem;
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+.cloud-project-card__pending strong {
   font-weight: 700;
+}
+
+.cloud-project-card__pending .secondary-button {
+  margin-top: 5px;
 }
 
 .cloud-empty {
