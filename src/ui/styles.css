@@ -1935,49 +1935,42 @@ body {
 }
 
 /* Phase 3 manual planning worksheet */
-.manual-plan-difference-control {
+.manual-plan-cell-actions {
+  position: fixed;
+  z-index: 30;
   display: grid;
-  grid-template-columns: minmax(210px, 0.8fr) minmax(260px, 1fr) max-content;
-  align-items: center;
-  gap: 10px 18px;
-  margin-bottom: 14px;
-  padding: 12px 14px;
-  border: 1px solid var(--color-line);
-  border-left: 5px solid #9daab8;
-  background: var(--color-panel);
+  width: min(250px, calc(100vw - 24px));
+  gap: 8px;
+  padding: 10px;
+  border: 2px solid #252525;
+  border-radius: var(--radius-control);
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(18, 24, 31, 0.22);
 }
 
-.manual-plan-difference-control--marked {
-  border-color: color-mix(in srgb, var(--color-danger) 45%, var(--color-line));
-  border-left-color: var(--color-danger);
+.manual-plan-cell-actions--marked {
+  border-color: var(--color-danger);
   background: color-mix(in srgb, var(--color-danger-soft) 52%, #fff);
 }
 
-.manual-plan-difference-control__context {
-  display: grid;
-  gap: 2px;
-}
-
-.manual-plan-difference-control__context > span {
-  color: var(--color-muted);
-  font-size: 0.78rem;
-  font-weight: 700;
-}
-
-.manual-plan-difference-control__context > strong {
-  font-size: 0.98rem;
+.manual-plan-cell-actions__context {
+  overflow: hidden;
+  font-size: 0.9rem;
   line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.manual-plan-difference-control > p {
+.manual-plan-cell-actions__message {
   margin: 0;
-  color: var(--color-text);
-  line-height: 1.45;
+  color: var(--color-muted);
+  font-size: 0.85rem;
+  line-height: 1.4;
 }
 
-.manual-plan-difference-control__button {
-  min-height: var(--control-height);
-  padding: 9px 14px;
+.manual-plan-cell-actions__button {
+  min-height: 42px;
+  padding: 8px 12px;
   border: 2px solid var(--color-danger);
   border-radius: var(--radius-control);
   background: #fff;
@@ -1986,14 +1979,14 @@ body {
   cursor: pointer;
 }
 
-.manual-plan-difference-control__button:hover,
-.manual-plan-difference-control__button:focus-visible,
-.manual-plan-difference-control__button[aria-pressed="true"] {
+.manual-plan-cell-actions__button:hover,
+.manual-plan-cell-actions__button:focus-visible,
+.manual-plan-cell-actions__button[aria-pressed="true"] {
   background: var(--color-danger);
   color: #fff;
 }
 
-.manual-plan-difference-control__button:disabled {
+.manual-plan-cell-actions__button:disabled {
   border-color: var(--color-line);
   background: #f2f4f6;
   color: var(--color-muted);
@@ -2333,7 +2326,7 @@ body {
   min-width: 45px;
   padding: 2px;
   margin-right: 3px;
-  border: 1px solid #d2d4d5;
+  border: 0px solid #d2d4d5;
   border-radius: 6px;
   background: #fff;
   color: var(--color-text);
@@ -2631,14 +2624,6 @@ body {
 }
 
 @media (max-width: 820px) {
-  .manual-plan-difference-control {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .manual-plan-difference-control__button {
-    width: 100%;
-  }
-
   .manual-plan-sheet {
     padding: 12px;
   }
@@ -2671,6 +2656,10 @@ body {
 }
 
 @media (max-width: 520px) {
+  .manual-plan-cell-actions__button {
+    min-height: 46px;
+  }
+
   .manual-plan-validation__heading,
   .manual-plan-validation__list > li {
     align-items: stretch;

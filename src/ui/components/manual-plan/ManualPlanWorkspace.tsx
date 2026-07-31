@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import {
   calculateManualPlan,
   deriveAllManualPlanMemberSummaryRows,
@@ -21,6 +21,7 @@ import {
   ManualPlanTable,
   type ManualPlanSelection,
 } from './ManualPlanTable';
+import { ManualPlanSelectionActions } from './ManualPlanSelectionActions';
 import {
   ManualPlanSelectedContextIssues,
   ManualPlanValidationSummary,
@@ -59,6 +60,7 @@ export function ManualPlanWorkspace({
     date: schema.dates[0]!.date,
     memberKey: schema.members[0]!.memberKey,
   }));
+  const [cellActionsOpen, setCellActionsOpen] = useState(false);
   const memberJumpOptions = useMemo(
     () => deriveManualPlanMemberJumpOptions(schema),
     [schema],
@@ -70,7 +72,9 @@ export function ManualPlanWorkspace({
     : `${Number(selectedDate.date.slice(5, 7))}월 ${Number(
         selectedDate.date.slice(8, 10),
       )}일 (${selectedDate.weekdayLabel})`;
-  const selectedMemberLabel = selectedMember?.displayLabel ?? selection.memberKey;
+  const selectedMemberLabel = selectedMember?.name
+    ?? selectedMember?.displayLabel
+    ?? selection.memberKey;
   const actualDifferenceMarked = hasManualPlanActualDifference(
     draft,
     selection.date,
@@ -107,6 +111,19 @@ export function ManualPlanWorkspace({
       onDraftChange(next);
     }
   };
+
+  const handleTableSelect = (nextSelection: ManualPlanSelection): void => {
+    setSelection(nextSelection);
+    setCellActionsOpen(true);
+  };
+
+  const handleContextSelect = (nextSelection: ManualPlanSelection): void => {
+    setSelection(nextSelection);
+    setCellActionsOpen(false);
+  };
+  const handleDismissCellActions = useCallback((): void => {
+    setCellActionsOpen(false);
+  }, []);
 
   const visibleIssues =
     calculation.status === 'BLOCKED'
@@ -183,7 +200,8 @@ export function ManualPlanWorkspace({
         issues={visibleIssues}
         schema={schema}
         blocked={calculation.status === 'BLOCKED'}
-        onSelectContext={(date, memberKey) => setSelection({ date, memberKey })}
+        onSelectContext={(date, memberKey) =>
+          handleContextSelect({ date, memberKey })}
       />
 
       <p className="visually-hidden" aria-live="polite" aria-atomic="true">
@@ -194,42 +212,25 @@ export function ManualPlanWorkspace({
           : '현재 계획 계산 완료'}
       </p>
 
-      <section
-        className={`manual-plan-difference-control${
-          actualDifferenceMarked ? ' manual-plan-difference-control--marked' : ''
-        }`}
-        aria-label="선택한 날짜 표시"
-      >
-        <div className="manual-plan-difference-control__context">
-          <span>선택한 칸</span>
-          <strong>{selectedDateLabel} · {selectedMemberLabel}</strong>
-        </div>
-        <p aria-live="polite">
-          {actualDifferenceDisabled
-            ? '입력하지 않는 날은 표시할 수 없습니다.'
-            : actualDifferenceMarked
-              ? '계획과 실제 숫자가 다른 날로 표시했습니다.'
-              : '계획과 실제 숫자가 다르면 표시해 두세요.'}
-        </p>
-        <button
-          type="button"
-          className="manual-plan-difference-control__button"
-          aria-pressed={actualDifferenceMarked}
-          disabled={actualDifferenceDisabled}
-          onClick={handleToggleActualDifference}
-        >
-          {actualDifferenceMarked ? '표시 지우기' : '계획과 달랐음 표시'}
-        </button>
-      </section>
-
       <ManualPlanTable
         schema={schema}
         draft={draft}
         calculation={calculation}
         selection={selection}
         planMode={planMode}
-        onSelect={setSelection}
+        onSelect={handleTableSelect}
         onEdit={handleEdit}
+      />
+
+      <ManualPlanSelectionActions
+        selection={selection}
+        open={cellActionsOpen}
+        dateLabel={selectedDateLabel}
+        memberLabel={selectedMemberLabel}
+        marked={actualDifferenceMarked}
+        disabled={actualDifferenceDisabled}
+        onToggle={handleToggleActualDifference}
+        onDismiss={handleDismissCellActions}
       />
 
       <details className="manual-result-disclosure">
@@ -243,7 +244,7 @@ export function ManualPlanWorkspace({
             <select
               value={selection.date}
               onChange={(event) =>
-                setSelection({
+                handleContextSelect({
                   date: event.currentTarget.value,
                   memberKey: selection.memberKey,
                 })}
@@ -260,7 +261,7 @@ export function ManualPlanWorkspace({
             <select
               value={selection.memberKey}
               onChange={(event) =>
-                setSelection({
+                handleContextSelect({
                   date: selection.date,
                   memberKey: event.currentTarget.value,
                 })}
