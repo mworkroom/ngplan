@@ -469,21 +469,21 @@ describe('SupabasePlanRepository', () => {
         { data: null, error: { message: 'recent denied' } },
         { data: [], error: null },
       ]).repository.listRecoveryPoints(WORKSPACE_ID, PROJECT_ID),
-    ).rejects.toThrow('최근 보관본을 불러오지 못했습니다: recent denied');
+    ).rejects.toThrow('이전 내용을 불러오지 못했습니다: recent denied');
 
     await expect(
       repositoryFor([
         { data: [], error: null },
         { data: null, error: { message: 'daily denied' } },
       ]).repository.listRecoveryPoints(WORKSPACE_ID, PROJECT_ID),
-    ).rejects.toThrow('일일 보관본을 불러오지 못했습니다: daily denied');
+    ).rejects.toThrow('이전 내용을 불러오지 못했습니다: daily denied');
 
     await expect(
       repositoryFor([
         { data: {}, error: null },
         { data: [], error: null },
       ]).repository.listRecoveryPoints(WORKSPACE_ID, PROJECT_ID),
-    ).rejects.toThrow('보관본 목록 응답 형식이 올바르지 않습니다.');
+    ).rejects.toThrow('이전 내용 목록을 읽을 수 없습니다.');
 
     await expect(
       repositoryFor([
@@ -501,7 +501,7 @@ describe('SupabasePlanRepository', () => {
         },
         { data: [], error: null },
       ]).repository.listRecoveryPoints(WORKSPACE_ID, PROJECT_ID),
-    ).rejects.toThrow('읽을 수 없는 최근 보관본 항목이 있습니다.');
+    ).rejects.toThrow('일부 이전 내용을 읽을 수 없습니다.');
 
     await expect(
       repositoryFor([
@@ -517,7 +517,7 @@ describe('SupabasePlanRepository', () => {
           error: null,
         },
       ]).repository.listRecoveryPoints(WORKSPACE_ID, PROJECT_ID),
-    ).rejects.toThrow('읽을 수 없는 일일 보관본 항목이 있습니다.');
+    ).rejects.toThrow('일부 이전 내용을 읽을 수 없습니다.');
 
     const point = {
       key: 'recovery:missing',
@@ -531,19 +531,19 @@ describe('SupabasePlanRepository', () => {
       repositoryFor([
         { data: null, error: { message: 'load denied' } },
       ]).repository.loadRecoveryPoint(WORKSPACE_ID, PROJECT_ID, point),
-    ).rejects.toThrow('보관본을 불러오지 못했습니다: load denied');
+    ).rejects.toThrow('선택한 이전 내용을 불러오지 못했습니다: load denied');
     await expect(
       repositoryFor([{ data: null, error: null }]).repository.loadRecoveryPoint(
         WORKSPACE_ID,
         PROJECT_ID,
         point,
       ),
-    ).rejects.toThrow('선택한 보관본을 찾지 못했습니다.');
+    ).rejects.toThrow('선택한 이전 내용을 찾지 못했습니다.');
     await expect(
       repositoryFor([
         { data: { document: { version: 99 } }, error: null },
       ]).repository.loadRecoveryPoint(WORKSPACE_ID, PROJECT_ID, point),
-    ).rejects.toThrow('선택한 보관본 문서가 현재 계획과 맞지 않습니다.');
+    ).rejects.toThrow('선택한 이전 내용이 현재 계획과 맞지 않습니다.');
 
     await expect(
       repositoryFor([

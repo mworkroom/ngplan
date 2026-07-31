@@ -1,4 +1,5 @@
 import type {
+  FortnightSideTarget,
   Half,
   OrganizationSnapshotInput,
   PeriodInput,
@@ -36,6 +37,7 @@ export interface MemberDraft {
   readonly memberId: string;
   readonly name: string;
   readonly pvpTarget: string;
+  readonly fortnightSideTarget: string;
   readonly sheetMarker: SheetMarker;
   readonly placement: PlacementDraft;
   readonly openingState: OpeningStateDraft;
@@ -221,5 +223,12 @@ export type DraftPvpTargetParseOutcome =
   | {
       readonly ok: false;
       readonly code: 'PVP_TARGET_INVALID';
+    };
+
+export type DraftFortnightSideTargetParseOutcome =
+  | { readonly ok: true; readonly value: FortnightSideTarget }
+  | {
+      readonly ok: false;
+      readonly code: 'FORTNIGHT_SIDE_TARGET_INVALID';
     };
 

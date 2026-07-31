@@ -1,6 +1,7 @@
 import type {
   CommissionEquivalentUnits,
   CommissionTier,
+  FortnightSideTarget,
   PvpTarget,
   Pv,
   RuleSet,
@@ -8,11 +9,11 @@ import type {
 
 const pvLiteral = (value: number): Pv => value as Pv;
 
-export const ENGINE_VERSION = '7.0.0';
+export const ENGINE_VERSION = '8.0.0';
 export const CALENDAR_VERSION = '1.0.0';
 
-export const RULE_SET_7_0_0: RuleSet = Object.freeze({
-  rulesetVersion: '7.0.0',
+export const RULE_SET_8_0_0: RuleSet = Object.freeze({
+  rulesetVersion: '8.0.0',
   commissionTiers: Object.freeze([
     300,
     700,
@@ -23,13 +24,17 @@ export const RULE_SET_7_0_0: RuleSet = Object.freeze({
     60000,
   ] satisfies CommissionTier[]),
   allowedPvpTargets: Object.freeze([2400, 1500, 700] satisfies PvpTarget[]),
+  allowedFortnightSideTargets: Object.freeze(
+    [2500, 1500] satisfies FortnightSideTarget[],
+  ),
   cumulativePvpCap: pvLiteral(2400),
-  fortnightSideTarget: pvLiteral(2500),
+  defaultFortnightSideTarget: 2500,
   businessCalendarPolicy: 'SUNDAY_SKIP_NO_INPUT',
   pvpTiePolicy: 'LEFT',
   fortnightPvpSourcePolicy: 'NEW_ONLY_EXCLUDING_OPENING_AND_DAILY_CARRY',
   target700CommissionPreference: Object.freeze({
     eligiblePvpTarget: 700,
+    eligibleFortnightSideTarget: 2500,
     recommendedEquivalentUnits: 8,
   }),
   qualificationPolicy: Object.freeze({
@@ -39,7 +44,7 @@ export const RULE_SET_7_0_0: RuleSet = Object.freeze({
   }),
 });
 
-export const DEFAULT_RULE_SET = RULE_SET_7_0_0;
+export const DEFAULT_RULE_SET = RULE_SET_8_0_0;
 
 /** 엄마식 수당 횟수: 300단계 수당을 1회로 본 금액 환산 단위. */
 export function commissionEquivalentUnitsForTier(

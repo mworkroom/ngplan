@@ -4,6 +4,7 @@ import type {
   DailySettlement,
   DerivedPeriod,
   FortnightAssessment,
+  FortnightSideTarget,
   OpeningStateInput,
   PvBalance,
   RawPerformance,
@@ -37,6 +38,7 @@ export interface ManualPlanMemberDescriptor {
   readonly displayLabel: string;
   readonly duplicateLabel: string | null;
   readonly pvpTarget: number;
+  readonly fortnightSideTarget: FortnightSideTarget;
   readonly sheetMarker: SheetMarker;
   readonly openingState: OpeningStateInput;
   readonly leftMode: ManualPlanDirectionMode;
@@ -192,6 +194,7 @@ export interface ManualPlanMemberSummaryView {
   readonly memberKey: string;
   readonly memberLabel: string;
   readonly pvpTarget: number;
+  readonly fortnightSideTarget: FortnightSideTarget;
   readonly sheetMarker: SheetMarker;
   readonly openingQualificationPvp: number;
   readonly closingQualificationPvp: number;

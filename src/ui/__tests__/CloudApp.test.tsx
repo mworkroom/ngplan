@@ -8,7 +8,7 @@ import {
 } from '../../application/project-setup';
 import {
   cloudDocumentFromWorkspaceSession,
-  type CloudPlanDocumentV1,
+  type CloudPlanDocumentV2,
 } from '../../cloud/cloud-plan-document';
 import { createCachedPlanRecord } from '../../cloud/indexeddb-plan-cache';
 import type {
@@ -58,7 +58,7 @@ function createSnapshot(title = '브라질 7월 계획'): WorkspaceSessionSnapsh
 }
 
 function projectRecord(
-  document: CloudPlanDocumentV1,
+  document: CloudPlanDocumentV2,
   hiddenAt: string | null = null,
 ): CloudProjectRecord {
   return {
@@ -275,7 +275,7 @@ describe('CloudApp', () => {
     );
 
     expect(
-      await screen.findByRole('heading', { name: /\d{4}년 \d{1,2}월 (상반기|하반기)/ }),
+      await screen.findByRole('heading', { name: '브라질 7월 계획' }),
     ).toBeDefined();
     expect(screen.queryByText('클라우드와 이 기기에 자동으로 저장됩니다.')).toBeNull();
     expect(screen.queryByText('저장됨', { selector: '.cloud-save-status' })).toBeNull();
@@ -655,7 +655,7 @@ describe('CloudApp', () => {
       screen.getByRole('button', { name: '계획 열기' }),
     );
     expect(
-      await screen.findByRole('heading', { name: /\d{4}년 \d{1,2}월 (상반기|하반기)/ }),
+      await screen.findByRole('heading', { name: '아직 동기화되지 않은 계획' }),
     ).toBeDefined();
     await userEvent.setup().click(screen.getByRole('button', { name: '기간 변경' }));
     expect(screen.getByLabelText('프로젝트명')).toHaveProperty(
@@ -704,7 +704,7 @@ describe('CloudApp', () => {
       screen.getByRole('button', { name: '이 기간으로 시작' }),
     );
     expect(
-      await screen.findByRole('heading', { name: /\d{4}년 \d{1,2}월 (상반기|하반기)/ }),
+      await screen.findByRole('heading', { name: /\d{6}[AB]/ }),
     ).toBeDefined();
     await userEvent.setup().click(
       screen.getByRole('button', { name: '최상위 회원 만들기' }),
@@ -754,18 +754,20 @@ describe('CloudApp', () => {
     );
 
     await userEvent.setup().click(
-      await screen.findByRole('button', { name: '보관본 보기' }),
+      await screen.findByRole('button', { name: '이전 내용 보기' }),
     );
-    expect(
-      await screen.findByRole('dialog', { name: '브라질 7월 계획 보관본' }),
-    ).toBeDefined();
-    expect(screen.getByText('기간 변경 직전')).toBeDefined();
+    const recoveryDialog = await screen.findByRole('dialog', {
+      name: '이전 내용으로 새 계획 만들기',
+    });
+    expect(recoveryDialog.textContent).toContain('브라질 7월 계획');
+    expect(screen.getByText('기간을 바꾸기 전')).toBeDefined();
+    expect(screen.queryByText('이전 자동 저장')).toBeNull();
     await userEvent.setup().click(
-      screen.getByRole('button', { name: '사본으로 열기' }),
+      screen.getByRole('button', { name: '이때 내용으로 새 계획 만들기' }),
     );
 
     expect(
-      await screen.findByRole('heading', { name: '2026년 7월 하반기' }),
+      await screen.findByRole('heading', { name: '브라질 7월 계획 · 이전 내용' }),
     ).toBeDefined();
     expect(loadRecoveryPoint).toHaveBeenCalledWith(
       WORKSPACE_ID,
@@ -777,7 +779,7 @@ describe('CloudApp', () => {
     );
     expect(screen.getByLabelText('프로젝트명')).toHaveProperty(
       'value',
-      '브라질 7월 계획 · 복구본',
+      '브라질 7월 계획 · 이전 내용',
     );
   });
 
@@ -786,7 +788,8 @@ describe('CloudApp', () => {
     const base = mutableRepository(projectRecord(document));
     const listRecoveryPoints = vi
       .fn<NonNullable<PlanRepository['listRecoveryPoints']>>()
-      .mockRejectedValueOnce(new Error('보관 목록 연결 실패'))
+      .mockRejectedValueOnce(new Error('이전 내용 목록 연결 실패'))
+      .mockResolvedValueOnce([])
       .mockResolvedValueOnce([
         {
           key: 'recovery:auto',
@@ -822,7 +825,7 @@ describe('CloudApp', () => {
         },
       ]);
     const loadRecoveryPoint = vi.fn(async () => {
-      throw new Error('선택한 보관본 연결 실패');
+      throw new Error('선택한 이전 내용 연결 실패');
     });
     const { client } = authenticatedClient();
     render(
@@ -838,20 +841,30 @@ describe('CloudApp', () => {
     );
 
     await userEvent.setup().click(
-      await screen.findByRole('button', { name: '보관본 보기' }),
+      await screen.findByRole('button', { name: '이전 내용 보기' }),
     );
-    expect(await screen.findByText('보관 목록 연결 실패')).toBeDefined();
+    expect(await screen.findByText('이전 내용 목록 연결 실패')).toBeDefined();
     await userEvent.setup().click(
       screen.getByRole('button', { name: '다시 불러오기' }),
     );
-    expect(await screen.findByText('자동 계산 적용 직전')).toBeDefined();
-    expect(screen.getByText('회원 삭제 직전')).toBeDefined();
-    expect(screen.getByText('15분 자동 보관')).toBeDefined();
-    expect(screen.getAllByText('일일 보관')).toHaveLength(2);
+    expect(
+      await screen.findByText('아직 불러올 수 있는 이전 내용이 없습니다.'),
+    ).toBeDefined();
+    await userEvent.setup().click(screen.getByRole('button', { name: '닫기' }));
     await userEvent.setup().click(
-      screen.getAllByRole('button', { name: '사본으로 열기' })[0]!,
+      await screen.findByRole('button', { name: '이전 내용 보기' }),
     );
-    expect(await screen.findByText('선택한 보관본 연결 실패')).toBeDefined();
+    expect(await screen.findByText('자동 계산을 적용하기 전')).toBeDefined();
+    expect(screen.getByText('회원을 삭제하기 전')).toBeDefined();
+    expect(screen.getByText('이전 자동 저장')).toBeDefined();
+    expect(screen.getAllByText('자동 저장')).toHaveLength(2);
+    expect(screen.queryByText(/브라질 2026/)).toBeNull();
+    await userEvent.setup().click(
+      screen.getAllByRole('button', {
+        name: '이때 내용으로 새 계획 만들기',
+      })[0]!,
+    );
+    expect(await screen.findByText('선택한 이전 내용 연결 실패')).toBeDefined();
     expect(screen.getByRole('dialog')).toBeDefined();
     await userEvent.setup().click(screen.getByRole('button', { name: '닫기' }));
     expect(screen.queryByRole('dialog')).toBeNull();

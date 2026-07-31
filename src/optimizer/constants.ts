@@ -5,8 +5,8 @@ export const AUTOMATIC_PLAN_CALENDAR_VERSION = '1.0.0' as const;
 export const AUTOMATIC_PLAN_FINGERPRINT_VERSION = '4.0.0' as const;
 export const AUTOMATIC_PLAN_MODEL_VERSION = '4.0.0' as const;
 export const AUTOMATIC_PLAN_MODEL_CERTIFICATE_VERSION = '4.0.0' as const;
-export const AUTOMATIC_PLAN_RULESET_VERSION = '7.0.0' as const;
-export const AUTOMATIC_PLAN_ENGINE_VERSION = '7.0.0' as const;
+export const AUTOMATIC_PLAN_RULESET_VERSION = '8.0.0' as const;
+export const AUTOMATIC_PLAN_ENGINE_VERSION = '8.0.0' as const;
 
 export const AUTOMATIC_PLAN_PRODUCT_TIME_LIMIT_MS = 1_800_000 as const;
 export const AUTOMATIC_PLAN_MAX_ACTIVE_MEMBERS = 57 as const;

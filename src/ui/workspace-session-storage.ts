@@ -7,8 +7,9 @@ import type {
 
 export const LEGACY_WORKSPACE_SESSION_STORAGE_KEY = 'ngplan.workspace-session.v1';
 export const LEGACY_WORKSPACE_SESSION_STORAGE_V2_KEY = 'ngplan.workspace-session.v2';
-export const WORKSPACE_SESSION_STORAGE_KEY = 'ngplan.workspace-session.v3';
-export const WORKSPACE_SESSION_VERSION = 3 as const;
+export const LEGACY_WORKSPACE_SESSION_STORAGE_V3_KEY = 'ngplan.workspace-session.v3';
+export const WORKSPACE_SESSION_STORAGE_KEY = 'ngplan.workspace-session.v4';
+export const WORKSPACE_SESSION_VERSION = 4 as const;
 
 export type WorkspaceAutomaticPlanCheckpoint = Readonly<Record<string, unknown>>;
 
@@ -42,7 +43,7 @@ const V2_OPENING_FIELDS = [
   ...V1_OPENING_FIELDS,
 ] as const;
 
-type StoredOpeningVersion = 'V1' | 'V2' | 'V3';
+type StoredOpeningVersion = 'V1' | 'V2' | 'V3' | 'V4';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -70,7 +71,7 @@ function looksLikeOpeningState(
   if (!isRecord(value)) {
     return false;
   }
-  if (version === 'V3') {
+  if (version === 'V3' || version === 'V4') {
     return (
       typeof value.cumulativePvp === 'string' &&
       typeof value.dailyCarryLeft === 'string' &&
@@ -98,6 +99,7 @@ function looksLikeMemberDraft(value: unknown, version: StoredOpeningVersion): bo
     typeof value.memberId === 'string' &&
     typeof value.name === 'string' &&
     typeof value.pvpTarget === 'string' &&
+    (version !== 'V4' || typeof value.fortnightSideTarget === 'string') &&
     typeof value.sheetMarker === 'string' &&
     (value.placement.parentMemberKey === null ||
       typeof value.placement.parentMemberKey === 'string') &&
@@ -171,6 +173,8 @@ function looksLikeProjectSetupBundle(value: unknown): value is ProjectSetupBundl
       typeof member.memberId !== 'string' ||
       typeof member.name !== 'string' ||
       !isSafePv(member.pvpTarget) ||
+      (member.fortnightSideTarget !== 1_500 &&
+        member.fortnightSideTarget !== 2_500) ||
       typeof member.sheetMarker !== 'string' ||
       (member.parentMemberKey !== null && typeof member.parentMemberKey !== 'string') ||
       !isSideOrNull(member.sideAtParent) ||
@@ -227,11 +231,11 @@ function withSafeActiveBundle(draft: ProjectSetupDraft): ProjectSetupDraft {
     : { ...draft, activeBundle: null };
 }
 
-function normalizeV3Snapshot(value: unknown): WorkspaceSessionSnapshot | null {
+function normalizeV4Snapshot(value: unknown): WorkspaceSessionSnapshot | null {
   if (
     !isRecord(value) ||
     value.version !== WORKSPACE_SESSION_VERSION ||
-    !looksLikeProjectDraft(value.draft, 'V3')
+    !looksLikeProjectDraft(value.draft, 'V4')
   ) {
     return null;
   }
@@ -265,7 +269,7 @@ function normalizeV3Snapshot(value: unknown): WorkspaceSessionSnapshot | null {
 export function normalizeWorkspaceSessionSnapshot(
   value: unknown,
 ): WorkspaceSessionSnapshot | null {
-  return normalizeV3Snapshot(value);
+  return normalizeV4Snapshot(value);
 }
 
 type LegacyOpeningStateDraft = Readonly<{
@@ -274,7 +278,10 @@ type LegacyOpeningStateDraft = Readonly<{
   dailyCarryRight: string;
 }>;
 
-type LegacyMemberDraft = Omit<MemberDraft, 'openingState'> & Readonly<{
+type LegacyMemberDraft = Omit<
+  MemberDraft,
+  'openingState' | 'fortnightSideTarget'
+> & Readonly<{
   openingState: LegacyOpeningStateDraft;
 }>;
 
@@ -291,6 +298,7 @@ function migrateLegacyMember(value: unknown): MemberDraft {
   const opening = member.openingState;
   return {
     ...member,
+    fortnightSideTarget: '2500',
     placement: { ...member.placement },
     openingState: {
       cumulativePvp: opening.dailyCarryPvp,
@@ -331,6 +339,49 @@ function migrateLegacySnapshot(
   });
 }
 
+type LegacyV3MemberDraft = Omit<MemberDraft, 'fortnightSideTarget'>;
+
+type LegacyV3ProjectSetupDraft = Omit<
+  ProjectSetupDraft,
+  'members' | 'activeBundle'
+> & Readonly<{
+  members: readonly LegacyV3MemberDraft[];
+  activeBundle: unknown;
+}>;
+
+export function migrateWorkspaceSessionV3Snapshot(
+  value: unknown,
+): WorkspaceSessionSnapshot | null {
+  if (
+    !isRecord(value) ||
+    value.version !== 3 ||
+    !looksLikeProjectDraft(value.draft, 'V3')
+  ) {
+    return null;
+  }
+  const legacyDraft = value.draft as LegacyV3ProjectSetupDraft;
+  const draft: ProjectSetupDraft = {
+    ...legacyDraft,
+    members: legacyDraft.members.map((member) => ({
+      ...member,
+      placement: { ...member.placement },
+      openingState: { ...member.openingState },
+      fortnightSideTarget: '2500',
+    })),
+    activeBundle: null,
+  };
+  return deepFreeze({
+    version: WORKSPACE_SESSION_VERSION,
+    draft,
+    manualPlanDraft: looksLikeManualPlanDraft(value.manualPlanDraft)
+      ? value.manualPlanDraft
+      : null,
+    screen: 'SETUP',
+    organizationScale: normalizedScale(value.organizationScale),
+    automaticPlanCheckpoint: null,
+  });
+}
+
 function removeStorageKey(storage: Storage, key: string): void {
   try {
     storage.removeItem(key);
@@ -339,7 +390,7 @@ function removeStorageKey(storage: Storage, key: string): void {
   }
 }
 
-function persistV3Snapshot(snapshot: WorkspaceSessionSnapshot): boolean {
+function persistV4Snapshot(snapshot: WorkspaceSessionSnapshot): boolean {
   try {
     window.localStorage.setItem(
       WORKSPACE_SESSION_STORAGE_KEY,
@@ -351,16 +402,29 @@ function persistV3Snapshot(snapshot: WorkspaceSessionSnapshot): boolean {
   }
 }
 
-function readAndNormalizeV3(storage: Storage): WorkspaceSessionSnapshot | null {
+function readAndNormalizeV4(storage: Storage): WorkspaceSessionSnapshot | null {
   const raw = storage.getItem(WORKSPACE_SESSION_STORAGE_KEY);
   if (raw === null) return null;
   try {
-    const normalized = normalizeV3Snapshot(JSON.parse(raw));
+    const normalized = normalizeV4Snapshot(JSON.parse(raw));
     if (normalized !== null) return normalized;
   } catch {
     // 손상된 현재 세대 저장값은 제거하고 이전 세대 저장 위치를 시도합니다.
   }
   removeStorageKey(storage, WORKSPACE_SESSION_STORAGE_KEY);
+  return null;
+}
+
+function readAndMigrateV3(storage: Storage): WorkspaceSessionSnapshot | null {
+  const raw = storage.getItem(LEGACY_WORKSPACE_SESSION_STORAGE_V3_KEY);
+  if (raw === null) return null;
+  try {
+    const migrated = migrateWorkspaceSessionV3Snapshot(JSON.parse(raw));
+    if (migrated !== null) return migrated;
+  } catch {
+    // 손상된 구형 저장값은 아래에서 제거합니다.
+  }
+  removeStorageKey(storage, LEGACY_WORKSPACE_SESSION_STORAGE_V3_KEY);
   return null;
 }
 
@@ -387,6 +451,7 @@ function readAndMigrateLegacy(
 }
 
 function removeLegacyStorageKeys(storage: Storage): void {
+  removeStorageKey(storage, LEGACY_WORKSPACE_SESSION_STORAGE_V3_KEY);
   removeStorageKey(storage, LEGACY_WORKSPACE_SESSION_STORAGE_V2_KEY);
   removeStorageKey(storage, LEGACY_WORKSPACE_SESSION_STORAGE_KEY);
 }
@@ -395,7 +460,7 @@ function promoteToLocalStorage(
   snapshot: WorkspaceSessionSnapshot,
   source: Storage,
 ): WorkspaceSessionSnapshot {
-  if (persistV3Snapshot(snapshot)) {
+  if (persistV4Snapshot(snapshot)) {
     removeLegacyStorageKeys(source);
     if (source === window.sessionStorage) {
       removeStorageKey(source, WORKSPACE_SESSION_STORAGE_KEY);
@@ -406,9 +471,14 @@ function promoteToLocalStorage(
 
 export function readWorkspaceSession(): WorkspaceSessionSnapshot | null {
   try {
-    const localCurrent = readAndNormalizeV3(window.localStorage);
+    const localCurrent = readAndNormalizeV4(window.localStorage);
     if (localCurrent !== null) {
       return localCurrent;
+    }
+
+    const localV3 = readAndMigrateV3(window.localStorage);
+    if (localV3 !== null) {
+      return promoteToLocalStorage(localV3, window.localStorage);
     }
 
     const localV2 = readAndMigrateLegacy(
@@ -431,9 +501,14 @@ export function readWorkspaceSession(): WorkspaceSessionSnapshot | null {
       return promoteToLocalStorage(localV1, window.localStorage);
     }
 
-    const sessionCurrent = readAndNormalizeV3(window.sessionStorage);
+    const sessionCurrent = readAndNormalizeV4(window.sessionStorage);
     if (sessionCurrent !== null) {
       return promoteToLocalStorage(sessionCurrent, window.sessionStorage);
+    }
+
+    const sessionV3 = readAndMigrateV3(window.sessionStorage);
+    if (sessionV3 !== null) {
+      return promoteToLocalStorage(sessionV3, window.sessionStorage);
     }
 
     const sessionV2 = readAndMigrateLegacy(
@@ -470,7 +545,7 @@ export function writeWorkspaceSession(snapshot: WorkspaceSessionWriteSnapshot): 
     organizationScale: snapshot.organizationScale,
     automaticPlanCheckpoint: snapshot.automaticPlanCheckpoint ?? null,
   };
-  if (persistV3Snapshot(current)) {
+  if (persistV4Snapshot(current)) {
     removeLegacyStorageKeys(window.localStorage);
     removeStorageKey(window.sessionStorage, WORKSPACE_SESSION_STORAGE_KEY);
     removeLegacyStorageKeys(window.sessionStorage);
@@ -484,7 +559,7 @@ export function replaceWorkspaceAutomaticPlanCheckpoint(
   if (current === null) {
     return false;
   }
-  return persistV3Snapshot({ ...current, automaticPlanCheckpoint: checkpoint });
+  return persistV4Snapshot({ ...current, automaticPlanCheckpoint: checkpoint });
 }
 
 export function clearWorkspaceSession(): void {

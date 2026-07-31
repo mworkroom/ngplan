@@ -19,12 +19,14 @@ function member(
   parentMemberKey: string | null,
   sideAtParent: 'LEFT' | 'RIGHT' | null,
   pvpTarget: 700 | 1500 | 2400 = 700,
+  fortnightSideTarget: 1500 | 2500 = 2500,
 ): MemberSnapshot {
   return Object.freeze({
     memberKey,
     memberId: memberKey,
     name: memberKey,
     pvpTarget,
+    fortnightSideTarget,
     sheetMarker: 'NONE',
     parentMemberKey,
     sideAtParent,
@@ -60,6 +62,18 @@ function bundle(
 }
 
 describe('manual-plan achievement targets', () => {
+  it('uses each member\'s 1,500 side target in the manual worksheet target formula', () => {
+    const schema = deriveManualPlanSchema(
+      bundle([member('root', null, null, 700, 1500)]),
+    );
+
+    expect(deriveManualPlanAchievementTargets(schema).get('root')).toEqual({
+      pvp: 700,
+      selfLeft: 1500,
+      selfRight: 800,
+    });
+  });
+
   it('recreates the Excel pyramid target formula through the whole subtree', () => {
     const members = [
       member('root', null, null, 2400),

@@ -33,8 +33,9 @@
 
 ### Phase 4 버전 계약
 
-- 누적 PVP 원천 분리, 순수 재귀 목표와 수당 환산을 포함한 현재 규칙 계산 계약과 엔진 계약은 `7.0.0`이다.
+- 누적 PVP 원천 분리, 회원별 좌·우 목표, 순수 재귀 목표와 수당 환산을 포함한 현재 규칙 계산 계약과 엔진 계약은 `8.0.0`이다.
 - 자동 계획 request/fingerprint/checkpoint/model/certificate와 worker protocol은 `4.0.0`, 정책과 목적함수는 `7.0.0`, calendar는 `1.0.0`이다. 이전 환산 횟수·깊이 기반 후보, 체크포인트와 모델 인증서는 호환되지 않는다.
+- 수동 계획과 계산 엔진은 회원별 좌·우 각 2,500 또는 1,500을 지원한다. 현재 자동 계획은 모든 활성 회원이 2,500인 경우만 지원하며 1,500 회원이 있으면 요청 전에 차단한다.
 - 제품의 `PVP 시작값`은 0~2,400 회사 누적 달성값이다. 정규화 시 같은 값을 `openingQualificationPvp`와 `fortnightPvpOpeningCredit`에 기록하고 `dailyCarryPvp`는 0으로 기록한다. 일일 좌·우 시작값은 별도 사용자 입력이다.
 - `qualificationPvp`는 `openingQualificationPvp + 해당 날짜까지의 직접 신규 PVP 누계`이며 일일 정산으로 초기화되지 않는다. 당일 직접 PVP를 먼저 포함한 뒤 300 자격을 판정한다.
 - 회사 누적 PVP와 이번 기간 신규 PVP 합은 2,400을 넘을 수 없다. 시작값 2,400 회원은 신규 PVP가 항상 0이다.
@@ -332,7 +333,7 @@ PVP 적용 방향은 PVP가 처음 생긴 날에 고정되지 않는다.
 
 **기대 결과:** 목표 700, 추가 필요량 0.
 
-### HALF-004 — 일일 좌·우 시작 잔액은 보름 2,500을 줄이지 않음
+### HALF-004 — 일일 좌·우 시작 잔액은 선택한 보름 목표를 줄이지 않음
 
 **상태:** 확정 · **대상:** Phase 1
 
@@ -372,6 +373,16 @@ HALF-005의 기대 저장값:
 - 판정 파생값: `L 2,500 / R 2,500`
 
 원본 우를 2,500으로 덮어쓰지 않는다.
+
+### HALF-008 — 회원별 좌·우 1,500 목표와 작은 쪽 PVP 적용
+
+**상태:** 확정 · **대상:** Phase 1/3
+
+- 회원의 좌·우 목표: 각각 1,500
+- 이번 보름 신규 PVP 합계: 700
+- 보름 원본: `L 800 / R 1,500`
+
+**기대 결과:** 작은 쪽 왼쪽에 신규 PVP 700 전액을 적용하여 판정값은 `L1,500/R1,500`이고 양쪽 목표를 달성한다. 같은 회원의 PVP 목표가 700이어도 기존 환산 8회 권장은 적용하지 않으며 향후 5회 권장 자동화 대상으로만 표시한다.
 
 ### HALF-P01 — 회사 누적 PVP 시작값은 작은 쪽 적용에서 제외
 
@@ -1098,7 +1109,7 @@ OPT-007과 같은 조직에서 B의 회사 누적 PVP 시작값과 다른 신규
 
 테스트 모델이 Sunday nonzero, 연결된 `CHILD` 방향 직접값 또는 자격 299의 기계적 정산을 포함한 벡터를 해로 반환한다.
 
-**기대 결과:** 정본 shape/numeric 검증과 `rulesetVersion=7.0.0` 계산이 후보를 거부한다. raw 솔버 벡터에는 candidate ID를 부여하지 않고 화면·checkpoint·apply 경계로 내보내지 않는다. 솔버가 feasible이라고 보고했다는 이유로 `OPTIMAL`을 표시하면 오답이다.
+**기대 결과:** 정본 shape/numeric 검증과 `rulesetVersion=8.0.0` 계산이 후보를 거부한다. raw 솔버 벡터에는 candidate ID를 부여하지 않고 화면·checkpoint·apply 경계로 내보내지 않는다. 솔버가 feasible이라고 보고했다는 이유로 `OPTIMAL`을 표시하면 오답이다.
 
 ### MODEL-002 — 유효한 더 나은 배정을 누락하면 completeness 실패
 
@@ -1120,7 +1131,7 @@ OPT-007과 같은 조직에서 B의 회사 누적 PVP 시작값과 다른 신규
 
 **상태:** 설계 계약 · **대상:** Phase 4
 
-`ModelCertificate 4.0.0`은 최소한 모델 구현, 계산 규칙·엔진 `7.0.0`, 정책·목적 `7.0.0`, 달력/fingerprint 버전, 솔버 adapter와 버전, exact integer·tolerance 조건, soundness/completeness/objective-preservation 증거 모음을 식별한다.
+`ModelCertificate 4.0.0`은 최소한 모델 구현, 계산 규칙·엔진 `8.0.0`, 정책·목적 `7.0.0`, 달력/fingerprint 버전, 솔버 adapter와 버전, exact integer·tolerance 조건, soundness/completeness/objective-preservation 증거 모음을 식별한다.
 
 **기대 결과:** 활성 요청과 certificate의 식별자 중 하나라도 다르면 proof 상태를 사용할 수 없다. 후보는 현재 버전으로 독립 재검증될 때만 unproven candidate로 사용할 수 있으며, 이전 certificate의 `OPTIMAL`·`INFEASIBLE`을 승계하지 않는다.
 
@@ -1325,7 +1336,7 @@ deadline 소진을 `OPTIMAL`, `INFEASIBLE` 또는 백그라운드 계산 계속�
 - 조직 스냅샷에 회원 A와 B가 있다.
 - 회사 누적 PVP를 qualification·보름 역할로 매핑한 값과 일일 `P=0/L/R`의 다섯 필드를 가진 OpeningState는 A에만 있고 B에는 없다.
 
-**기대 결과:** `OPENING_STATE_MISSING` 오류를 B 위치와 함께 반환한다. 조직에 없는 회원의 OpeningState가 추가로 있으면 `OPENING_STATE_MEMBER_NOT_FOUND` 오류다. 한 회원의 다섯 필드 중 하나가 없거나 `openingQualificationPvp !== fortnightPvpOpeningCredit`, `dailyCarryPvp !== 0`, 누적값이 2,400 초과이면 완전한 `7.0.0` 제품 입력이 아니다.
+**기대 결과:** `OPENING_STATE_MISSING` 오류를 B 위치와 함께 반환한다. 조직에 없는 회원의 OpeningState가 추가로 있으면 `OPENING_STATE_MEMBER_NOT_FOUND` 오류다. 한 회원의 다섯 필드 중 하나가 없거나 `openingQualificationPvp !== fortnightPvpOpeningCredit`, `dailyCarryPvp !== 0`, 누적값이 2,400 초과이면 완전한 `8.0.0` 제품 입력이 아니다.
 
 ### VAL-P01 — PVP 목표와 찾기 표지판
 
@@ -1376,7 +1387,7 @@ deadline 소진을 `OPTIMAL`, `INFEASIBLE` 또는 백그라운드 계산 계속�
 | 반월·ISO date-only 일요일·기간 말 carry | CAL-001, CAL-002, CAL-003, CAL-004, CAL-005, CAL-P01, CAL-P02, CARRY-001 |
 | 조직 공식과 연쇄 합산 | ORG-001, ORG-002, ORG-006, DAY-P01, DAY-P02 |
 | 직접 선택한 PVP 목표와 찾기 표지판 | HALF-001, HALF-002, HALF-003, VAL-P01 |
-| 보름 좌·우 및 마감 PVP | HALF-005, HALF-006, HALF-007, HALF-P01, HALF-P02, HALF-P03, HALF-P04 |
+| 보름 좌·우 및 마감 PVP | HALF-005, HALF-006, HALF-007, HALF-008, HALF-P01, HALF-P02, HALF-P03, HALF-P04 |
 | 일일 PVP와 공식 단계 | DAY-001, DAY-002, DAY-003, DAY-004, DAY-005, DAY-007, DAY-008, DAY-009, DAY-P03 |
 | 초기화와 원본 보존 | DAY-006, DAY-010, HALF-007 |
 | 회사 누적 PVP·daily-zero·좌우 시작값 역할 | HALF-001, HALF-004, HALF-P03, OPEN-001, OPEN-002, OPEN-P01, QUAL-001, QUAL-003, VAL-006 |

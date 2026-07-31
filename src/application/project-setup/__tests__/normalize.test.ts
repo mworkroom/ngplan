@@ -47,6 +47,7 @@ describe('P2-NORM 정본 Setup Bundle', () => {
       memberId: '  COMPANY-A  ',
       name: '  루트 회원  ',
       pvpTarget: '2400',
+      fortnightSideTarget: '1500',
       sheetMarker: 'PINK_1',
     });
     draft = editOpeningState(draft, 'A', {
@@ -75,6 +76,7 @@ describe('P2-NORM 정본 Setup Bundle', () => {
             memberId: 'COMPANY-A',
             name: '루트 회원',
             pvpTarget: 2400,
+            fortnightSideTarget: 1500,
             sheetMarker: 'PINK_1',
             parentMemberKey: null,
             sideAtParent: null,
@@ -84,6 +86,7 @@ describe('P2-NORM 정본 Setup Bundle', () => {
             memberId: 'ID-B',
             name: '회원 B',
             pvpTarget: 700,
+            fortnightSideTarget: 2500,
             sheetMarker: 'NONE',
             parentMemberKey: 'A',
             sideAtParent: 'LEFT',

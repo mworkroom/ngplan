@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   normalizeCloudPlanDocument,
-  type CloudPlanDocumentV1,
+  type CloudPlanDocumentV2,
 } from './cloud-plan-document';
 import type {
   CloudProjectRecord,
@@ -107,7 +107,7 @@ function safeMetadataInteger(
     : null;
 }
 
-function safeMetadataTitle(document: CloudPlanDocumentV1): string {
+function safeMetadataTitle(document: CloudPlanDocumentV2): string {
   const title = document.draft.title.trim();
   const fallback = `${document.draft.year || '계획'}-${document.draft.month || '?'}`;
   return Array.from(title || fallback).slice(0, 200).join('');
@@ -235,7 +235,7 @@ export class SupabasePlanRepository implements PlanRepository {
 
   async saveProject(
     workspaceId: string,
-    document: CloudPlanDocumentV1,
+    document: CloudPlanDocumentV2,
   ): Promise<SaveProjectResult> {
     const payload = {
       id: document.draft.projectId,
@@ -312,18 +312,18 @@ export class SupabasePlanRepository implements PlanRepository {
         .limit(400),
     ]);
     if (recoveryResult.error !== null) {
-      fail('최근 보관본을 불러오지 못했습니다', recoveryResult.error);
+      fail('이전 내용을 불러오지 못했습니다', recoveryResult.error);
     }
     if (dailyResult.error !== null) {
-      fail('일일 보관본을 불러오지 못했습니다', dailyResult.error);
+      fail('이전 내용을 불러오지 못했습니다', dailyResult.error);
     }
     if (!Array.isArray(recoveryResult.data) || !Array.isArray(dailyResult.data)) {
-      throw new Error('보관본 목록 응답 형식이 올바르지 않습니다.');
+      throw new Error('이전 내용 목록을 읽을 수 없습니다.');
     }
     const recoveryPoints = recoveryResult.data.map((value) => {
       const row = normalizeRecoveryRow(value);
       if (row === null) {
-        throw new Error('읽을 수 없는 최근 보관본 항목이 있습니다.');
+        throw new Error('일부 이전 내용을 읽을 수 없습니다.');
       }
       return {
         key: `recovery:${row.id}`,
@@ -337,7 +337,7 @@ export class SupabasePlanRepository implements PlanRepository {
     const dailyPoints = dailyResult.data.map((value) => {
       const row = normalizeDailyBackupRow(value);
       if (row === null) {
-        throw new Error('읽을 수 없는 일일 보관본 항목이 있습니다.');
+        throw new Error('일부 이전 내용을 읽을 수 없습니다.');
       }
       return {
         key: `daily:${row.business_date}`,
@@ -357,7 +357,7 @@ export class SupabasePlanRepository implements PlanRepository {
     workspaceId: string,
     projectId: string,
     point: RecoveryPointSummary,
-  ): Promise<CloudPlanDocumentV1> {
+  ): Promise<CloudPlanDocumentV2> {
     const query =
       point.kind === 'DAILY'
         ? this.#client
@@ -373,13 +373,13 @@ export class SupabasePlanRepository implements PlanRepository {
             .eq('project_id', projectId)
             .eq('id', point.key.replace(/^recovery:/, ''));
     const { data, error } = await query.maybeSingle();
-    if (error !== null) fail('보관본을 불러오지 못했습니다', error);
+    if (error !== null) fail('선택한 이전 내용을 불러오지 못했습니다', error);
     if (!isRecord(data)) {
-      throw new Error('선택한 보관본을 찾지 못했습니다.');
+      throw new Error('선택한 이전 내용을 찾지 못했습니다.');
     }
     const document = normalizeCloudPlanDocument(data.document);
     if (document === null || document.draft.projectId !== projectId) {
-      throw new Error('선택한 보관본 문서가 현재 계획과 맞지 않습니다.');
+      throw new Error('선택한 이전 내용이 현재 계획과 맞지 않습니다.');
     }
     return document;
   }

@@ -212,12 +212,15 @@ export function evaluateFortnight(
         memberKey: input.member.memberKey,
         field: 'finalAssessment.assessedRight',
       });
-  const leftTargetMet = assessedLeft >= rules.fortnightSideTarget;
-  const rightTargetMet = assessedRight >= rules.fortnightSideTarget;
+  const fortnightSideTarget = input.member.fortnightSideTarget as Pv;
+  const leftTargetMet = assessedLeft >= fortnightSideTarget;
+  const rightTargetMet = assessedRight >= fortnightSideTarget;
   const sideTargetsMet = leftTargetMet && rightTargetMet;
   const recommendationApplies =
     input.member.pvpTarget ===
-    rules.target700CommissionPreference.eligiblePvpTarget;
+      rules.target700CommissionPreference.eligiblePvpTarget &&
+    input.member.fortnightSideTarget ===
+      rules.target700CommissionPreference.eligibleFortnightSideTarget;
   const commissionDays = input.accumulator.commissionOccurrences.length;
   const commissionEquivalentUnits = totalCommissionEquivalentUnits(
     input.accumulator.commissionOccurrences,
@@ -236,6 +239,7 @@ export function evaluateFortnight(
   return {
     memberKey: input.member.memberKey,
     pvpTarget: input.member.pvpTarget,
+    fortnightSideTarget: input.member.fortnightSideTarget,
     openingQualificationPvp:
       input.openingState.openingQualificationPvp as Pv,
     closingQualificationPvp,

@@ -1,5 +1,6 @@
 import {
   buildOrganizationIndex,
+  DEFAULT_RULE_SET,
   derivePeriod,
   settlementModeForDate,
   type NormalizedAllocationCell,
@@ -58,6 +59,18 @@ export function createAutomaticPlanRequest(
   }
 
   try {
+    const unsupportedSideTargetMember = bundle.organization.members.find(
+      (member) =>
+        member.fortnightSideTarget !==
+        DEFAULT_RULE_SET.defaultFortnightSideTarget,
+    );
+    if (unsupportedSideTargetMember !== undefined) {
+      return failure(
+        'AUTOMATIC_PLAN_SIDE_TARGET_UNSUPPORTED',
+        '좌·우 각 1,500 목표 회원이 있어 자동 플랜은 아직 사용할 수 없습니다. 수동 플랜을 이용해 주세요.',
+      );
+    }
+
     const period = derivePeriod(bundle.project.period);
     const organization = buildOrganizationIndex(bundle.organization.members);
     const canonicalMemberKeys = Object.freeze([...organization.orderedMemberKeys]);
@@ -106,6 +119,7 @@ export function createAutomaticPlanRequest(
         memberId: member.memberId,
         name: member.name,
         pvpTarget: member.pvpTarget,
+        fortnightSideTarget: member.fortnightSideTarget,
         sheetMarker: member.sheetMarker,
         parentMemberKey: member.parentMemberKey,
         sideAtParent: member.sideAtParent,

@@ -408,6 +408,8 @@ describe('automatic plan operator components', () => {
 
     expect(screen.getByRole('dialog')).toBeTruthy();
     expect(screen.getByText(/직접 입력한 값이 자동 계산 결과로 바뀝니다/)).toBeTruthy();
+    expect(screen.getByText(/현재 내용이 자동으로 저장됩니다/)).toBeTruthy();
+    expect(screen.getByText(/‘이전 내용 보기’/)).toBeTruthy();
     await user.click(screen.getByRole('button', { name: '계획표에 넣기' }));
     expect(onConfirm).toHaveBeenCalledOnce();
     fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });

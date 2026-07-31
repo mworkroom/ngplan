@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  addRootMember,
   createProjectDraft,
   type IdGenerator,
 } from '../../application/project-setup';
 import {
+  CLOUD_PLAN_DOCUMENT_VERSION,
   cloudDocumentFromWorkspaceSession,
   normalizeCloudPlanDocument,
   workspaceSessionFromCloudDocument,
@@ -35,13 +37,13 @@ function createSnapshot(): WorkspaceSessionSnapshot {
   };
 }
 
-describe('CloudPlanDocumentV1', () => {
+describe('CloudPlanDocumentV2', () => {
   it('stores only the shared planning source and leaves UI/checkpoint state local', () => {
     const snapshot = createSnapshot();
     const document = cloudDocumentFromWorkspaceSession(snapshot);
 
     expect(document).toEqual({
-      version: 1,
+      version: CLOUD_PLAN_DOCUMENT_VERSION,
       draft: snapshot.draft,
       manualPlanDraft: null,
     });
@@ -54,14 +56,40 @@ describe('CloudPlanDocumentV1', () => {
   it('rejects malformed versions and the former Seoul-time document shape', () => {
     const document = cloudDocumentFromWorkspaceSession(createSnapshot());
 
-    expect(normalizeCloudPlanDocument({ ...document, version: 2 })).toBeNull();
+    expect(normalizeCloudPlanDocument({ ...document, version: 3 })).toBeNull();
     expect(
       normalizeCloudPlanDocument({
         ...document,
         draft: { ...document.draft, timezone: 'Asia/Seoul' },
       }),
     ).toBeNull();
-    expect(normalizeCloudPlanDocument({ version: 1, draft: null })).toBeNull();
+    expect(normalizeCloudPlanDocument({ version: 2, draft: null })).toBeNull();
+  });
+
+  it('migrates a v1 cloud draft to the 2,500 member default', () => {
+    const snapshot = createSnapshot();
+    const withRoot = addRootMember(snapshot.draft, 'root');
+    if (withRoot.status !== 'SUCCESS') {
+      throw new Error(withRoot.error.message);
+    }
+    const legacyDraft = structuredClone(withRoot.draft) as unknown as Record<
+      string,
+      unknown
+    >;
+    const members = legacyDraft.members as Array<Record<string, unknown>>;
+    delete members[0]!.fortnightSideTarget;
+
+    const migrated = normalizeCloudPlanDocument({
+      version: 1,
+      draft: legacyDraft,
+      manualPlanDraft: null,
+    });
+
+    expect(migrated).toMatchObject({
+      version: CLOUD_PLAN_DOCUMENT_VERSION,
+      draft: { activeBundle: null },
+    });
+    expect(migrated?.draft.members[0]?.fortnightSideTarget).toBe('2500');
   });
 
   it('restores matching local-only view state without putting it in the cloud document', () => {

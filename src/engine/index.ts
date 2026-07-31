@@ -9,7 +9,7 @@ export {
   CALENDAR_VERSION,
   DEFAULT_RULE_SET,
   ENGINE_VERSION,
-  RULE_SET_7_0_0,
+  RULE_SET_8_0_0,
   commissionEquivalentUnitsForTier,
 } from '../domain/constants';
 export {
@@ -38,6 +38,7 @@ export type {
   DailySettlement,
   DerivedPeriod,
   FortnightAssessment,
+  FortnightSideTarget,
   Half,
   IsoDate,
   MemberSnapshot,

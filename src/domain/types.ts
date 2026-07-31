@@ -16,6 +16,7 @@ export type SettlementKind =
 export type CommissionTier = 300 | 700 | 1500 | 2400 | 6000 | 20000 | 60000;
 export type CommissionEquivalentUnits = 1 | 2 | 4 | 8;
 export type PvpTarget = 700 | 1500 | 2400;
+export type FortnightSideTarget = 1500 | 2500;
 export type SheetMarker =
   | 'NONE'
   | 'PINK_1'
@@ -46,6 +47,7 @@ export interface MemberSnapshot {
   readonly memberId: string;
   readonly name: string;
   readonly pvpTarget: PvpTarget;
+  readonly fortnightSideTarget: FortnightSideTarget;
   readonly sheetMarker: SheetMarker;
   readonly parentMemberKey: string | null;
   readonly sideAtParent: Side | null;
@@ -80,16 +82,18 @@ export interface CalculatePlanInput {
 }
 
 export interface RuleSet {
-  readonly rulesetVersion: '7.0.0';
+  readonly rulesetVersion: '8.0.0';
   readonly commissionTiers: readonly CommissionTier[];
   readonly allowedPvpTargets: readonly PvpTarget[];
+  readonly allowedFortnightSideTargets: readonly FortnightSideTarget[];
   readonly cumulativePvpCap: Pv;
-  readonly fortnightSideTarget: Pv;
+  readonly defaultFortnightSideTarget: FortnightSideTarget;
   readonly businessCalendarPolicy: 'SUNDAY_SKIP_NO_INPUT';
   readonly pvpTiePolicy: 'LEFT';
   readonly fortnightPvpSourcePolicy: 'NEW_ONLY_EXCLUDING_OPENING_AND_DAILY_CARRY';
   readonly target700CommissionPreference: {
     readonly eligiblePvpTarget: 700;
+    readonly eligibleFortnightSideTarget: 2500;
     readonly recommendedEquivalentUnits: 8;
   };
   readonly qualificationPolicy: {
@@ -166,6 +170,7 @@ export interface BelowQualificationSettlementOccurrence
 export interface FortnightAssessment extends FortnightRawTotals {
   readonly memberKey: string;
   readonly pvpTarget: PvpTarget;
+  readonly fortnightSideTarget: FortnightSideTarget;
   readonly openingQualificationPvp: Pv;
   readonly closingQualificationPvp: Pv;
   readonly qualificationThresholdMet: boolean;
@@ -220,6 +225,7 @@ export type ValidationCode =
   | 'MEMBER_ID_DUPLICATE'
   | 'MEMBER_NAME_REQUIRED'
   | 'PVP_TARGET_INVALID'
+  | 'FORTNIGHT_SIDE_TARGET_INVALID'
   | 'SHEET_MARKER_INVALID'
   | 'PLACEMENT_INCOMPLETE'
   | 'ROOT_PLACEMENT_INVALID'

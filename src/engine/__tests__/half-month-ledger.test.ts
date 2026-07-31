@@ -27,11 +27,16 @@ const SUNDAY = '2026-07-12' as IsoDate;
 const D2 = '2026-07-13' as IsoDate;
 const pv = (value: number): Pv => value as Pv;
 
-const member = (pvpTarget: PvpTarget, memberKey = 'A'): MemberSnapshot => ({
+const member = (
+  pvpTarget: PvpTarget,
+  memberKey = 'A',
+  fortnightSideTarget: 1500 | 2500 = 2500,
+): MemberSnapshot => ({
   memberKey,
   memberId: `ID-${memberKey}`,
   name: memberKey,
   pvpTarget,
+  fortnightSideTarget,
   sheetMarker: 'NONE',
   parentMemberKey: null,
   sideAtParent: null,
@@ -92,13 +97,30 @@ const assess = (
   left: number,
   right: number,
   commissionOccurrences: readonly CommissionOccurrence[] = [],
+  fortnightSideTarget: 1500 | 2500 = 2500,
 ) => evaluateFortnight({
-  member: member(pvpTarget),
+  member: member(pvpTarget, 'A', fortnightSideTarget),
   openingState: opening(openingCredit),
   accumulator: accumulator(newPvp, left, right, commissionOccurrences),
 });
 
 describe('half-month-ledger', () => {
+  it('[HALF-008] 회원별 1,500 좌·우 목표에 신규 PVP를 작은 쪽 전액 적용한다', () => {
+    const result = assess(700, 0, 700, 800, 1500, [], 1500);
+
+    expect(result).toMatchObject({
+      fortnightSideTarget: 1500,
+      pvpAppliedSide: 'LEFT',
+      assessedLeft: 1500,
+      assessedRight: 1500,
+      leftTargetMet: true,
+      rightTargetMet: true,
+      sideTargetsMet: true,
+      recommendationStatus: 'NOT_APPLICABLE',
+      recommendedCommissionEquivalentUnits: null,
+    });
+  });
+
   it('[HALF-001] 목표 1,500의 시작 PVP가 신규 필요량을 줄임', () => {
     const result = assess(1500, 700, 800, 0, 0);
 

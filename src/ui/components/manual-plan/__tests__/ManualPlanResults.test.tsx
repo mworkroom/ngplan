@@ -40,6 +40,7 @@ function member(
     memberId: '',
     name: memberKey,
     pvpTarget,
+    fortnightSideTarget: 2500,
     sheetMarker: 'NONE',
     parentMemberKey,
     sideAtParent,

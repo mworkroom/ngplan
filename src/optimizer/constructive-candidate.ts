@@ -18,7 +18,7 @@ import type {
 } from './types';
 
 const CUMULATIVE_PVP_CAP = 2_400;
-const FORTNIGHT_SIDE_TARGET = DEFAULT_RULE_SET.fortnightSideTarget;
+const FORTNIGHT_SIDE_TARGET = DEFAULT_RULE_SET.defaultFortnightSideTarget;
 const MINIMUM_AUTOMATIC_DIRECT_PV = 30;
 const PREFERRED_DIRECT_PV_BLOCK = 100;
 

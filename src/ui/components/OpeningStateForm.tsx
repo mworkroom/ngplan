@@ -30,6 +30,7 @@ export interface OpeningStateFormProps {
   readonly issues: readonly ProjectSetupIssue[];
   readonly onChange: (patch: Partial<OpeningStateDraft>) => void;
   readonly onPvpTargetChange: (pvpTarget: string) => void;
+  readonly onFortnightSideTargetChange: (fortnightSideTarget: string) => void;
 }
 
 function issueFor(
@@ -48,8 +49,14 @@ export function OpeningStateForm({
   issues,
   onChange,
   onPvpTargetChange,
+  onFortnightSideTargetChange,
 }: OpeningStateFormProps) {
   const pvpTargetIssue = issueFor(issues, member.memberKey, 'pvpTarget');
+  const fortnightSideTargetIssue = issueFor(
+    issues,
+    member.memberKey,
+    'fortnightSideTarget',
+  );
   const confirmationIssue = issueFor(
     issues,
     member.memberKey,
@@ -61,10 +68,10 @@ export function OpeningStateForm({
   );
 
   return (
-    <section className="opening-state-form" aria-labelledby="opening-state-title">
+    <section className="opening-state-form" aria-labelledby="period-targets-title">
       <div>
         <hr className="section-divider" />
-        <h2 id="opening-state-title">시작값</h2>
+        <h2 id="period-targets-title">이번 기간 목표</h2>
       </div>
 
       <div className="form-grid opening-state-form__fields">
@@ -84,6 +91,36 @@ export function OpeningStateForm({
             <option value="700">700 PV</option>
           </select>
         </div>
+        <div className="field">
+          <label
+            htmlFor={memberFieldId(member.memberKey, 'fortnightSideTarget')}
+          >
+            이번 기간 좌·우 목표
+          </label>
+          <select
+            id={memberFieldId(member.memberKey, 'fortnightSideTarget')}
+            value={member.fortnightSideTarget}
+            aria-invalid={fortnightSideTargetIssue !== undefined}
+            onChange={(event) =>
+              onFortnightSideTargetChange(event.currentTarget.value)
+            }
+          >
+            <option value="2500">좌/우 각 2,500 PV (기본)</option>
+            <option value="1500">좌/우 각 1,500 PV</option>
+          </select>
+          <p className="field-help">선택한 값이 좌·우 각각에 적용됩니다.</p>
+          {fortnightSideTargetIssue === undefined ? null : (
+            <p className="field-error">{fortnightSideTargetIssue.message}</p>
+          )}
+        </div>
+      </div>
+
+      <div>
+        <hr className="section-divider" />
+        <h2 id="opening-state-title">시작값</h2>
+      </div>
+
+      <div className="form-grid opening-state-form__fields">
         {OPENING_FIELDS.map(({ field, label, help }) => {
           const fieldIssue = issueFor(issues, member.memberKey, field);
           const fieldId = memberFieldId(member.memberKey, field);
@@ -119,8 +156,6 @@ export function OpeningStateForm({
           );
         })}
       </div>
-
-
 
       <label className="confirmation-field" htmlFor={confirmationId}>
         <input

@@ -558,7 +558,7 @@ Tests may inject a fake clock, deterministic work/node budget, or test-only shor
 
 The `problemFingerprint` includes the normalized bundle/business inputs, ruleset version, policy version, objective version, calendar version/date set, canonical member sequence, and relevant schema versions. It excludes elapsed time, run ID, candidate sequence, warm start, and transient UI state. A warm start may change search speed but must not change the definition of the problem or the proven optimum.
 
-The synchronized versions are ruleset/engine `7.0.0`, policy/objective `7.0.0`, request/fingerprint/model/model-certificate/checkpoint `4.0.0`, worker protocol `4.0.0`, and calendar `1.0.0`. Fairness predicates, equivalent-unit-cap semantics, and objective shape changed, so prior candidates, checkpoints, warm starts, and model certificates are incompatible.
+The synchronized versions are ruleset/engine `8.0.0`, policy/objective `7.0.0`, request/fingerprint/model/model-certificate/checkpoint `4.0.0`, worker protocol `4.0.0`, and calendar `1.0.0`. Automatic requests currently require every member's fortnight side target to be 2,500; a 1,500 member is handled in manual planning and rejected before optimization.
 
 ### 6.2 Objective Vector and Display Metrics
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  addRootMember,
   createProjectDraft,
   type IdGenerator,
 } from '../../application/project-setup';
@@ -21,14 +22,21 @@ const sourceIds: IdGenerator = (kind) =>
   kind === 'PROJECT' ? 'source-project' : `${kind.toLowerCase()}-source`;
 
 function sourceSession(): WorkspaceSessionSnapshot {
-  return {
-    version: WORKSPACE_SESSION_VERSION,
-    draft: createProjectDraft({
+  const withRoot = addRootMember(
+    createProjectDraft({
       year: 2026,
       month: 7,
       half: 'SECOND_HALF',
       generateId: sourceIds,
     }),
+    'root',
+  );
+  if (withRoot.status !== 'SUCCESS') {
+    throw new Error(withRoot.error.message);
+  }
+  return {
+    version: WORKSPACE_SESSION_VERSION,
+    draft: withRoot.draft,
     manualPlanDraft: {
       cells: [{ date: '2026-07-16', memberKey: 'root', pvp: '123' }],
     },
@@ -94,7 +102,17 @@ describe('plan recovery rules', () => {
   });
 
   it('creates a new-period shell without moving date-bound numbers', () => {
-    const source = sourceSession();
+    const original = sourceSession();
+    const source = {
+      ...original,
+      draft: {
+        ...original.draft,
+        members: original.draft.members.map((member) => ({
+          ...member,
+          fortnightSideTarget: '1500',
+        })),
+      },
+    };
     const copy = createPeriodCopySession(
       source,
       { year: 2026, month: 8, half: 'FIRST_HALF' },
@@ -116,6 +134,9 @@ describe('plan recovery rules', () => {
       automaticPlanCheckpoint: null,
     });
     expect(source.manualPlanDraft?.cells[0]?.pvp).toBe('123');
+    expect(copy.draft.members.every(
+      (member) => member.fortnightSideTarget === '2500',
+    )).toBe(true);
   });
 
   it('opens a recovery point as a separately identified plan copy', () => {
@@ -127,7 +148,7 @@ describe('plan recovery rules', () => {
     expect(copy.draft).toMatchObject({
       projectId: 'recovery-copy',
       organizationSnapshotId: 'recovery-org',
-      title: '202607B · 복구본',
+      title: '202607B · 이전 내용',
       titleSource: 'MANUAL',
       activeBundle: null,
     });

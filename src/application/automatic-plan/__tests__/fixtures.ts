@@ -18,6 +18,7 @@ export function createAutomaticPlanBundle(): ProjectSetupBundle {
           memberId: 'A-1',
           name: '루트 회원',
           pvpTarget: 700 as const,
+          fortnightSideTarget: 2500 as const,
           sheetMarker: 'NONE' as const,
           parentMemberKey: null,
           sideAtParent: null,

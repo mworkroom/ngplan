@@ -1,7 +1,7 @@
 import type { Half } from '../engine';
 import type { ManualPlanDraft } from '../application/manual-plan';
 import { deriveDefaultProjectTitle } from '../application/project-setup';
-import type { CloudPlanDocumentV1 } from './cloud-plan-document';
+import type { CloudPlanDocumentV2 } from './cloud-plan-document';
 import {
   WORKSPACE_SESSION_VERSION,
   type WorkspaceSessionSnapshot,
@@ -114,6 +114,10 @@ export function createPeriodCopySession(
         source.draft.titleSource === 'DERIVED' || sourceTitle === ''
           ? 'DERIVED'
           : 'MANUAL',
+      members: source.draft.members.map((member) => ({
+        ...member,
+        fortnightSideTarget: '2500',
+      })),
       activeBundle: null,
     },
     manualPlanDraft: null,
@@ -124,7 +128,7 @@ export function createPeriodCopySession(
 }
 
 export function createRecoveryCopySession(
-  document: CloudPlanDocumentV1,
+  document: CloudPlanDocumentV2,
   ids: PlanCopyIds,
 ): WorkspaceSessionSnapshot {
   const sourceTitle = document.draft.title.trim() || '이름 없는 계획';
@@ -134,7 +138,7 @@ export function createRecoveryCopySession(
       ...document.draft,
       projectId: ids.projectId,
       organizationSnapshotId: ids.organizationSnapshotId,
-      title: `${sourceTitle} · 복구본`,
+      title: `${sourceTitle} · 이전 내용`,
       titleSource: 'MANUAL',
       activeBundle: null,
     },

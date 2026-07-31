@@ -1,9 +1,10 @@
 import {
   normalizeCloudPlanDocument,
-  type CloudPlanDocumentV1,
+  type CloudPlanDocumentV2,
 } from './cloud-plan-document';
 import type { CachedPlanRecord, PlanCache } from './types';
 import {
+  migrateWorkspaceSessionV3Snapshot,
   normalizeWorkspaceSessionSnapshot,
   type WorkspaceSessionSnapshot,
 } from '../ui/workspace-session-storage';
@@ -57,9 +58,9 @@ function stringOrNull(value: unknown): string | null | undefined {
 function normalizeCachedPlanRecord(value: unknown): CachedPlanRecord | null {
   if (!isRecord(value)) return null;
   const document = normalizeCloudPlanDocument(value.document);
-  const workspaceSession = normalizeWorkspaceSessionSnapshot(
-    value.workspaceSession,
-  );
+  const workspaceSession =
+    normalizeWorkspaceSessionSnapshot(value.workspaceSession) ??
+    migrateWorkspaceSessionV3Snapshot(value.workspaceSession);
   const hiddenAt = stringOrNull(value.hiddenAt);
   const remoteUpdatedAt = stringOrNull(value.remoteUpdatedAt);
   const remoteLastSavedAt = stringOrNull(value.remoteLastSavedAt);
@@ -114,7 +115,7 @@ export function createCachedPlanRecord(input: {
   readonly workspaceId: string;
   readonly verifiedUserId: string;
   readonly verifiedUserIds?: readonly string[];
-  readonly document: CloudPlanDocumentV1;
+  readonly document: CloudPlanDocumentV2;
   readonly workspaceSession: WorkspaceSessionSnapshot;
   readonly pendingRemote: boolean;
   readonly remoteRevision?: number | null;

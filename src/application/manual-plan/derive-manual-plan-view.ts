@@ -59,6 +59,12 @@ function finalPvpApplicationLabel(
 }
 
 function recommendationLabel(assessment: FortnightAssessment): string {
+  if (
+    assessment.pvpTarget === 700 &&
+    assessment.fortnightSideTarget === 1500
+  ) {
+    return '1,500 목표 권장 횟수는 추후 반영';
+  }
   switch (assessment.recommendationStatus) {
     case 'NOT_APPLICABLE':
       return '권장 대상 아님';
@@ -177,6 +183,7 @@ export function deriveManualPlanMemberSummaryView(
     memberKey,
     memberLabel: member.displayLabel,
     pvpTarget: assessment.pvpTarget,
+    fortnightSideTarget: assessment.fortnightSideTarget,
     sheetMarker: member.sheetMarker,
     openingQualificationPvp: assessment.openingQualificationPvp,
     closingQualificationPvp: assessment.closingQualificationPvp,

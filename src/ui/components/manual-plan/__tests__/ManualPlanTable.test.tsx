@@ -37,6 +37,7 @@ function createTreeBundle(childOpeningPvp = 0): ProjectSetupBundle {
           memberId: '',
           name: '하위',
           pvpTarget: 700,
+          fortnightSideTarget: 2500,
           sheetMarker: 'NONE',
           parentMemberKey: 'root',
           sideAtParent: 'LEFT' as const,
@@ -46,6 +47,7 @@ function createTreeBundle(childOpeningPvp = 0): ProjectSetupBundle {
           memberId: '1000',
           name: '루트',
           pvpTarget: 700,
+          fortnightSideTarget: 2500,
           sheetMarker: 'PINK_1',
           parentMemberKey: null,
           sideAtParent: null,
@@ -70,6 +72,7 @@ function createLinearBundle(memberCount: number): ProjectSetupBundle {
       memberId: String(1000 + index),
       name: `회원 ${index + 1}`,
       pvpTarget: 700 as const,
+      fortnightSideTarget: 2500 as const,
       sheetMarker: 'NONE' as const,
       parentMemberKey: index === 0 ? null : `member-${index}`,
       sideAtParent: index === 0 ? null : 'LEFT' as const,
@@ -385,7 +388,7 @@ describe('WP4 manual planning worksheet', () => {
     const memberSelect = screen.getByLabelText('회원 선택');
     await user.selectOptions(memberSelect, 'child');
     expect((memberSelect as HTMLSelectElement).value).toBe('child');
-    expect(screen.getByText(/하위 · 목표/)).toBeDefined();
+    expect(screen.getByText(/하위 · PVP 700 PV · 좌\/우 각 2,500 PV/)).toBeDefined();
   });
 
   it('selects a locked Sunday audit context inside the detail disclosure', async () => {

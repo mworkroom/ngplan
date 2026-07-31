@@ -9,7 +9,7 @@ import type { SupabaseClient, User } from '@supabase/supabase-js';
 import type { IdGenerator, IdKind } from '../application/project-setup';
 import {
   workspaceSessionFromCloudDocument,
-  type CloudPlanDocumentV1,
+  type CloudPlanDocumentV2,
 } from '../cloud/cloud-plan-document';
 import {
   createCachedPlanRecord,
@@ -46,7 +46,7 @@ interface EditorSelection {
   readonly initialPeriod: PlanningPeriod | null;
   readonly initialSession: WorkspaceSessionSnapshot | null;
   readonly initialRecord: CachedPlanRecord | null;
-  readonly initialRemoteDocument: CloudPlanDocumentV1 | null;
+  readonly initialRemoteDocument: CloudPlanDocumentV2 | null;
 }
 
 export interface CloudAppProps {
@@ -298,7 +298,7 @@ function ProjectCard({
             onClick={() => onOpenRecovery(project)}
             disabled={actionPending}
           >
-            보관본 보기
+            이전 내용 보기
           </button>
         )}
         <button
@@ -457,15 +457,15 @@ function ProjectListScreen({
 function recoveryReasonLabel(point: RecoveryPointSummary): string {
   switch (point.reason) {
     case 'BEFORE_PERIOD_CHANGE':
-      return '기간 변경 직전';
+      return '기간을 바꾸기 전';
     case 'BEFORE_AUTOMATIC_PLAN_APPLY':
-      return '자동 계산 적용 직전';
+      return '자동 계산을 적용하기 전';
     case 'BEFORE_MEMBER_EXCLUSION':
-      return '회원 삭제 직전';
+      return '회원을 삭제하기 전';
     case 'AUTO_15_MIN':
-      return '15분 자동 보관';
+      return '자동 저장';
     case 'DAILY':
-      return '일일 보관';
+      return '자동 저장';
   }
 }
 
@@ -484,39 +484,34 @@ function RecoveryPointSection({
   readonly onOpenCopy: (point: RecoveryPointSummary) => void;
   readonly initiallyOpen?: boolean;
 }) {
+  if (points.length === 0) return null;
+
   return (
     <details className="recovery-section" open={initiallyOpen}>
       <summary>
         {title} <span>{points.length}개</span>
       </summary>
       <p className="help-text">{description}</p>
-      {points.length === 0 ? (
-        <p className="cloud-empty">아직 이 종류의 보관본이 없습니다.</p>
-      ) : (
-        <ul className="recovery-list">
-          {points.map((point) => (
-            <li key={point.key}>
-              <div>
-                <strong>{recoveryReasonLabel(point)}</strong>
-                <span>
-                  한국 {formatSavedAt(point.capturedAt, 'Asia/Seoul')}
-                </span>
-                <span>
-                  브라질 {formatSavedAt(point.capturedAt, 'America/Sao_Paulo')}
-                </span>
-              </div>
-              <button
-                type="button"
-                className="secondary-button"
-                disabled={pendingKey !== null}
-                onClick={() => onOpenCopy(point)}
-              >
-                {pendingKey === point.key ? '사본 만드는 중…' : '사본으로 열기'}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+      <ul className="recovery-list">
+        {points.map((point) => (
+          <li key={point.key}>
+            <div>
+              <strong>{recoveryReasonLabel(point)}</strong>
+              <span>{formatSavedAt(point.capturedAt, 'Asia/Seoul')}</span>
+            </div>
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={pendingKey !== null}
+              onClick={() => onOpenCopy(point)}
+            >
+              {pendingKey === point.key
+                ? '새 계획 만드는 중…'
+                : '이때 내용으로 새 계획 만들기'}
+            </button>
+          </li>
+        ))}
+      </ul>
     </details>
   );
 }
@@ -541,8 +536,7 @@ function RecoveryDialog({
   readonly onClose: () => void;
 }) {
   const safety = points.filter((point) => point.kind === 'SAFETY');
-  const rolling = points.filter((point) => point.kind === 'ROLLING');
-  const daily = points.filter((point) => point.kind === 'DAILY');
+  const automatic = points.filter((point) => point.kind !== 'SAFETY');
   return (
     <div className="period-dialog-backdrop" role="presentation">
       <section
@@ -553,8 +547,8 @@ function RecoveryDialog({
       >
         <div className="period-dialog__header">
           <div>
-            <p className="period-confirmation__eyebrow">원본은 그대로 유지됩니다</p>
-            <h2 id="recovery-dialog-title">{project.title} 보관본</h2>
+            <p className="period-confirmation__eyebrow">{project.title}</p>
+            <h2 id="recovery-dialog-title">이전 내용으로 새 계획 만들기</h2>
           </div>
           <button
             type="button"
@@ -566,9 +560,11 @@ function RecoveryDialog({
           </button>
         </div>
         <p className="recovery-dialog__notice">
-          보관본을 선택하면 현재 계획을 덮지 않고 ‘복구본’이라는 새 계획을 만듭니다.
+          현재 계획은 지워지지 않습니다.
+          <br />
+          원하는 시간을 고르면 그때 내용으로 새 계획이 만들어집니다.
         </p>
-        {loading ? <p role="status">보관본을 불러오는 중…</p> : null}
+        {loading ? <p role="status">이전 내용을 불러오는 중…</p> : null}
         {error === null ? null : (
           <div className="cloud-message cloud-message--error" role="alert">
             <span>{error}</span>
@@ -579,28 +575,24 @@ function RecoveryDialog({
         )}
         {loading || error !== null ? null : (
           <div className="recovery-dialog__sections">
+            {points.length === 0 ? (
+              <p className="cloud-empty">아직 불러올 수 있는 이전 내용이 없습니다.</p>
+            ) : null}
             <RecoveryPointSection
-              title="중요 작업 직전"
-              description="기간 변경, 자동 계산 적용, 회원 삭제 직전에 만든 보관본입니다. 최근 50개를 유지합니다."
+              title="실수하기 전 자동 저장"
+              description="기간을 바꾸거나 자동 계산을 적용하거나 회원을 삭제하기 전에 자동으로 저장한 내용입니다."
               points={safety}
               pendingKey={pendingKey}
               onOpenCopy={onOpenCopy}
               initiallyOpen
             />
             <RecoveryPointSection
-              title="최근 7일"
-              description="15분 간격의 순환 보관본입니다. 계획마다 최대 672개를 유지합니다."
-              points={rolling}
+              title="이전 자동 저장"
+              description="작업하는 동안 자동으로 저장한 내용입니다."
+              points={automatic}
               pendingKey={pendingKey}
               onOpenCopy={onOpenCopy}
               initiallyOpen={safety.length === 0}
-            />
-            <RecoveryPointSection
-              title="일일 보관"
-              description="브라질 업무일마다 한 개씩 남는 장기 보관본입니다."
-              points={daily}
-              pendingKey={pendingKey}
-              onOpenCopy={onOpenCopy}
             />
           </div>
         )}

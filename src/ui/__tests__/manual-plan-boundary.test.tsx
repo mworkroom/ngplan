@@ -98,7 +98,7 @@ describe('WP3 App setup handoff', () => {
     await user.click(screen.getByRole('button', { name: '설정으로 돌아가기' }));
     expect(screen.queryByRole('dialog')).toBeNull();
     await waitFor(() => expect(document.getElementById('project-setup')).not.toBeNull());
-    const setupTitle = screen.getByRole('heading', { name: '2026년 7월 상반기' });
+    const setupTitle = screen.getByRole('heading', { name: '202607A' });
     await waitFor(() => expect(document.activeElement).toBe(setupTitle));
     expect(screen.getByRole('button', { name: '수동 플랜 만들기' })).toBeDefined();
   });

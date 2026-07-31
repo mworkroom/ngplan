@@ -26,7 +26,7 @@ Phase 4 실행 계획의 WP2 관문에 따라 브라우저 Web Worker 안에서 
 - 결정적 constructive candidate와 bounded tiny exhaustive oracle를 구현했다.
 - Constructive candidate는 exact optimum 주장이 없는 사용 가능 초안으로서 PVP 목표량과 좌·우 2,500을 최대 8개 영업일에 결정적으로 분산한다. 첫 영업일 PVP는 회원별 qualification 누계가 최소 300에 도달하도록 우선 배정하고, 이후 날짜도 verifier의 자격 관문을 모두 통과해야 한다.
 - 분산 정책 도입과 함께 automatic policy를 `2.1.0`, checkpoint를 `1.1.0`으로 올려 첫날 집중 방식의 저장 후보를 warm start나 복원 후보로 재사용하지 않는다.
-- 모든 raw candidate는 현재 활성 ruleset/engine(현재 `7.0.0`)으로 다시 계산하고 shape, 자격 PVP, 목표, 목적 벡터를 독립 검증한 뒤에만 사용할 수 있다.
+- 모든 raw candidate는 현재 활성 ruleset/engine(현재 `8.0.0`)으로 다시 계산하고 shape, 자격 PVP, 목표, 목적 벡터를 독립 검증한 뒤에만 사용할 수 있다. 현재 자동 요청은 모든 회원의 좌·우 목표가 2,500일 때만 허용한다.
 - Web Worker는 검증 후보를 게시한 뒤 exact proof backend 부재를 `FAILED / AUTOMATIC_PLAN_PROOF_INCOMPLETE`로 종료한다. 이미 검증된 후보는 미리보기·체크포인트·수동 계획 적용에 계속 사용할 수 있다.
 - 50명 정규 이진 조직의 constructive candidate 생성과 정본 엔진 재검증은 개발 환경의 격리 시험에서 26.61ms로 관측됐다. 이 값은 exact search 또는 목표 office laptop의 30분 proof benchmark가 아니며, 회귀 테스트에는 변동성 있는 시간 임계값을 두지 않았다.
 - 제품은 대기만 하는 가짜 30분 탐색이나 휴리스틱 종료의 `OPTIMAL/INFEASIBLE` 표시를 하지 않는다.

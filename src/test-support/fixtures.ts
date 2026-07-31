@@ -23,12 +23,14 @@ export function member(
   parentMemberKey: string | null = null,
   sideAtParent: Side | null = null,
   pvpTarget: PvpTarget = 700,
+  fortnightSideTarget: 1500 | 2500 = 2500,
 ): MemberSnapshot {
   return {
     memberKey,
     memberId: `ID-${memberKey}`,
     name: `회원 ${memberKey}`,
     pvpTarget,
+    fortnightSideTarget,
     sheetMarker: 'NONE',
     parentMemberKey,
     sideAtParent,

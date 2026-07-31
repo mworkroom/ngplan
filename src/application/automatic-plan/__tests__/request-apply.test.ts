@@ -53,6 +53,28 @@ describe('automatic plan request and atomic application', () => {
     expect(createAutomaticPlanRequest(tooMany).status).toBe('FAILURE');
   });
 
+  it('blocks automatic planning when any member selects the 1,500 side target', () => {
+    const bundle = createAutomaticPlanBundle();
+    const unsupported = {
+      ...bundle,
+      organization: {
+        ...bundle.organization,
+        members: bundle.organization.members.map((member) => ({
+          ...member,
+          fortnightSideTarget: 1500 as const,
+        })),
+      },
+    };
+
+    expect(createAutomaticPlanRequest(unsupported)).toMatchObject({
+      status: 'FAILURE',
+      error: {
+        code: 'AUTOMATIC_PLAN_SIDE_TARGET_UNSUPPORTED',
+        message: expect.stringContaining('수동 플랜'),
+      },
+    });
+  });
+
   it('rejects a disconnected canonical order and missing or invalid opening values', () => {
     const bundle = createAutomaticPlanBundle();
     const root = bundle.organization.members[0]!;

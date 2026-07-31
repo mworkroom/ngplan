@@ -28,12 +28,14 @@ export function optimizerMember(
   parentMemberKey: string | null = null,
   sideAtParent: 'LEFT' | 'RIGHT' | null = null,
   pvpTarget: 700 | 1500 | 2400 = 700,
+  fortnightSideTarget: 1500 | 2500 = 2500,
 ): MemberSnapshot {
   return Object.freeze({
     memberKey,
     memberId: `id-${memberKey}`,
     name: memberKey,
     pvpTarget,
+    fortnightSideTarget,
     sheetMarker: 'NONE',
     parentMemberKey,
     sideAtParent,

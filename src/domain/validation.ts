@@ -330,6 +330,19 @@ function validateOrganization(
       );
     }
     if (
+      typeof member.fortnightSideTarget !== 'number' ||
+      !DEFAULT_RULE_SET.allowedFortnightSideTargets.includes(
+        member.fortnightSideTarget,
+      )
+    ) {
+      pushIssue(
+        issues,
+        'FORTNIGHT_SIDE_TARGET_INVALID',
+        { ...baseLocation, field: 'fortnightSideTarget' },
+        '이번 기간 좌·우 목표는 각각 2,500 또는 1,500 중 하나여야 합니다.',
+      );
+    }
+    if (
       member.sheetMarker !== 'NONE' &&
       member.sheetMarker !== 'PINK_1' &&
       member.sheetMarker !== 'GREEN_2' &&
@@ -833,13 +846,22 @@ function hasCanonicalRuleSetBody(rules: RuleSet): boolean {
       rules.allowedPvpTargets.every(
         (target, index) => target === expected.allowedPvpTargets[index],
       ) &&
+      rules.allowedFortnightSideTargets.length ===
+        expected.allowedFortnightSideTargets.length &&
+      rules.allowedFortnightSideTargets.every(
+        (target, index) =>
+          target === expected.allowedFortnightSideTargets[index],
+      ) &&
       rules.cumulativePvpCap === expected.cumulativePvpCap &&
-      rules.fortnightSideTarget === expected.fortnightSideTarget &&
+      rules.defaultFortnightSideTarget ===
+        expected.defaultFortnightSideTarget &&
       rules.businessCalendarPolicy === expected.businessCalendarPolicy &&
       rules.pvpTiePolicy === expected.pvpTiePolicy &&
       rules.fortnightPvpSourcePolicy === expected.fortnightPvpSourcePolicy &&
       rules.target700CommissionPreference.eligiblePvpTarget ===
         expected.target700CommissionPreference.eligiblePvpTarget &&
+      rules.target700CommissionPreference.eligibleFortnightSideTarget ===
+        expected.target700CommissionPreference.eligibleFortnightSideTarget &&
       rules.target700CommissionPreference.recommendedEquivalentUnits ===
         expected.target700CommissionPreference.recommendedEquivalentUnits &&
       rules.qualificationPolicy.threshold ===
@@ -947,8 +969,8 @@ export function validatePlan(
       issues,
       'RULESET_BODY_MISMATCH',
       { snapshotId, field: 'ruleset' },
-      '규칙 버전 7.0.0의 본문이 확정된 규칙과 일치하지 않습니다.',
-      '내보낸 기본 RuleSet 7.0.0을 변경하지 않고 사용해 주세요.',
+      '규칙 버전 8.0.0의 본문이 확정된 규칙과 일치하지 않습니다.',
+      '내보낸 기본 RuleSet 8.0.0을 변경하지 않고 사용해 주세요.',
     );
   }
 

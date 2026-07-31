@@ -44,6 +44,7 @@ export {
 } from './map-validation-issues';
 export { normalizeProjectSetup } from './normalize-project-setup';
 export {
+  parseDraftFortnightSideTarget,
   parseDraftPvpTarget,
   parseDraftPeriod,
   parseDraftPv,

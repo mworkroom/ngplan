@@ -45,7 +45,10 @@ function member(
   parentMemberKey: string | null,
   sideAtParent: 'LEFT' | 'RIGHT' | null,
   overrides: Partial<
-    Pick<MemberSnapshot, 'memberId' | 'name' | 'pvpTarget' | 'sheetMarker'>
+    Pick<
+      MemberSnapshot,
+      'memberId' | 'name' | 'pvpTarget' | 'fortnightSideTarget' | 'sheetMarker'
+    >
   > = {},
 ): MemberSnapshot {
   return Object.freeze({
@@ -53,6 +56,7 @@ function member(
     memberId: overrides.memberId ?? '',
     name: overrides.name ?? memberKey,
     pvpTarget: overrides.pvpTarget ?? 700,
+    fortnightSideTarget: overrides.fortnightSideTarget ?? 2500,
     sheetMarker: overrides.sheetMarker ?? 'NONE',
     parentMemberKey,
     sideAtParent,

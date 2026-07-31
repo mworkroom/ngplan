@@ -84,6 +84,7 @@ interface SelectedMemberValues {
   readonly memberId: string;
   readonly name: string;
   readonly pvpTarget?: string;
+  readonly fortnightSideTarget?: string;
   readonly confirmed?: boolean;
 }
 
@@ -97,6 +98,12 @@ async function fillSelectedMember(
     screen.getByLabelText('이번 기간 PVP 목표'),
     values.pvpTarget ?? '700',
   );
+  if (values.fortnightSideTarget !== undefined) {
+    await user.selectOptions(
+      screen.getByLabelText('이번 기간 좌·우 목표'),
+      values.fortnightSideTarget,
+    );
+  }
   if (values.confirmed ?? true) {
     const confirmation = inputByLabel(/시작값이 맞게 입력되었으면 확인 버튼을 클릭해주세요/);
     if (!confirmation.checked) {
@@ -270,6 +277,28 @@ describe('App project setup flow', () => {
     const planTitle = await screen.findByRole('heading', { name: '202607A' });
     await waitFor(() => expect(document.activeElement).toBe(planTitle));
     expect(screen.getByText('입력을 확인하고 수동 플랜을 열었습니다.')).toBeDefined();
+  });
+
+  it('keeps manual planning available but disables automatic planning for a 1,500 member', async () => {
+    const user = renderApp();
+    await addRootWithKeyboard(user);
+    await fillSelectedMember(user, {
+      memberId: '1000',
+      name: 'Root',
+      fortnightSideTarget: '1500',
+    });
+
+    const automaticButton = screen.getByRole('button', {
+      name: '자동 플랜 만들기',
+    }) as HTMLButtonElement;
+    expect(automaticButton.disabled).toBe(true);
+    expect(screen.getByText(/1,500 목표 회원이 있어 자동 플랜은 아직 사용할 수 없습니다/))
+      .toBeDefined();
+
+    const manualButton = screen.getByRole('button', { name: '수동 플랜 만들기' });
+    expect((manualButton as HTMLButtonElement).disabled).toBe(false);
+    await user.click(manualButton);
+    expect(await screen.findByRole('heading', { name: '202607A' })).toBeDefined();
   });
 
   it('blocks invalid completion and lets the compact summary focus the first error', async () => {
@@ -505,14 +534,14 @@ describe('App project setup flow', () => {
     await replaceInput(user, '월', '8');
     await user.click(screen.getByRole('button', { name: '닫기' }));
 
-    expect(screen.getByRole('heading', { name: '2026년 7월 상반기' })).toBeDefined();
+    expect(screen.getByRole('heading', { name: '202607A' })).toBeDefined();
     expect(inputByLabel('PVP 시작값').value).toBe('42');
 
     await user.click(screen.getByRole('button', { name: '기간 변경' }));
     await replaceInput(user, '월', '8');
     await user.click(screen.getByRole('button', { name: '변경 적용' }));
 
-    expect(screen.getByRole('heading', { name: '2026년 8월 상반기' })).toBeDefined();
+    expect(screen.getByRole('heading', { name: '202608A' })).toBeDefined();
     expect(screen.getByRole('button', { name: 'Legacy 회원 상세 편집' })).toBeDefined();
     expect(inputByLabel('PVP 시작값').value).toBe('42');
   });
@@ -574,7 +603,7 @@ describe('App project setup flow', () => {
     expect(pvpInput.value).toBe('123');
 
     await user.click(screen.getByRole('button', { name: '설정으로 돌아가기' }));
-    expect(screen.getByRole('heading', { name: '2026년 7월 상반기' })).toBeDefined();
+    expect(screen.getByRole('heading', { name: '202607A' })).toBeDefined();
     await user.click(screen.getByRole('button', { name: '수동 플랜 만들기' }));
 
     expect(
@@ -640,7 +669,7 @@ describe('App project setup flow', () => {
       screen: 'SETUP',
     });
     expect(
-      screen.getByRole('heading', { name: '2026년 7월 상반기' }),
+      screen.getByRole('heading', { name: '202607A' }),
     ).toBeDefined();
   });
 
@@ -683,7 +712,7 @@ describe('App project setup flow', () => {
     const user = renderApp({ onRequestSafetyBackup });
     await createNamedRoot(user);
     await user.click(screen.getByRole('button', { name: '삭제하기' }));
-    expect(screen.getByText(/먼저 현재 계획을 보관합니다/)).toBeDefined();
+    expect(screen.getByText(/먼저 현재 내용이 자동으로 저장됩니다/)).toBeDefined();
     await user.click(
       within(screen.getByRole('dialog')).getByRole('button', {
         name: '삭제하기',

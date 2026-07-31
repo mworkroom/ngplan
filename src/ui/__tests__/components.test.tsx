@@ -38,6 +38,7 @@ function member(
     memberId: `${memberKey}-id`,
     name: memberKey,
     pvpTarget: '700',
+    fortnightSideTarget: '2500',
     sheetMarker: 'NONE',
     placement: { parentMemberKey: null, sideAtParent: null },
     openingState: {
@@ -135,6 +136,7 @@ describe('project and opening forms', () => {
     });
     const onChange = vi.fn();
     const onPvpTargetChange = vi.fn();
+    const onFortnightSideTargetChange = vi.fn();
     render(
       <OpeningStateForm
         member={current}
@@ -149,6 +151,7 @@ describe('project and opening forms', () => {
         ]}
         onChange={onChange}
         onPvpTargetChange={onPvpTargetChange}
+        onFortnightSideTargetChange={onFortnightSideTargetChange}
       />,
     );
 
@@ -158,9 +161,15 @@ describe('project and opening forms', () => {
     fireEvent.focus(openingPvp);
     expect(openingPvp.selectionStart).toBe(0);
     expect(openingPvp.selectionEnd).toBe(1);
+    fireEvent.click(openingPvp);
+    expect(openingPvp.selectionStart).toBe(0);
+    expect(openingPvp.selectionEnd).toBe(1);
     fireEvent.change(openingPvp, { target: { value: '33' } });
 
     fireEvent.change(screen.getByLabelText('이번 기간 PVP 목표'), {
+      target: { value: '1500' },
+    });
+    fireEvent.change(screen.getByLabelText('이번 기간 좌·우 목표'), {
       target: { value: '1500' },
     });
     fireEvent.change(screen.getByLabelText('좌 시작값'), { target: { value: '39' } });
@@ -170,6 +179,7 @@ describe('project and opening forms', () => {
     expect(onChange).toHaveBeenCalledWith({ dailyCarryLeft: '39' });
     expect(onChange).toHaveBeenCalledWith({ cumulativePvp: '33' });
     expect(onPvpTargetChange).toHaveBeenCalledWith('1500');
+    expect(onFortnightSideTargetChange).toHaveBeenCalledWith('1500');
     expect(onChange).toHaveBeenCalledWith({ openingStateConfirmed: true });
     expect(screen.getByText('dailyCarryLeft 문제')).toBeTruthy();
   });
@@ -453,10 +463,13 @@ describe('queue, dialog, and validation feedback', () => {
         member={parented}
         directChildren={[member('child')]}
         isRoot={false}
+        safetyBackupEnabled
         onCancel={onCancel}
         onConfirm={onConfirm}
       />,
     );
+    expect(screen.getByText(/현재 내용이 자동으로 저장됩니다/)).toBeTruthy();
+    expect(screen.getByText(/‘이전 내용 보기’/)).toBeTruthy();
     expect(screen.getByLabelText(/아래 회원을 이 자리로 올리기/)).toBeTruthy();
     fireEvent.click(screen.getByLabelText(/아래 회원들의 새 위치를 나중에 정하기/));
     fireEvent.click(screen.getByLabelText(/아래 회원을 이 자리로 올리기/));
@@ -553,6 +566,19 @@ describe('queue, dialog, and validation feedback', () => {
     fireEvent.click(screen.getByRole('button', { name: 'name 문제' }));
     expect(onNavigate).toHaveBeenCalledTimes(2);
     expect(screen.getAllByText('수정 안내')).toHaveLength(2);
+    rerender(
+      <ValidationSummary
+        validation={{
+          isReady: false,
+          issues: [error],
+          errors: [error],
+          warnings: [],
+          reassignmentQueue: [],
+        }}
+        onNavigate={onNavigate}
+      />,
+    );
+    expect(screen.queryByText(/확인해 볼 내용/)).toBeNull();
     rerender(
       <ValidationSummary
         validation={{

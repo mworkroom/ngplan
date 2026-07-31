@@ -5,6 +5,7 @@ import type {
 } from '../../engine';
 import { deriveTopology } from './derive-topology';
 import type {
+  DraftFortnightSideTargetParseOutcome,
   DraftPvpTargetParseOutcome,
   DraftPvParseOutcome,
   MemberDraft,
@@ -100,6 +101,15 @@ export function parseMemberOpeningState(
     dailyCarryLeft: values[1]!.value,
     dailyCarryRight: values[2]!.value,
   };
+}
+
+export function parseDraftFortnightSideTarget(
+  value: string,
+): DraftFortnightSideTargetParseOutcome {
+  const numeric = Number(value);
+  return value !== '' && (numeric === 2500 || numeric === 1500)
+    ? { ok: true, value: numeric as 2500 | 1500 }
+    : { ok: false, code: 'FORTNIGHT_SIDE_TARGET_INVALID' };
 }
 
 function issue(
@@ -262,6 +272,19 @@ function validateMember(
         ),
       );
     }
+  }
+  const fortnightSideTarget = parseDraftFortnightSideTarget(
+    member.fortnightSideTarget,
+  );
+  if (!fortnightSideTarget.ok) {
+    issues.push(
+      issue(
+        fortnightSideTarget.code,
+        'ERROR',
+        { ...location, field: 'fortnightSideTarget' },
+        '이번 기간 좌·우 목표를 각각 2,500 또는 1,500 중에서 선택해 주세요.',
+      ),
+    );
   }
   const cumulativePvp = parseDraftPv(member.openingState.cumulativePvp);
   if (cumulativePvp.ok && cumulativePvp.value > 2400) {

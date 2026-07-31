@@ -1,4 +1,3 @@
-import { DEFAULT_RULE_SET } from '../../engine';
 import type {
   ManualPlanAchievementTargets,
   ManualPlanSchema,
@@ -42,11 +41,11 @@ export function deriveManualPlanAchievementTargets(
     );
     let selfLeft =
       leftChildTargets === null
-        ? DEFAULT_RULE_SET.fortnightSideTarget
+        ? member.fortnightSideTarget
         : targetTotal(leftChildTargets);
     let selfRight =
       rightChildTargets === null
-        ? DEFAULT_RULE_SET.fortnightSideTarget
+        ? member.fortnightSideTarget
         : targetTotal(rightChildTargets);
 
     if (rightChildTargets === null) {

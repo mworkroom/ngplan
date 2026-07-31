@@ -42,6 +42,7 @@ function root(
     memberId: `ID-${memberKey}`,
     name: `회원 ${memberKey}`,
     pvpTarget: 700,
+    fortnightSideTarget: 2500,
     sheetMarker: 'NONE',
     parentMemberKey: null,
     sideAtParent: null,
@@ -60,6 +61,7 @@ function child(
     memberId: `ID-${memberKey}`,
     name: `회원 ${memberKey}`,
     pvpTarget: 700,
+    fortnightSideTarget: 2500,
     sheetMarker: 'NONE',
     parentMemberKey,
     sideAtParent,
@@ -663,6 +665,19 @@ describe('[VAL-P01] — PVP 목표와 찾기 표지판', () => {
       issueCodes(planFor([root('A', { pvpTarget: pvpTarget as 700 })])),
     ).toContain('PVP_TARGET_INVALID');
   });
+
+  it.each([-1, 0, 1_000, 2_000])(
+    '지원하지 않는 좌·우 목표 %s를 거부한다',
+    (fortnightSideTarget) => {
+      expect(
+        issueCodes(planFor([
+          root('A', {
+            fortnightSideTarget: fortnightSideTarget as 1500,
+          }),
+        ])),
+      ).toContain('FORTNIGHT_SIDE_TARGET_INVALID');
+    },
+  );
 
   it.each([2400, 1500, 700] as const)('목표 %s를 허용한다', (pvpTarget) => {
     expect(validatePlan(planFor([root('A', { pvpTarget })])).isValid).toBe(true);

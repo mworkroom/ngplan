@@ -1,6 +1,6 @@
 import type { User } from '@supabase/supabase-js';
 import type { WorkspaceSessionSnapshot } from '../ui/workspace-session-storage';
-import type { CloudPlanDocumentV1 } from './cloud-plan-document';
+import type { CloudPlanDocumentV2 } from './cloud-plan-document';
 
 export interface CloudWorkspace {
   readonly id: string;
@@ -23,7 +23,7 @@ export interface CloudProjectSummary {
 }
 
 export interface CloudProjectRecord extends CloudProjectSummary {
-  readonly document: CloudPlanDocumentV1;
+  readonly document: CloudPlanDocumentV2;
 }
 
 export interface SaveProjectResult {
@@ -60,7 +60,7 @@ export interface PlanRepository {
   ): Promise<CloudProjectRecord>;
   saveProject(
     workspaceId: string,
-    document: CloudPlanDocumentV1,
+    document: CloudPlanDocumentV2,
   ): Promise<SaveProjectResult>;
   setProjectHidden(
     workspaceId: string,
@@ -75,7 +75,7 @@ export interface PlanRepository {
     workspaceId: string,
     projectId: string,
     point: RecoveryPointSummary,
-  ): Promise<CloudPlanDocumentV1>;
+  ): Promise<CloudPlanDocumentV2>;
   createSafetyBackup?(
     workspaceId: string,
     projectId: string,
@@ -89,7 +89,7 @@ export interface CachedPlanRecord {
   readonly workspaceId: string;
   readonly projectId: string;
   readonly verifiedUserIds: readonly string[];
-  readonly document: CloudPlanDocumentV1;
+  readonly document: CloudPlanDocumentV2;
   readonly workspaceSession: WorkspaceSessionSnapshot;
   readonly pendingRemote: boolean;
   readonly remoteRevision: number | null;

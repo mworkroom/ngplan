@@ -3,12 +3,14 @@ import {
   addRootMember,
   assignMemberDirectoryIdentity,
   createProjectDraft,
+  editMemberIdentity,
   type ProjectSetupDraft,
 } from '../../application/project-setup';
 import {
   clearWorkspaceSession,
   LEGACY_WORKSPACE_SESSION_STORAGE_KEY,
   LEGACY_WORKSPACE_SESSION_STORAGE_V2_KEY,
+  LEGACY_WORKSPACE_SESSION_STORAGE_V3_KEY,
   readWorkspaceSession,
   replaceWorkspaceAutomaticPlanCheckpoint,
   WORKSPACE_SESSION_STORAGE_KEY,
@@ -44,6 +46,7 @@ function createLegacyDraft(
   >;
   const members = legacyDraft.members as Array<Record<string, unknown>>;
   for (const member of members) {
+    delete member.fortnightSideTarget;
     const current = member.openingState as Record<string, unknown>;
     member.openingState = {
       ...(version === 2 ? { openingQualificationPvp: cumulativePvp } : {}),
@@ -62,8 +65,8 @@ afterEach(() => {
   window.sessionStorage.clear();
 });
 
-describe('persistent workspace storage v3', () => {
-  it('persists and reads only the current schema v3 write contract', () => {
+describe('persistent workspace storage v4', () => {
+  it('persists and reads only the current schema v4 write contract', () => {
     const draft = createDraft();
     writeWorkspaceSession({
       version: WORKSPACE_SESSION_VERSION,
@@ -76,7 +79,7 @@ describe('persistent workspace storage v3', () => {
     expect(Object.isFrozen(draft)).toBe(false);
     expect(window.localStorage.getItem(LEGACY_WORKSPACE_SESSION_STORAGE_KEY)).toBeNull();
     expect(JSON.parse(window.localStorage.getItem(WORKSPACE_SESSION_STORAGE_KEY)!))
-      .toMatchObject({ version: 3, automaticPlanCheckpoint: null });
+      .toMatchObject({ version: 4, automaticPlanCheckpoint: null });
     expect(readWorkspaceSession()).toEqual({
       version: WORKSPACE_SESSION_VERSION,
       draft,
@@ -120,6 +123,24 @@ describe('persistent workspace storage v3', () => {
     });
   });
 
+  it('preserves an explicitly selected 1,500 side target in current storage', () => {
+    const draft = editMemberIdentity(createDraftWithMember(), 'member-1', {
+      fortnightSideTarget: '1500',
+    });
+
+    writeWorkspaceSession({
+      version: WORKSPACE_SESSION_VERSION,
+      draft,
+      manualPlanDraft: null,
+      screen: 'SETUP',
+      organizationScale: 1,
+    });
+
+    expect(readWorkspaceSession()?.draft.members[0]?.fortnightSideTarget).toBe(
+      '1500',
+    );
+  });
+
   it('migrates v1 visible PVP into cumulative PVP and clears derived state', () => {
     const legacyDraft = createLegacyDraft(1);
     const members = legacyDraft.members as Array<Record<string, unknown>>;
@@ -155,7 +176,7 @@ describe('persistent workspace storage v3', () => {
     const migrated = readWorkspaceSession();
 
     expect(migrated).not.toBeNull();
-    expect(migrated?.version).toBe(3);
+    expect(migrated?.version).toBe(4);
     expect(migrated?.screen).toBe('SETUP');
     expect(migrated?.draft.activeBundle).toBeNull();
     expect(migrated?.manualPlanDraft).toEqual(manualPlanDraft);
@@ -166,9 +187,10 @@ describe('persistent workspace storage v3', () => {
       dailyCarryRight: '30',
       openingStateConfirmed: false,
     });
+    expect(migrated?.draft.members[0]?.fortnightSideTarget).toBe('2500');
     expect(window.sessionStorage.getItem(LEGACY_WORKSPACE_SESSION_STORAGE_KEY)).toBeNull();
     expect(JSON.parse(window.localStorage.getItem(WORKSPACE_SESSION_STORAGE_KEY)!))
-      .toMatchObject({ version: 3, screen: 'SETUP', automaticPlanCheckpoint: null });
+      .toMatchObject({ version: 4, screen: 'SETUP', automaticPlanCheckpoint: null });
   });
 
   it('migrates local v2 visible PVP without clamping and discards stale bundle/checkpoint', () => {
@@ -200,7 +222,7 @@ describe('persistent workspace storage v3', () => {
     const migrated = readWorkspaceSession();
 
     expect(migrated).toMatchObject({
-      version: 3,
+      version: 4,
       screen: 'SETUP',
       organizationScale: 0.75,
       automaticPlanCheckpoint: null,
@@ -213,8 +235,46 @@ describe('persistent workspace storage v3', () => {
       dailyCarryRight: '0',
       openingStateConfirmed: false,
     });
+    expect(migrated?.draft.members[0]?.fortnightSideTarget).toBe('2500');
     expect(window.localStorage.getItem(LEGACY_WORKSPACE_SESSION_STORAGE_V2_KEY)).toBeNull();
     expect(window.localStorage.getItem(WORKSPACE_SESSION_STORAGE_KEY)).not.toBeNull();
+  });
+
+  it('migrates v3 members to the 2,500 default and clears stale derived state', () => {
+    const legacyDraft = structuredClone(createDraftWithMember()) as unknown as Record<
+      string,
+      unknown
+    >;
+    const members = legacyDraft.members as Array<Record<string, unknown>>;
+    delete members[0]!.fortnightSideTarget;
+    legacyDraft.activeBundle = { staleBundle: true };
+    const manualPlanDraft = {
+      cells: [{ date: '2026-07-01', memberKey: 'member-1', pvp: '321' }],
+    };
+    window.localStorage.setItem(
+      LEGACY_WORKSPACE_SESSION_STORAGE_V3_KEY,
+      JSON.stringify({
+        version: 3,
+        draft: legacyDraft,
+        manualPlanDraft,
+        screen: 'AUTOMATIC_PLAN',
+        organizationScale: 0.7,
+        automaticPlanCheckpoint: { candidateId: 'stale' },
+      }),
+    );
+
+    const migrated = readWorkspaceSession();
+
+    expect(migrated).toMatchObject({
+      version: 4,
+      screen: 'SETUP',
+      organizationScale: 0.7,
+      manualPlanDraft,
+      automaticPlanCheckpoint: null,
+    });
+    expect(migrated?.draft.members[0]?.fortnightSideTarget).toBe('2500');
+    expect(migrated?.draft.activeBundle).toBeNull();
+    expect(window.localStorage.getItem(LEGACY_WORKSPACE_SESSION_STORAGE_V3_KEY)).toBeNull();
   });
 
   it('isolates malformed checkpoint data without discarding setup/manual work', () => {
@@ -255,6 +315,7 @@ describe('persistent workspace storage v3', () => {
 
     window.sessionStorage.setItem(LEGACY_WORKSPACE_SESSION_STORAGE_KEY, '{}');
     window.sessionStorage.setItem(LEGACY_WORKSPACE_SESSION_STORAGE_V2_KEY, '{}');
+    window.sessionStorage.setItem(LEGACY_WORKSPACE_SESSION_STORAGE_V3_KEY, '{}');
     writeWorkspaceSession({
       version: WORKSPACE_SESSION_VERSION,
       draft: createDraft(),
@@ -264,18 +325,22 @@ describe('persistent workspace storage v3', () => {
     });
     window.sessionStorage.setItem(LEGACY_WORKSPACE_SESSION_STORAGE_KEY, '{}');
     window.sessionStorage.setItem(LEGACY_WORKSPACE_SESSION_STORAGE_V2_KEY, '{}');
+    window.sessionStorage.setItem(LEGACY_WORKSPACE_SESSION_STORAGE_V3_KEY, '{}');
     window.localStorage.setItem(LEGACY_WORKSPACE_SESSION_STORAGE_KEY, '{}');
     window.localStorage.setItem(LEGACY_WORKSPACE_SESSION_STORAGE_V2_KEY, '{}');
+    window.localStorage.setItem(LEGACY_WORKSPACE_SESSION_STORAGE_V3_KEY, '{}');
     clearWorkspaceSession();
     expect(window.localStorage.getItem(WORKSPACE_SESSION_STORAGE_KEY)).toBeNull();
     expect(window.localStorage.getItem(LEGACY_WORKSPACE_SESSION_STORAGE_KEY)).toBeNull();
     expect(window.localStorage.getItem(LEGACY_WORKSPACE_SESSION_STORAGE_V2_KEY)).toBeNull();
+    expect(window.localStorage.getItem(LEGACY_WORKSPACE_SESSION_STORAGE_V3_KEY)).toBeNull();
     expect(window.sessionStorage.getItem(WORKSPACE_SESSION_STORAGE_KEY)).toBeNull();
     expect(window.sessionStorage.getItem(LEGACY_WORKSPACE_SESSION_STORAGE_KEY)).toBeNull();
     expect(window.sessionStorage.getItem(LEGACY_WORKSPACE_SESSION_STORAGE_V2_KEY)).toBeNull();
+    expect(window.sessionStorage.getItem(LEGACY_WORKSPACE_SESSION_STORAGE_V3_KEY)).toBeNull();
   });
 
-  it('promotes an existing v3 session snapshot into persistent local storage', () => {
+  it('promotes an existing v4 session snapshot into persistent local storage', () => {
     const draft = createDraftWithMember();
     window.sessionStorage.setItem(
       WORKSPACE_SESSION_STORAGE_KEY,

@@ -1,7 +1,7 @@
 import {
   cloudDocumentFromWorkspaceSession,
   serializeCloudPlanDocument,
-  type CloudPlanDocumentV1,
+  type CloudPlanDocumentV2,
 } from './cloud-plan-document';
 import { createCachedPlanRecord } from './indexeddb-plan-cache';
 import type {
@@ -24,7 +24,7 @@ interface PlanSaveCoordinatorOptions {
   readonly repository: PlanRepository;
   readonly cache: PlanCache;
   readonly initialRecord?: CachedPlanRecord | null;
-  readonly initialRemoteDocument?: CloudPlanDocumentV1 | null;
+  readonly initialRemoteDocument?: CloudPlanDocumentV2 | null;
   readonly onStatus: (status: CloudSaveStatus) => void;
   readonly isOnline?: () => boolean;
   readonly now?: () => Date;

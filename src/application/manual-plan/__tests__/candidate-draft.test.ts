@@ -33,6 +33,7 @@ function member(
     memberId: '',
     name: memberKey,
     pvpTarget: 700,
+    fortnightSideTarget: 2500,
     sheetMarker: 'NONE',
     parentMemberKey,
     sideAtParent,

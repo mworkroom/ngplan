@@ -52,7 +52,8 @@ export function MemberFortnightSummary({
             보름 목표 요약
           </h2>
           <p className="panel__description">
-            {selected.memberLabel} · 목표 {pv(selected.pvpTarget)}
+            {selected.memberLabel} · PVP {pv(selected.pvpTarget)} · 좌/우 각{' '}
+            {pv(selected.fortnightSideTarget)}
           </p>
         </div>
         <span className={`status-badge ${selected.allTargetsMet ? 'status-badge--ready' : 'status-badge--warning'}`}>
@@ -65,6 +66,10 @@ export function MemberFortnightSummary({
         <SummaryValue label="신규 PVP" value={pv(selected.newPvpTotal)} />
         <SummaryValue label="누적 PVP 마감" value={pv(selected.personalPvpTotal)} />
         <SummaryValue label="개인 PVP 목표" value={pv(selected.personalPvpTarget)} />
+        <SummaryValue
+          label="좌·우 목표"
+          value={`각 ${pv(selected.fortnightSideTarget)}`}
+        />
         <SummaryValue label="추가 필요 PVP" value={pv(selected.remainingPvp)} />
         <SummaryValue label="개인 PVP 상태" value={selected.personalPvpStatusLabel} />
         <SummaryValue label="누적 좌" value={pv(selected.rawLeftTotal)} />

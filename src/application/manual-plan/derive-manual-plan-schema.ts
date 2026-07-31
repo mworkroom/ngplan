@@ -194,6 +194,7 @@ function createMemberDescriptors(
       displayLabel,
       duplicateLabel,
       pvpTarget: member.pvpTarget,
+      fortnightSideTarget: member.fortnightSideTarget,
       sheetMarker: member.sheetMarker,
       openingState: openingFor(bundle, member.memberKey),
       leftMode: children.left === null ? 'SELF' : 'CHILD',

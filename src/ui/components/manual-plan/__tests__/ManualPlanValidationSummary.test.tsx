@@ -32,6 +32,7 @@ function createBundle(): ProjectSetupBundle {
           memberId: '',
           name: '루트',
           pvpTarget: 700,
+          fortnightSideTarget: 2500,
           sheetMarker: 'NONE',
           parentMemberKey: null,
           sideAtParent: null,

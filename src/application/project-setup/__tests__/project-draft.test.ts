@@ -17,6 +17,7 @@ import {
   editProjectTitle,
   memberCardId,
   memberFieldId,
+  parseDraftFortnightSideTarget,
   parseDraftPvpTarget,
   parseDraftPeriod,
   parseDraftPv,
@@ -158,6 +159,7 @@ describe('P2-OPEN / P2-MEMBER 회원 편집과 파싱', () => {
       openingStateConfirmed: false,
     });
     expect(member.openingState).toEqual(firstOpening);
+    expect(member.fortnightSideTarget).toBe('2500');
     expect(member.openingState).not.toBe(firstOpening);
     expect(firstOpening).not.toBe(secondOpening);
   });
@@ -214,6 +216,15 @@ describe('P2-OPEN / P2-MEMBER 회원 편집과 파싱', () => {
     ['1000', { ok: false, code: 'PVP_TARGET_INVALID' }],
   ] as const)('PVP 목표 문자열 %s를 안정적으로 파싱한다', (value, expected) => {
     expect(parseDraftPvpTarget(value)).toEqual(expected);
+  });
+
+  it.each([
+    ['2500', { ok: true, value: 2500 }],
+    ['1500', { ok: true, value: 1500 }],
+    ['', { ok: false, code: 'FORTNIGHT_SIDE_TARGET_INVALID' }],
+    ['2000', { ok: false, code: 'FORTNIGHT_SIDE_TARGET_INVALID' }],
+  ] as const)('좌·우 목표 문자열 %s를 안정적으로 파싱한다', (value, expected) => {
+    expect(parseDraftFortnightSideTarget(value)).toEqual(expected);
   });
 
   it('기간 문자열을 빈칸의 암묵적 0 없이 파싱한다', () => {

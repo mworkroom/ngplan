@@ -95,7 +95,7 @@ export function ExcludeMemberDialog({
         <h2 id="exclude-dialog-title">{displayName}님을 삭제할까요?</h2>
         <p id="exclude-dialog-description">
           {safetyBackupEnabled
-            ? '삭제하기를 누르면 먼저 현재 계획을 보관합니다. 나중에 계획 목록의 보관본에서 원래 상태를 새 사본으로 열 수 있습니다.'
+            ? '삭제하기를 누르면 먼저 현재 내용이 자동으로 저장됩니다. 나중에 계획 목록의 ‘이전 내용 보기’에서 삭제 전 내용으로 새 계획을 만들 수 있습니다.'
             : '이 회원의 이름과 입력한 숫자가 화면에서 사라집니다.'}
         </p>
 
@@ -180,7 +180,7 @@ export function ExcludeMemberDialog({
             onClick={() => onConfirm(strategy)}
             disabled={pending}
           >
-            {pending ? '보관본 만드는 중…' : '삭제하기'}
+            {pending ? '현재 내용 저장 중…' : '삭제하기'}
           </button>
         </div>
       </section>

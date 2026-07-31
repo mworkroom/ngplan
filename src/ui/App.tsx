@@ -98,6 +98,9 @@ const EMPTY_AUTOMATIC_PLAN_PROOF: AutomaticPlanProofProgress = Object.freeze({
   primaryLowerBound: null,
 });
 
+const AUTOMATIC_PLAN_SIDE_TARGET_UNAVAILABLE_MESSAGE =
+  '좌·우 각 1,500 목표 회원이 있어 자동 플랜은 아직 사용할 수 없습니다. 수동 플랜을 이용해 주세요.';
+
 const defaultAutomaticPlanWorkerFactory: AutomaticPlanWorkerFactory = () =>
   new Worker(new URL('../workers/automatic-plan.worker.ts', import.meta.url), {
     type: 'module',
@@ -357,6 +360,9 @@ export function App({
   const previousScreenRef = useRef<AppScreen>(screenState);
 
   const topology = useMemo(() => deriveTopology(draft), [draft]);
+  const automaticPlanSideTargetUnavailable = topology.activeMembers.some(
+    (member) => member.fortnightSideTarget !== '2500',
+  );
   const liveValidation = useMemo(() => validateProjectSetupDraft(draft), [draft]);
   const displayedValidation = submittedValidation ?? liveValidation;
   const selectedMember =
@@ -704,7 +710,7 @@ export function App({
         const message =
           backupError instanceof Error
             ? backupError.message
-            : '회원 삭제 전 보관본을 만들지 못했습니다.';
+            : '회원을 삭제하기 전 현재 내용을 저장하지 못했습니다.';
         setCommandError(message);
         setAnnouncement(`회원 삭제를 막았습니다. ${message}`);
         setRiskActionPending(false);
@@ -719,7 +725,7 @@ export function App({
     );
     const succeeded = applyTopologyOutcome(
       outcome,
-      '선택한 회원을 삭제했습니다. 삭제 직전 보관본에서 원래 상태를 사본으로 열 수 있습니다.',
+      '선택한 회원을 삭제했습니다. 계획 목록의 ‘이전 내용 보기’에서 삭제 전 내용으로 새 계획을 만들 수 있습니다.',
     );
     if (succeeded) {
       setExcludedMemberKey(null);
@@ -826,6 +832,10 @@ export function App({
   };
 
   const handleStartAutomaticPlanFromSetup = (): void => {
+    if (automaticPlanSideTargetUnavailable) {
+      setCommandError(AUTOMATIC_PLAN_SIDE_TARGET_UNAVAILABLE_MESSAGE);
+      return;
+    }
     const activeBundle = preparePlan();
     if (activeBundle === null) return;
     setManualPlanDraft(reconcileManualPlanDraft(activeBundle, manualPlanDraft));
@@ -864,7 +874,7 @@ export function App({
         setAutomaticPlanActionError(
           backupError instanceof Error
             ? backupError.message
-            : '자동 계산 적용 전 보관본을 만들지 못했습니다.',
+            : '자동 계산을 적용하기 전 현재 내용을 저장하지 못했습니다.',
         );
         setRiskActionPending(false);
         return;
@@ -1004,8 +1014,7 @@ export function App({
       <header className="setup-command-header">
         <div className="setup-command-header__context">
           <h1 id="project-setup-title" tabIndex={-1}>
-            {draft.year}년 {draft.month}월{' '}
-            {draft.half === 'FIRST_HALF' ? '상반기' : '하반기'}
+            {draft.title}
           </h1>
           <button
             type="button"
@@ -1025,6 +1034,12 @@ export function App({
           <button
             type="button"
             className="setup-command-header__action"
+            disabled={automaticPlanSideTargetUnavailable}
+            aria-describedby={
+              automaticPlanSideTargetUnavailable
+                ? 'automatic-plan-side-target-unavailable'
+                : undefined
+            }
             onClick={handleStartAutomaticPlanFromSetup}
           >
             자동 플랜 만들기
@@ -1040,6 +1055,15 @@ export function App({
           )}
         </div>
       </header>
+
+      {automaticPlanSideTargetUnavailable ? (
+        <p
+          id="automatic-plan-side-target-unavailable"
+          className="help-text automatic-plan-unavailable-notice"
+        >
+          {AUTOMATIC_PLAN_SIDE_TARGET_UNAVAILABLE_MESSAGE}
+        </p>
+      ) : null}
 
       <p className="visually-hidden" aria-live="polite" aria-atomic="true">
         {announcement}
@@ -1279,6 +1303,13 @@ export function App({
                 onPvpTargetChange={(pvpTarget) =>
                   commitDraft(
                     editMemberIdentity(draft, selectedMember.memberKey, { pvpTarget }),
+                  )
+                }
+                onFortnightSideTargetChange={(fortnightSideTarget) =>
+                  commitDraft(
+                    editMemberIdentity(draft, selectedMember.memberKey, {
+                      fortnightSideTarget,
+                    }),
                   )
                 }
               />

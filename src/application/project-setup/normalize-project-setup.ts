@@ -18,6 +18,7 @@ import type {
 import {
   createProjectSetupValidation,
   fromCanonicalIssue,
+  parseDraftFortnightSideTarget,
   parseDraftPvpTarget,
   parseDraftPeriod,
   parseMemberOpeningState,
@@ -95,8 +96,11 @@ export function normalizeProjectSetup(
   const openings: [string, OpeningStateInput][] = [];
   for (const member of topology.activeMembers) {
     const pvpTarget = parseDraftPvpTarget(member.pvpTarget);
+    const fortnightSideTarget = parseDraftFortnightSideTarget(
+      member.fortnightSideTarget,
+    );
     const opening = parseMemberOpeningState(member);
-    if (!pvpTarget.ok || opening === null) {
+    if (!pvpTarget.ok || !fortnightSideTarget.ok || opening === null) {
       return fail(validation);
     }
     members.push({
@@ -104,6 +108,7 @@ export function normalizeProjectSetup(
       memberId: member.memberId.trim(),
       name: member.name.trim(),
       pvpTarget: pvpTarget.value,
+      fortnightSideTarget: fortnightSideTarget.value,
       sheetMarker: member.sheetMarker,
       parentMemberKey: member.placement.parentMemberKey,
       sideAtParent: member.placement.sideAtParent,

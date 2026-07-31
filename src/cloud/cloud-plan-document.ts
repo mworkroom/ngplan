@@ -1,14 +1,16 @@
 import type { ManualPlanDraft } from '../application/manual-plan';
 import type { ProjectSetupDraft } from '../application/project-setup';
 import {
+  migrateWorkspaceSessionV3Snapshot,
   normalizeWorkspaceSessionSnapshot,
   WORKSPACE_SESSION_VERSION,
   type WorkspaceSessionSnapshot,
 } from '../ui/workspace-session-storage';
 
-export const CLOUD_PLAN_DOCUMENT_VERSION = 1 as const;
+const LEGACY_CLOUD_PLAN_DOCUMENT_VERSION = 1 as const;
+export const CLOUD_PLAN_DOCUMENT_VERSION = 2 as const;
 
-export interface CloudPlanDocumentV1 {
+export interface CloudPlanDocumentV2 {
   readonly version: typeof CLOUD_PLAN_DOCUMENT_VERSION;
   readonly draft: ProjectSetupDraft;
   readonly manualPlanDraft: ManualPlanDraft | null;
@@ -20,7 +22,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 export function cloudDocumentFromWorkspaceSession(
   snapshot: WorkspaceSessionSnapshot,
-): CloudPlanDocumentV1 {
+): CloudPlanDocumentV2 {
   return {
     version: CLOUD_PLAN_DOCUMENT_VERSION,
     draft: snapshot.draft,
@@ -30,18 +32,26 @@ export function cloudDocumentFromWorkspaceSession(
 
 export function normalizeCloudPlanDocument(
   value: unknown,
-): CloudPlanDocumentV1 | null {
-  if (!isRecord(value) || value.version !== CLOUD_PLAN_DOCUMENT_VERSION) {
+): CloudPlanDocumentV2 | null {
+  if (!isRecord(value)) {
     return null;
   }
-  const normalized = normalizeWorkspaceSessionSnapshot({
-    version: WORKSPACE_SESSION_VERSION,
+  const workspaceCandidate = {
+    version:
+      value.version === LEGACY_CLOUD_PLAN_DOCUMENT_VERSION
+        ? 3
+        : WORKSPACE_SESSION_VERSION,
     draft: value.draft,
     manualPlanDraft: value.manualPlanDraft,
     screen: 'SETUP',
     organizationScale: 1,
     automaticPlanCheckpoint: null,
-  });
+  };
+  const normalized = value.version === CLOUD_PLAN_DOCUMENT_VERSION
+    ? normalizeWorkspaceSessionSnapshot(workspaceCandidate)
+    : value.version === LEGACY_CLOUD_PLAN_DOCUMENT_VERSION
+      ? migrateWorkspaceSessionV3Snapshot(workspaceCandidate)
+      : null;
   if (normalized === null) {
     return null;
   }
@@ -53,7 +63,7 @@ export function normalizeCloudPlanDocument(
 }
 
 export function workspaceSessionFromCloudDocument(
-  document: CloudPlanDocumentV1,
+  document: CloudPlanDocumentV2,
   localSession?: WorkspaceSessionSnapshot | null,
 ): WorkspaceSessionSnapshot {
   const canOpenManualPlan =
@@ -81,7 +91,7 @@ export function workspaceSessionFromCloudDocument(
 }
 
 export function serializeCloudPlanDocument(
-  document: CloudPlanDocumentV1,
+  document: CloudPlanDocumentV2,
 ): string {
   return JSON.stringify(document);
 }

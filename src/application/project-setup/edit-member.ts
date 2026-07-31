@@ -81,6 +81,7 @@ export interface MemberIdentityPatch {
   readonly memberId?: string;
   readonly name?: string;
   readonly pvpTarget?: string;
+  readonly fortnightSideTarget?: string;
   readonly sheetMarker?: MemberDraft['sheetMarker'];
 }
 
@@ -108,6 +109,8 @@ export function editMemberIdentity(
       memberId,
       name,
       pvpTarget: patch.pvpTarget ?? member.pvpTarget,
+      fortnightSideTarget:
+        patch.fortnightSideTarget ?? member.fortnightSideTarget,
       sheetMarker: patch.sheetMarker ?? member.sheetMarker,
       openingState: nameChanged
         ? { ...member.openingState, openingStateConfirmed: false }
@@ -117,6 +120,7 @@ export function editMemberIdentity(
       next.memberId === member.memberId &&
       next.name === member.name &&
       next.pvpTarget === member.pvpTarget &&
+      next.fortnightSideTarget === member.fortnightSideTarget &&
       next.sheetMarker === member.sheetMarker
       ? member
       : next;

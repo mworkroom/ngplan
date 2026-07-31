@@ -70,10 +70,12 @@ export function MemberCard({
           >
             <h3 className="member-card__name">{displayName}</h3>
             <p className="member-card__meta">
-              ID {member.memberId.trim() || '미입력'} · 목표{' '}
+              ID {member.memberId.trim() || '미입력'} · PVP{' '}
               {member.pvpTarget === ''
                 ? '미선택'
-                : `${Number(member.pvpTarget).toLocaleString('ko-KR')} PV`}
+                : `${Number(member.pvpTarget).toLocaleString('ko-KR')} PV`}{' '}
+              · 좌/우 각{' '}
+              {Number(member.fortnightSideTarget).toLocaleString('ko-KR')} PV
             </p>
           </button>
           <span

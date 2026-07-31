@@ -30,6 +30,7 @@ export function createMemberDraft(memberKey: string): MemberDraft {
     memberId: '',
     name: '',
     pvpTarget: '',
+    fortnightSideTarget: '2500',
     sheetMarker: 'NONE',
     placement: { parentMemberKey: null, sideAtParent: null },
     openingState: createOpeningStateDraft(),

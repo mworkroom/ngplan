@@ -31,12 +31,14 @@ function member(
   parentMemberKey: string | null = null,
   sideAtParent: 'LEFT' | 'RIGHT' | null = null,
   pvpTarget: PvpTarget = 700,
+  fortnightSideTarget: 1500 | 2500 = 2500,
 ): MemberSnapshot {
   return {
     memberKey,
     memberId: '',
     name: memberKey === '__proto__' ? '특수 회원' : memberKey,
     pvpTarget,
+    fortnightSideTarget,
     sheetMarker: 'NONE',
     parentMemberKey,
     sideAtParent,

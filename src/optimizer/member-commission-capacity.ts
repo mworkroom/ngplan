@@ -147,12 +147,12 @@ export function deriveMemberCommissionCapacities(
     const plannedPvp = requiredPvpByMember.get(memberKey)!;
     const smallerSideRequirement = Math.max(
       0,
-      DEFAULT_RULE_SET.fortnightSideTarget - plannedPvp,
+      DEFAULT_RULE_SET.defaultFortnightSideTarget - plannedPvp,
     );
     const children = childSlots.get(memberKey)!;
     const leftTotal = children.left === undefined
       ? children.right === undefined
-        ? DEFAULT_RULE_SET.fortnightSideTarget
+        ? DEFAULT_RULE_SET.defaultFortnightSideTarget
         : smallerSideRequirement
       : subtreeTotalByMember.get(children.left)!;
     const rightTotal = children.right === undefined
