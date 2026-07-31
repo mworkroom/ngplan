@@ -130,6 +130,7 @@ describe('WP3 manual-plan workspace boundary', () => {
   it('initializes a current blank session with the compact view and return control', async () => {
     const user = userEvent.setup();
     const onReturnToSetup = vi.fn();
+    const onBackToPlanList = vi.fn();
     render(
       <ManualPlanWorkspace
         bundle={createBundle()}
@@ -137,6 +138,7 @@ describe('WP3 manual-plan workspace boundary', () => {
         setupWarnings={[]}
         onDraftChange={vi.fn()}
         onReturnToSetup={onReturnToSetup}
+        onBackToPlanList={onBackToPlanList}
       />,
     );
 
@@ -158,6 +160,8 @@ describe('WP3 manual-plan workspace boundary', () => {
 
     await user.click(screen.getByRole('button', { name: '설정으로 돌아가기' }));
     expect(onReturnToSetup).toHaveBeenCalledOnce();
+    await user.click(screen.getByRole('button', { name: '전체 목록으로' }));
+    expect(onBackToPlanList).toHaveBeenCalledOnce();
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 

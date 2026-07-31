@@ -38,8 +38,8 @@ afterEach(() => {
 describe('WP3 App setup handoff', () => {
   it('offers both direct plan choices without repeated editing or ready states', () => {
     render(<App generateId={createIdGenerator()} initialDate={INITIAL_DATE} />);
-    expect(screen.getByRole('button', { name: '수동 플랜 만들기' })).toBeDefined();
-    expect(screen.getByRole('button', { name: '자동 플랜 만들기' })).toBeDefined();
+    expect(screen.getByRole('button', { name: '플랜 만들기' })).toBeDefined();
+    expect(screen.getByRole('button', { name: '다음 단계' })).toBeDefined();
     expect(screen.queryByRole('button', { name: '플래너 생성' })).toBeNull();
     expect(screen.queryByText('입력 중')).toBeNull();
     expect(screen.queryByText('계획표 준비 완료')).toBeNull();
@@ -56,14 +56,14 @@ describe('WP3 App setup handoff', () => {
     await user.type(inputById('member-member-1-name'), '루트 회원');
     await user.selectOptions(selectById('member-member-1-pvpTarget'), '700');
     await user.click(inputById('member-member-1-openingStateConfirmed'));
-    await user.click(screen.getByRole('button', { name: '수동 플랜 만들기' }));
+    await user.click(screen.getByRole('button', { name: '플랜 만들기' }));
     await screen.findByRole('heading', { name: '202607A' });
     await user.click(screen.getByRole('button', { name: '설정으로 돌아가기' }));
 
     await user.click(screen.getByRole('button', { name: '기간 변경' }));
     await user.type(screen.getByRole('textbox', { name: '프로젝트명' }), ' 수정');
     await user.click(screen.getByRole('button', { name: '변경 적용' }));
-    await user.click(screen.getByRole('button', { name: '수동 플랜 만들기' }));
+    await user.click(screen.getByRole('button', { name: '플랜 만들기' }));
 
     const updatedTitle = await screen.findByRole('heading', { name: '202607A 수정' });
     await waitFor(() => expect(document.activeElement).toBe(updatedTitle));
@@ -80,7 +80,7 @@ describe('WP3 App setup handoff', () => {
     await user.click(inputById('member-member-1-openingStateConfirmed'));
 
     const openButton = screen.getByRole('button', {
-      name: '수동 플랜 만들기',
+      name: '플랜 만들기',
     });
     openButton.focus();
     await user.keyboard('{Enter}');
@@ -100,6 +100,6 @@ describe('WP3 App setup handoff', () => {
     await waitFor(() => expect(document.getElementById('project-setup')).not.toBeNull());
     const setupTitle = screen.getByRole('heading', { name: '202607A' });
     await waitFor(() => expect(document.activeElement).toBe(setupTitle));
-    expect(screen.getByRole('button', { name: '수동 플랜 만들기' })).toBeDefined();
+    expect(screen.getByRole('button', { name: '플랜 만들기' })).toBeDefined();
   });
 });

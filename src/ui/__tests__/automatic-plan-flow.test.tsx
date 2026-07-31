@@ -285,7 +285,7 @@ describe('App automatic-plan integration', () => {
     render(<App createAutomaticPlanWorker={factory.create} />);
 
     const automaticButton = screen.getByRole('button', {
-      name: '자동 플랜 만들기',
+      name: '다음 단계',
     });
     automaticButton.focus();
     expect(document.activeElement).toBe(automaticButton);

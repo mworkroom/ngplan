@@ -945,6 +945,7 @@ export function App({
           )}
           onDraftChange={setManualPlanDraft}
           onReturnToSetup={() => setScreenState('SETUP')}
+          onBackToPlanList={onBackToPlanList}
           announcement={announcement}
           storageMode={cloudStorageEnabled ? 'CLOUD' : 'LOCAL'}
           planMode={screenState === 'AUTOMATIC_PLAN' ? 'AUTOMATIC' : 'MANUAL'}
@@ -1013,7 +1014,7 @@ export function App({
         </div>
         <div className="setup-command-header__actions">
           <button type="button" className="setup-command-header__action" onClick={handleOpenManualPlan}>
-            수동 플랜 만들기
+            플랜 만들기
           </button>
           <button
             type="button"
@@ -1026,7 +1027,7 @@ export function App({
             }
             onClick={handleStartAutomaticPlanFromSetup}
           >
-            자동 플랜 만들기
+            다음 단계
           </button>
           {onBackToPlanList === undefined ? null : (
             <button

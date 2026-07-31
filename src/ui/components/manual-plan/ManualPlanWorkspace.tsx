@@ -32,6 +32,7 @@ export interface ManualPlanWorkspaceProps {
   readonly setupWarnings: readonly ManualPlanIssue[];
   readonly onDraftChange: (draft: ManualPlanDraft) => void;
   readonly onReturnToSetup: () => void;
+  readonly onBackToPlanList?: (() => void) | undefined;
   readonly planMode?: 'MANUAL' | 'AUTOMATIC';
   readonly automaticPlanPanel?: ReactNode;
   readonly announcement?: string;
@@ -44,6 +45,7 @@ export function ManualPlanWorkspace({
   setupWarnings,
   onDraftChange,
   onReturnToSetup,
+  onBackToPlanList,
   planMode = 'MANUAL',
   automaticPlanPanel,
   announcement = '',
@@ -159,6 +161,15 @@ export function ManualPlanWorkspace({
           >
             설정으로 돌아가기
           </button>
+          {onBackToPlanList === undefined ? null : (
+            <button
+              type="button"
+              className="setup-command-header__action"
+              onClick={onBackToPlanList}
+            >
+              전체 목록으로
+            </button>
+          )}
         </div>
       </header>
 
