@@ -54,8 +54,8 @@ describe('P2-NORM 정본 Setup Bundle', () => {
       cumulativePvp: '200',
       dailyCarryLeft: '300',
       dailyCarryRight: '400',
-      openingStateConfirmed: true,
     });
+    draft = editOpeningState(draft, 'A', { openingStateConfirmed: true });
     const before = structuredClone(draft);
     const outcome = expectNormalizeSuccess(normalizeProjectSetup(draft));
 
@@ -181,6 +181,8 @@ describe('P2-NORM 정본 Setup Bundle', () => {
     draft = addCompletedChild(draft, 'A', 'LEFT', 'B');
     draft = editMemberIdentity(draft, 'A', { memberId: '' });
     draft = editMemberIdentity(draft, 'B', { memberId: '' });
+    draft = editOpeningState(draft, 'A', { openingStateConfirmed: true });
+    draft = editOpeningState(draft, 'B', { openingStateConfirmed: true });
 
     const outcome = expectNormalizeSuccess(normalizeProjectSetup(draft));
 

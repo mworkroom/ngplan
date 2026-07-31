@@ -93,7 +93,7 @@ async function fillSelectedMember(
   values: SelectedMemberValues,
 ): Promise<void> {
   await replaceInput(user, 'ID', values.memberId);
-  await replaceInput(user, '이름 (닉네임이 표시됨)', values.name);
+  await replaceInput(user, '이름', values.name);
   await user.selectOptions(
     screen.getByLabelText('PVP 목표'),
     values.pvpTarget ?? '700',
@@ -216,7 +216,7 @@ describe('App project setup flow', () => {
     );
     expect(screen.getByRole('heading', { name: '회원 정보 입력' })).toBeDefined();
     expect(inputByLabel('ID').value).toBe('');
-    expect(document.activeElement).toBe(inputByLabel('이름 (닉네임이 표시됨)'));
+    expect(document.activeElement).toBe(inputByLabel('이름'));
   });
 
   it('adds a root and both child sides by keyboard using explicit accessible labels', async () => {
@@ -352,7 +352,7 @@ describe('App project setup flow', () => {
     expect(queuedMemberButton.getAttribute('aria-pressed')).toBe('false');
     await activateWithKeyboard(user, queuedMemberButton);
     expect(queuedMemberButton.getAttribute('aria-pressed')).toBe('true');
-    expect(inputByLabel('이름 (닉네임이 표시됨)').value).toBe('Child');
+    expect(inputByLabel('이름').value).toBe('Child');
     expect(
       screen.getByRole('heading', {
         name: '보관함에 있는 회원',
@@ -773,7 +773,7 @@ describe('App project setup flow', () => {
     expect(screen.getByRole('button', { name: 'Root 회원 상세 편집' })).toBeDefined();
   });
 
-  it('imports only the nickname and member number and prevents selecting the same source UUID twice', async () => {
+  it('imports a useful display name and member number and prevents selecting the same source UUID twice', async () => {
     const memberDirectory = {
       listMembers: vi.fn(async () => [
         {
@@ -793,31 +793,33 @@ describe('App project setup flow', () => {
     const user = renderApp({ memberDirectory });
 
     await addRootWithKeyboard(user);
-    await user.click(screen.getByRole('button', { name: '불러오기' }));
-    await user.type(await screen.findByLabelText('회원 검색'), 'Bia');
+    await user.type(screen.getByLabelText('이름 또는 회원번호'), 'Bia');
     await user.click(screen.getByRole('button', { name: /Bia.*Maria Beatriz/ }));
-    expect(inputByLabel('이름 (닉네임이 표시됨)').value).toBe('Bia');
-    expect(inputByLabel('ID').value).toBe('1001');
+    expect(screen.getByText('회원 정보가 입력되었습니다.')).toBeDefined();
+    expect(screen.getByText('회원번호 1001')).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Bia 회원 상세 편집' })).toBeDefined();
     expect(screen.queryByDisplayValue('Maria Beatriz Rodrigues de Almeida')).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: '표시 이름 바꾸기' }));
+    await replaceInput(user, '계획에 표시할 이름', 'Bia 1980');
+    await user.click(screen.getByRole('button', { name: '이 이름으로 표시' }));
+    expect(screen.getByRole('button', { name: 'Bia 1980 회원 상세 편집' })).toBeDefined();
 
     await user.click(
       screen.getByRole('button', {
-        name: 'Bia의 왼쪽 빈 자리에 회원 연결',
+        name: 'Bia 1980의 왼쪽 빈 자리에 회원 연결',
       }),
     );
-    await user.click(screen.getByRole('button', { name: '불러오기' }));
-    await user.type(await screen.findByLabelText('회원 검색'), 'Bia');
+    await user.type(screen.getByLabelText('이름 또는 회원번호'), 'Bia');
     expect(
       screen.getByRole('button', { name: /Bia.*이미 추가됨/ }).hasAttribute('disabled'),
     ).toBe(true);
 
-    await user.clear(screen.getByLabelText('회원 검색'));
-    await user.type(screen.getByLabelText('회원 검색'), 'Ana Paula');
-    await user.click(screen.getByRole('button', { name: /닉네임 없음.*Ana Paula/ }));
-    await user.type(screen.getByLabelText('시트 표시 이름'), 'Aninha');
-    await user.click(screen.getByRole('button', { name: '이 이름으로 추가' }));
-    expect(inputByLabel('이름 (닉네임이 표시됨)').value).toBe('Aninha');
-    expect(inputByLabel('ID').value).toBe('1002');
+    await user.clear(screen.getByLabelText('이름 또는 회원번호'));
+    await user.type(screen.getByLabelText('이름 또는 회원번호'), 'Ana Paula');
+    await user.click(screen.getByRole('button', { name: /Ana.*Ana Paula/ }));
+    expect(screen.getByText('회원번호 1002')).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Ana 회원 상세 편집' })).toBeDefined();
   });
 
   it('reorders a persisted mirrored draft before the restored plan is edited', async () => {

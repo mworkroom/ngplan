@@ -15,7 +15,9 @@ import {
 } from './MemberDirectoryPicker';
 
 type Side = Exclude<MemberDraft['placement']['sideAtParent'], null>;
-type IdentityPatch = Partial<Pick<MemberDraft, 'memberId' | 'name' | 'sheetMarker'>>;
+type IdentityPatch = Partial<
+  Pick<MemberDraft, 'sourceMemberId' | 'memberId' | 'name' | 'sheetMarker'>
+>;
 
 export interface MemberFormProps {
   readonly member: MemberDraft;
@@ -60,6 +62,12 @@ export function MemberForm({
   onDetach,
   onExclude,
 }: MemberFormProps) {
+  const [manualEntryOpen, setManualEntryOpen] = useState(
+    () =>
+      memberDirectory === null ||
+      ((member.sourceMemberId?.trim() ?? '') === '' &&
+        (member.name.trim() !== '' || member.memberId.trim() !== '')),
+  );
   const [targetParentMemberKey, setTargetParentMemberKey] = useState(
     member.placement.parentMemberKey ?? '',
   );
@@ -68,9 +76,14 @@ export function MemberForm({
   );
 
   useEffect(() => {
+    setManualEntryOpen(
+      memberDirectory === null ||
+        ((member.sourceMemberId?.trim() ?? '') === '' &&
+          (member.name.trim() !== '' || member.memberId.trim() !== '')),
+    );
     setTargetParentMemberKey(member.placement.parentMemberKey ?? '');
     setTargetSide(member.placement.sideAtParent ?? 'LEFT');
-  }, [member.memberKey, member.placement.parentMemberKey, member.placement.sideAtParent]);
+  }, [member.memberKey, member.placement.parentMemberKey, member.placement.sideAtParent, memberDirectory]);
 
   const memberIdIssue = issueFor(issues, member.memberKey, 'memberId');
   const nameIssue = issueFor(issues, member.memberKey, 'name');
@@ -102,7 +115,7 @@ export function MemberForm({
           id={fieldId}
           inputMode={field === 'memberId' ? 'numeric' : undefined}
           pattern={field === 'memberId' ? '[0-9]*' : undefined}
-          placeholder={field === 'name' ? '닉네임' : undefined}
+          placeholder={field === 'name' ? '계획에 표시할 이름' : undefined}
           value={member[field]}
           aria-invalid={issue !== undefined}
           aria-describedby={showMessage ? errorId : undefined}
@@ -137,12 +150,40 @@ export function MemberForm({
             directory={memberDirectory}
             member={member}
             planMembers={planMembers}
-            onAssign={onDirectoryAssign}
+            onAssign={(entry, displayName) => {
+              const outcome = onDirectoryAssign(entry, displayName);
+              if (outcome.status === 'SUCCESS') setManualEntryOpen(false);
+              return outcome;
+            }}
+            onDisplayNameChange={(displayName) =>
+              onIdentityChange({
+                sourceMemberId: member.sourceMemberId ?? null,
+                name: displayName,
+              })
+            }
+            onChooseManualEntry={() => setManualEntryOpen(true)}
           />
         )}
-        <div className="form-grid form-grid--single">
-          {renderIdentityField('name', '이름 (닉네임이 표시됨)', nameIssue)}
-          {renderIdentityField('memberId', 'ID', memberIdIssue)}
+        {manualEntryOpen ? (
+          <section
+            className="member-form__manual-entry"
+            aria-labelledby={
+              memberDirectory === null ? undefined : 'member-manual-entry-title'
+            }
+          >
+            {memberDirectory === null ? null : (
+              <div>
+                <h3 id="member-manual-entry-title">직접 입력</h3>
+                <p className="help-text">검색에 없는 회원만 직접 입력해 주세요.</p>
+              </div>
+            )}
+            <div className="form-grid form-grid--single">
+              {renderIdentityField('name', '이름', nameIssue)}
+              {renderIdentityField('memberId', 'ID', memberIdIssue)}
+            </div>
+          </section>
+        ) : null}
+        <div className="form-grid form-grid--single member-form__marker">
           <div className="field">
             <label htmlFor={memberFieldId(member.memberKey, 'sheetMarker')}>
               이름 강조색
