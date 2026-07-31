@@ -698,6 +698,12 @@ describe('CloudApp', () => {
       await screen.findByRole('button', { name: '새 계획 만들기' }),
     );
     expect(
+      screen.getByRole('dialog', { name: '새 계획의 날짜가 맞나요?' }),
+    ).toBeDefined();
+    await userEvent.setup().click(
+      screen.getByRole('button', { name: '이 기간으로 시작' }),
+    );
+    expect(
       await screen.findByRole('heading', { name: /\d{4}년 \d{1,2}월 (상반기|하반기)/ }),
     ).toBeDefined();
     await userEvent.setup().click(
@@ -716,6 +722,139 @@ describe('CloudApp', () => {
       screen.getByRole('button', { name: '로그아웃' }),
     );
     expect(signOut).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens a recovery point as a new plan without overwriting the original', async () => {
+    const document = cloudDocumentFromWorkspaceSession(createSnapshot());
+    const base = mutableRepository(projectRecord(document));
+    const listRecoveryPoints = vi.fn(async () => [
+      {
+        key: 'recovery:checkpoint-1',
+        kind: 'SAFETY' as const,
+        reason: 'BEFORE_PERIOD_CHANGE' as const,
+        capturedAt: '2026-07-31T12:00:00.000Z',
+        sourceRevision: 2,
+        businessDate: null,
+      },
+    ]);
+    const loadRecoveryPoint = vi.fn(async () => document);
+    const repository: PlanRepository = {
+      ...base.repository,
+      listRecoveryPoints,
+      loadRecoveryPoint,
+    };
+    const { client } = authenticatedClient();
+
+    render(
+      <CloudApp
+        client={client}
+        repository={repository}
+        cache={new MemoryCache()}
+      />,
+    );
+
+    await userEvent.setup().click(
+      await screen.findByRole('button', { name: '보관본 보기' }),
+    );
+    expect(
+      await screen.findByRole('dialog', { name: '브라질 7월 계획 보관본' }),
+    ).toBeDefined();
+    expect(screen.getByText('기간 변경 직전')).toBeDefined();
+    await userEvent.setup().click(
+      screen.getByRole('button', { name: '사본으로 열기' }),
+    );
+
+    expect(
+      await screen.findByRole('heading', { name: '2026년 7월 하반기' }),
+    ).toBeDefined();
+    expect(loadRecoveryPoint).toHaveBeenCalledWith(
+      WORKSPACE_ID,
+      PROJECT_ID,
+      expect.objectContaining({ key: 'recovery:checkpoint-1' }),
+    );
+    await userEvent.setup().click(
+      screen.getByRole('button', { name: '기간 변경' }),
+    );
+    expect(screen.getByLabelText('프로젝트명')).toHaveProperty(
+      'value',
+      '브라질 7월 계획 · 복구본',
+    );
+  });
+
+  it('shows recovery loading errors, retries the list, and keeps a failed restore in the dialog', async () => {
+    const document = cloudDocumentFromWorkspaceSession(createSnapshot());
+    const base = mutableRepository(projectRecord(document));
+    const listRecoveryPoints = vi
+      .fn<NonNullable<PlanRepository['listRecoveryPoints']>>()
+      .mockRejectedValueOnce(new Error('보관 목록 연결 실패'))
+      .mockResolvedValueOnce([
+        {
+          key: 'recovery:auto',
+          kind: 'SAFETY',
+          reason: 'BEFORE_AUTOMATIC_PLAN_APPLY',
+          capturedAt: '2026-07-31T12:15:00.000Z',
+          sourceRevision: 5,
+          businessDate: null,
+        },
+        {
+          key: 'recovery:member',
+          kind: 'SAFETY',
+          reason: 'BEFORE_MEMBER_EXCLUSION',
+          capturedAt: '2026-07-31T12:10:00.000Z',
+          sourceRevision: 4,
+          businessDate: null,
+        },
+        {
+          key: 'recovery:rolling',
+          kind: 'ROLLING',
+          reason: 'AUTO_15_MIN',
+          capturedAt: '2026-07-31T12:00:00.000Z',
+          sourceRevision: 3,
+          businessDate: null,
+        },
+        {
+          key: 'daily:2026-07-30',
+          kind: 'DAILY',
+          reason: 'DAILY',
+          capturedAt: '2026-07-31T02:59:00.000Z',
+          sourceRevision: 2,
+          businessDate: '2026-07-30',
+        },
+      ]);
+    const loadRecoveryPoint = vi.fn(async () => {
+      throw new Error('선택한 보관본 연결 실패');
+    });
+    const { client } = authenticatedClient();
+    render(
+      <CloudApp
+        client={client}
+        repository={{
+          ...base.repository,
+          listRecoveryPoints,
+          loadRecoveryPoint,
+        }}
+        cache={new MemoryCache()}
+      />,
+    );
+
+    await userEvent.setup().click(
+      await screen.findByRole('button', { name: '보관본 보기' }),
+    );
+    expect(await screen.findByText('보관 목록 연결 실패')).toBeDefined();
+    await userEvent.setup().click(
+      screen.getByRole('button', { name: '다시 불러오기' }),
+    );
+    expect(await screen.findByText('자동 계산 적용 직전')).toBeDefined();
+    expect(screen.getByText('회원 삭제 직전')).toBeDefined();
+    expect(screen.getByText('15분 자동 보관')).toBeDefined();
+    expect(screen.getAllByText('일일 보관')).toHaveLength(2);
+    await userEvent.setup().click(
+      screen.getAllByRole('button', { name: '사본으로 열기' })[0]!,
+    );
+    expect(await screen.findByText('선택한 보관본 연결 실패')).toBeDefined();
+    expect(screen.getByRole('dialog')).toBeDefined();
+    await userEvent.setup().click(screen.getByRole('button', { name: '닫기' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('shows configuration and session errors without exposing app data', async () => {

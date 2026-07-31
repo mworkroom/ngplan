@@ -56,6 +56,14 @@ import type {
   MemberDirectoryEntry,
 } from '../cloud/member-directory';
 import {
+  createPeriodCopySession,
+  formatPlanningPeriodRange,
+  isValidPlanningPeriod,
+  manualPlanDraftHasEnteredValues,
+  type PlanningPeriod,
+} from '../cloud/plan-recovery';
+import type { SafetyBackupReason } from '../cloud/types';
+import {
   AUTOMATIC_PLAN_OBJECTIVE_STAGE_ORDER,
   AUTOMATIC_PLAN_PRODUCT_TIME_LIMIT_MS,
   type AutomaticPlanProofProgress,
@@ -219,12 +227,19 @@ export function createSessionIdGenerator(
 export interface AppProps {
   readonly generateId?: IdGenerator;
   readonly initialDate?: Date;
+  readonly initialPeriod?: PlanningPeriod | undefined;
   readonly memberDirectory?: MemberDirectory | null;
   readonly createAutomaticPlanWorker?: AutomaticPlanWorkerFactory;
   readonly initialWorkspaceSession?: WorkspaceSessionSnapshot | null;
   readonly onWorkspaceSessionChange?: (
     snapshot: WorkspaceSessionSnapshot,
   ) => void;
+  readonly onCreatePlanCopy?: (
+    snapshot: WorkspaceSessionSnapshot,
+  ) => Promise<void> | undefined;
+  readonly onRequestSafetyBackup?:
+    | ((reason: SafetyBackupReason) => Promise<void>)
+    | undefined;
   readonly onBackToPlanList?: () => void;
 }
 
@@ -233,7 +248,14 @@ interface SlotAction {
   readonly side: Side;
 }
 
-function createInitialDraft(generateId: IdGenerator, date: Date): ProjectSetupDraft {
+function createInitialDraft(
+  generateId: IdGenerator,
+  date: Date,
+  initialPeriod?: PlanningPeriod,
+): ProjectSetupDraft {
+  if (initialPeriod !== undefined) {
+    return createProjectDraft({ ...initialPeriod, generateId });
+  }
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/Sao_Paulo',
     year: 'numeric',
@@ -256,10 +278,13 @@ function createInitialDraft(generateId: IdGenerator, date: Date): ProjectSetupDr
 export function App({
   generateId: injectedGenerateId,
   initialDate,
+  initialPeriod,
   memberDirectory = null,
   createAutomaticPlanWorker = defaultAutomaticPlanWorkerFactory,
   initialWorkspaceSession,
   onWorkspaceSessionChange,
+  onCreatePlanCopy,
+  onRequestSafetyBackup,
   onBackToPlanList,
 }: AppProps = {}) {
   const generateIdRef = useRef<IdGenerator | null>(null);
@@ -278,7 +303,8 @@ export function App({
   const restoredSession = restoredSessionRef.current;
   const cloudStorageEnabled = onWorkspaceSessionChange !== undefined;
   const [draft, setDraft] = useState<ProjectSetupDraft>(() =>
-    restoredSession?.draft ?? createInitialDraft(generateId, initialDateRef.current),
+    restoredSession?.draft ??
+      createInitialDraft(generateId, initialDateRef.current, initialPeriod),
   );
   const [manualPlanDraft, setManualPlanDraft] = useState<ManualPlanDraft | null>(() => {
     const restoredManualPlanDraft = restoredSession?.manualPlanDraft ?? null;
@@ -295,7 +321,9 @@ export function App({
     () => new Set(),
   );
   const [excludedMemberKey, setExcludedMemberKey] = useState<string | null>(null);
-  const [periodDialogOpen, setPeriodDialogOpen] = useState(false);
+  const [periodEditDraft, setPeriodEditDraft] =
+    useState<ProjectSetupDraft | null>(null);
+  const [riskActionPending, setRiskActionPending] = useState(false);
   const [announcement, setAnnouncement] = useState('');
   const [screenState, setScreenState] = useState<AppScreen>(() =>
     (restoredSession?.screen === 'MANUAL_PLAN' ||
@@ -354,6 +382,31 @@ export function App({
       manualPlanDraft,
     );
   }, [draft.activeBundle, manualPlanDraft]);
+  const manualPlanHasEnteredValues = useMemo(
+    () => manualPlanDraftHasEnteredValues(manualPlanDraft),
+    [manualPlanDraft],
+  );
+  const periodEditValidation = useMemo(
+    () =>
+      periodEditDraft === null
+        ? null
+        : validateProjectSetupDraft(periodEditDraft),
+    [periodEditDraft],
+  );
+  const periodEditPeriod = useMemo<PlanningPeriod | null>(() => {
+    if (periodEditDraft === null) return null;
+    return {
+      year: Number(periodEditDraft.year),
+      month: Number(periodEditDraft.month),
+      half: periodEditDraft.half,
+    };
+  }, [periodEditDraft]);
+  const periodChanged =
+    periodEditDraft !== null &&
+    (periodEditDraft.year !== draft.year ||
+      periodEditDraft.month !== draft.month ||
+      periodEditDraft.half !== draft.half);
+  const periodRequiresCopy = periodChanged && manualPlanDraft !== null;
 
   useEffect(() => {
     slotFirstActionRef.current?.focus();
@@ -485,6 +538,68 @@ export function App({
     }
   };
 
+  const currentWorkspaceSnapshot = (): WorkspaceSessionSnapshot => ({
+    version: WORKSPACE_SESSION_VERSION,
+    draft,
+    manualPlanDraft,
+    screen: screenState,
+    organizationScale,
+    automaticPlanCheckpoint: workspaceAutomaticPlanCheckpoint,
+  });
+
+  const applyPeriodEdit = async (): Promise<void> => {
+    if (periodEditDraft === null || periodEditPeriod === null) return;
+    if (!isValidPlanningPeriod(periodEditPeriod)) {
+      setCommandError('연도와 월을 다시 확인해 주세요.');
+      return;
+    }
+    if (periodRequiresCopy) {
+      if (onCreatePlanCopy === undefined) {
+        setCommandError(
+          '입력한 숫자가 있는 계획은 기간을 직접 바꿀 수 없습니다. 클라우드 계획 목록에서 새 계획을 만든 뒤 옮겨 주세요.',
+        );
+        return;
+      }
+      setRiskActionPending(true);
+      setCommandError(null);
+      try {
+        let copy = createPeriodCopySession(
+          currentWorkspaceSnapshot(),
+          periodEditPeriod,
+          {
+            projectId: generateId('PROJECT'),
+            organizationSnapshotId: generateId('ORGANIZATION_SNAPSHOT'),
+          },
+        );
+        if (
+          periodEditDraft.title !== draft.title ||
+          periodEditDraft.titleSource !== draft.titleSource
+        ) {
+          copy = {
+            ...copy,
+            draft: {
+              ...copy.draft,
+              title: periodEditDraft.title,
+              titleSource: periodEditDraft.titleSource,
+            },
+          };
+        }
+        await onCreatePlanCopy(copy);
+      } catch (copyError) {
+        setCommandError(
+          copyError instanceof Error
+            ? copyError.message
+            : '새 기간 사본을 만들지 못했습니다.',
+        );
+      } finally {
+        setRiskActionPending(false);
+      }
+      return;
+    }
+    commitDraft(periodEditDraft, '기간 확인을 마쳤습니다.');
+    setPeriodEditDraft(null);
+  };
+
   const applyTopologyOutcome = (
     outcome: TopologyCommandOutcome,
     message: string,
@@ -574,6 +689,41 @@ export function App({
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setDraft(selectMember(draft, memberKey));
     setExcludedMemberKey(memberKey);
+  };
+
+  const confirmMemberExclusion = async (
+    strategy: ExclusionStrategy,
+  ): Promise<void> => {
+    if (memberPendingExclusion === undefined) return;
+    if (onRequestSafetyBackup !== undefined) {
+      setRiskActionPending(true);
+      setCommandError(null);
+      try {
+        await onRequestSafetyBackup('BEFORE_MEMBER_EXCLUSION');
+      } catch (backupError) {
+        const message =
+          backupError instanceof Error
+            ? backupError.message
+            : '회원 삭제 전 보관본을 만들지 못했습니다.';
+        setCommandError(message);
+        setAnnouncement(`회원 삭제를 막았습니다. ${message}`);
+        setRiskActionPending(false);
+        return;
+      }
+      setRiskActionPending(false);
+    }
+    const outcome = excludeMember(
+      draft,
+      memberPendingExclusion.memberKey,
+      strategy,
+    );
+    const succeeded = applyTopologyOutcome(
+      outcome,
+      '선택한 회원을 삭제했습니다. 삭제 직전 보관본에서 원래 상태를 사본으로 열 수 있습니다.',
+    );
+    if (succeeded) {
+      setExcludedMemberKey(null);
+    }
   };
 
   const handleAttachQueuedSubtree = (memberKey: string): void => {
@@ -695,7 +845,7 @@ export function App({
     setApplyAutomaticPlanRequested(true);
   };
 
-  const confirmApplyPinnedCandidate = (): void => {
+  const confirmApplyPinnedCandidate = async (): Promise<void> => {
     const activeBundle = draft.activeBundle;
     if (
       activeBundle === null ||
@@ -704,6 +854,22 @@ export function App({
     ) {
       setApplyAutomaticPlanRequested(false);
       return;
+    }
+    if (manualPlanIsModified && onRequestSafetyBackup !== undefined) {
+      setRiskActionPending(true);
+      setAutomaticPlanActionError(null);
+      try {
+        await onRequestSafetyBackup('BEFORE_AUTOMATIC_PLAN_APPLY');
+      } catch (backupError) {
+        setAutomaticPlanActionError(
+          backupError instanceof Error
+            ? backupError.message
+            : '자동 계산 적용 전 보관본을 만들지 못했습니다.',
+        );
+        setRiskActionPending(false);
+        return;
+      }
+      setRiskActionPending(false);
     }
     const applied = applyVerifiedAutomaticPlanCandidate(
       activeBundle,
@@ -819,7 +985,8 @@ export function App({
         {applyAutomaticPlanRequested ? (
           <ApplyAutomaticPlanDialog
             manualDraftModified={manualPlanIsModified}
-            onConfirm={confirmApplyPinnedCandidate}
+            pending={riskActionPending}
+            onConfirm={() => void confirmApplyPinnedCandidate()}
             onCancel={() => setApplyAutomaticPlanRequested(false)}
           />
         ) : null}
@@ -843,7 +1010,10 @@ export function App({
           <button
             type="button"
             className="setup-command-header__period-button"
-            onClick={() => setPeriodDialogOpen(true)}
+            onClick={() => {
+              setCommandError(null);
+              setPeriodEditDraft(draft);
+            }}
           >
             기간 변경
           </button>
@@ -882,7 +1052,7 @@ export function App({
         </section>
       )}
 
-      {periodDialogOpen ? (
+      {periodEditDraft === null ? null : (
         <div className="period-dialog-backdrop" role="presentation">
           <section
             className="period-dialog"
@@ -891,25 +1061,75 @@ export function App({
             aria-labelledby="period-dialog-title"
           >
             <div className="period-dialog__header">
-              <h2 id="period-dialog-title">기간 변경</h2>
+              <div>
+                <p className="period-confirmation__eyebrow">날짜 보호 장치</p>
+                <h2 id="period-dialog-title">기간 확인 및 변경</h2>
+              </div>
               <button
                 type="button"
                 className="secondary-button"
-                onClick={() => setPeriodDialogOpen(false)}
+                onClick={() => setPeriodEditDraft(null)}
+                disabled={riskActionPending}
               >
                 닫기
               </button>
             </div>
+            <p className="period-confirmation__warning">
+              {periodRequiresCopy
+                ? manualPlanHasEnteredValues
+                  ? '입력한 숫자가 있으므로 원본 기간은 바꾸지 않습니다. 적용하면 조직 정보만 복사한 새 기간 계획을 만듭니다.'
+                  : '수동 계획표가 이미 만들어졌으므로 원본 기간은 바꾸지 않습니다. 적용하면 조직 정보만 복사한 새 기간 계획을 만듭니다.'
+                : '아래 값을 고치는 동안에는 저장되지 않습니다. 날짜를 확인한 뒤 적용해 주세요.'}
+            </p>
             <ProjectPeriodForm
-              draft={draft}
-              issues={displayedValidation.issues}
-              onPeriodChange={(patch) => commitDraft(editProjectPeriod(draft, patch))}
-              onTitleChange={(title) => commitDraft(editProjectTitle(draft, title))}
-              onRestoreDerivedTitle={() => commitDraft(restoreDerivedProjectTitle(draft))}
+              draft={periodEditDraft}
+              issues={periodEditValidation?.issues ?? []}
+              onPeriodChange={(patch) =>
+                setPeriodEditDraft((current) =>
+                  current === null ? null : editProjectPeriod(current, patch),
+                )
+              }
+              onTitleChange={(title) =>
+                setPeriodEditDraft((current) =>
+                  current === null ? null : editProjectTitle(current, title),
+                )
+              }
+              onRestoreDerivedTitle={() =>
+                setPeriodEditDraft((current) =>
+                  current === null ? null : restoreDerivedProjectTitle(current),
+                )
+              }
             />
+            <div className="period-dialog__commit">
+              <div className="period-confirmation__result" aria-live="polite">
+                <span>적용할 날짜</span>
+                <strong>
+                  {periodEditPeriod !== null &&
+                  isValidPlanningPeriod(periodEditPeriod)
+                    ? formatPlanningPeriodRange(periodEditPeriod)
+                    : '연도와 월을 확인해 주세요'}
+                </strong>
+              </div>
+              <button
+                type="button"
+                className="primary-button"
+                disabled={
+                  riskActionPending ||
+                  periodEditPeriod === null ||
+                  !isValidPlanningPeriod(periodEditPeriod)
+                }
+                onClick={() => void applyPeriodEdit()}
+              >
+                {riskActionPending
+                  ? '사본 만드는 중…'
+                  : periodRequiresCopy
+                    ? '원본을 두고 새 기간 사본 만들기'
+                    : '변경 적용'}
+              </button>
+            </div>
           </section>
         </div>
-      ) : null}
+      )}
 
       <div className="workspace-grid">
 
@@ -1072,24 +1292,15 @@ export function App({
           member={memberPendingExclusion}
           directChildren={directChildrenPendingExclusion}
           isRoot={draft.rootMemberKey === memberPendingExclusion.memberKey}
+          pending={riskActionPending}
+          safetyBackupEnabled={onRequestSafetyBackup !== undefined}
           onCancel={() => {
             setExcludedMemberKey(null);
             window.setTimeout(() => excludeTriggerRef.current?.focus(), 0);
           }}
-          onConfirm={(strategy: ExclusionStrategy) => {
-            const outcome = excludeMember(
-              draft,
-              memberPendingExclusion.memberKey,
-              strategy,
-            );
-            const succeeded = applyTopologyOutcome(
-              outcome,
-              '선택한 회원을 삭제했습니다. 보관함에 남은 회원은 조직도의 빈 자리에서 다시 넣을 수 있습니다.',
-            );
-            if (succeeded) {
-              setExcludedMemberKey(null);
-            }
-          }}
+          onConfirm={(strategy: ExclusionStrategy) =>
+            void confirmMemberExclusion(strategy)
+          }
         />
       )}
     </main>

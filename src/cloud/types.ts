@@ -32,6 +32,22 @@ export interface SaveProjectResult {
   readonly lastSavedAt: string;
 }
 
+export type SafetyBackupReason =
+  | 'BEFORE_PERIOD_CHANGE'
+  | 'BEFORE_AUTOMATIC_PLAN_APPLY'
+  | 'BEFORE_MEMBER_EXCLUSION';
+
+export type RecoveryPointKind = 'ROLLING' | 'SAFETY' | 'DAILY';
+
+export interface RecoveryPointSummary {
+  readonly key: string;
+  readonly kind: RecoveryPointKind;
+  readonly reason: SafetyBackupReason | 'AUTO_15_MIN' | 'DAILY';
+  readonly capturedAt: string;
+  readonly sourceRevision: number;
+  readonly businessDate: string | null;
+}
+
 export interface PlanRepository {
   findWorkspace(): Promise<CloudWorkspace>;
   listProjects(
@@ -50,6 +66,21 @@ export interface PlanRepository {
     workspaceId: string,
     projectId: string,
     hidden: boolean,
+  ): Promise<void>;
+  listRecoveryPoints?(
+    workspaceId: string,
+    projectId: string,
+  ): Promise<readonly RecoveryPointSummary[]>;
+  loadRecoveryPoint?(
+    workspaceId: string,
+    projectId: string,
+    point: RecoveryPointSummary,
+  ): Promise<CloudPlanDocumentV1>;
+  createSafetyBackup?(
+    workspaceId: string,
+    projectId: string,
+    reason: SafetyBackupReason,
+    expectedSourceRevision: number,
   ): Promise<void>;
 }
 

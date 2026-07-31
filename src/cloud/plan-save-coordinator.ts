@@ -9,6 +9,7 @@ import type {
   CloudSaveStatus,
   PlanCache,
   PlanRepository,
+  SafetyBackupReason,
 } from './types';
 import type { WorkspaceSessionSnapshot } from '../ui/workspace-session-storage';
 
@@ -143,6 +144,35 @@ export class PlanSaveCoordinator {
     this.#retryIndex = 0;
     this.#clearTimer('RETRY');
     await this.flushNow();
+  }
+
+  async createSafetyBackup(reason: SafetyBackupReason): Promise<void> {
+    if (this.#repository.createSafetyBackup === undefined) {
+      throw new Error('이 저장소에서는 안전 보관본을 만들 수 없습니다.');
+    }
+    if (!this.#isOnline()) {
+      throw new Error('인터넷 연결 후 다시 시도해 주세요. 원본을 보관하지 않은 변경은 막았습니다.');
+    }
+    await this.flushNow();
+    const snapshot = this.#latestSnapshot;
+    if (snapshot === null) {
+      throw new Error('보관할 현재 계획이 아직 준비되지 않았습니다.');
+    }
+    const latestDocumentJson = serializeCloudPlanDocument(
+      cloudDocumentFromWorkspaceSession(snapshot),
+    );
+    if (latestDocumentJson !== this.#lastRemoteDocumentJson) {
+      throw new Error('현재 계획을 클라우드에 저장하지 못해 위험한 변경을 막았습니다. 저장 상태를 확인해 주세요.');
+    }
+    if (this.#remoteRevision === null) {
+      throw new Error('클라우드 저장 리비전을 확인하지 못해 위험한 변경을 막았습니다.');
+    }
+    await this.#repository.createSafetyBackup(
+      this.#workspaceId,
+      this.#projectId,
+      reason,
+      this.#remoteRevision,
+    );
   }
 
   handleOnline(): void {

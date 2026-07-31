@@ -8,6 +8,8 @@ import type {
   CloudProjectSummary,
   CloudWorkspace,
   PlanRepository,
+  RecoveryPointSummary,
+  SafetyBackupReason,
   SaveProjectResult,
 } from './types';
 
@@ -23,6 +25,24 @@ interface ProjectRow {
   readonly updated_at: string;
   readonly last_saved_at: string;
   readonly current_document?: unknown;
+}
+
+interface RecoveryRow {
+  readonly id: string;
+  readonly kind: 'ROLLING' | 'SAFETY';
+  readonly reason:
+    | 'AUTO_15_MIN'
+    | 'BEFORE_PERIOD_CHANGE'
+    | 'BEFORE_AUTOMATIC_PLAN_APPLY'
+    | 'BEFORE_MEMBER_EXCLUSION';
+  readonly captured_at: string;
+  readonly source_revision: number;
+}
+
+interface DailyBackupRow {
+  readonly business_date: string;
+  readonly saved_at: string;
+  readonly source_revision: number;
 }
 
 const PROJECT_SUMMARY_COLUMNS =
@@ -91,6 +111,47 @@ function safeMetadataTitle(document: CloudPlanDocumentV1): string {
   const title = document.draft.title.trim();
   const fallback = `${document.draft.year || '계획'}-${document.draft.month || '?'}`;
   return Array.from(title || fallback).slice(0, 200).join('');
+}
+
+function normalizePositiveRevision(value: unknown): number | null {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 1
+    ? value
+    : null;
+}
+
+function normalizeRecoveryRow(value: unknown): RecoveryRow | null {
+  if (
+    !isRecord(value) ||
+    typeof value.id !== 'string' ||
+    (value.kind !== 'ROLLING' && value.kind !== 'SAFETY') ||
+    ![
+      'AUTO_15_MIN',
+      'BEFORE_PERIOD_CHANGE',
+      'BEFORE_AUTOMATIC_PLAN_APPLY',
+      'BEFORE_MEMBER_EXCLUSION',
+    ].includes(String(value.reason)) ||
+    typeof value.captured_at !== 'string'
+  ) {
+    return null;
+  }
+  const revision = normalizePositiveRevision(value.source_revision);
+  return revision === null
+    ? null
+    : ({ ...value, source_revision: revision } as unknown as RecoveryRow);
+}
+
+function normalizeDailyBackupRow(value: unknown): DailyBackupRow | null {
+  if (
+    !isRecord(value) ||
+    typeof value.business_date !== 'string' ||
+    typeof value.saved_at !== 'string'
+  ) {
+    return null;
+  }
+  const revision = normalizePositiveRevision(value.source_revision);
+  return revision === null
+    ? null
+    : ({ ...value, source_revision: revision } as unknown as DailyBackupRow);
 }
 
 export class SupabasePlanRepository implements PlanRepository {
@@ -228,5 +289,113 @@ export class SupabasePlanRepository implements PlanRepository {
     if (!isRecord(data) || data.id !== projectId) {
       throw new Error('계획을 찾지 못했거나 접근 권한이 없습니다.');
     }
+  }
+
+  async listRecoveryPoints(
+    workspaceId: string,
+    projectId: string,
+  ): Promise<readonly RecoveryPointSummary[]> {
+    const [recoveryResult, dailyResult] = await Promise.all([
+      this.#client
+        .from('ngplan_recovery_backups')
+        .select('id,kind,reason,captured_at,source_revision')
+        .eq('workspace_id', workspaceId)
+        .eq('project_id', projectId)
+        .order('captured_at', { ascending: false })
+        .limit(722),
+      this.#client
+        .from('ngplan_daily_backups')
+        .select('business_date,saved_at,source_revision')
+        .eq('workspace_id', workspaceId)
+        .eq('project_id', projectId)
+        .order('business_date', { ascending: false })
+        .limit(400),
+    ]);
+    if (recoveryResult.error !== null) {
+      fail('최근 보관본을 불러오지 못했습니다', recoveryResult.error);
+    }
+    if (dailyResult.error !== null) {
+      fail('일일 보관본을 불러오지 못했습니다', dailyResult.error);
+    }
+    if (!Array.isArray(recoveryResult.data) || !Array.isArray(dailyResult.data)) {
+      throw new Error('보관본 목록 응답 형식이 올바르지 않습니다.');
+    }
+    const recoveryPoints = recoveryResult.data.map((value) => {
+      const row = normalizeRecoveryRow(value);
+      if (row === null) {
+        throw new Error('읽을 수 없는 최근 보관본 항목이 있습니다.');
+      }
+      return {
+        key: `recovery:${row.id}`,
+        kind: row.kind,
+        reason: row.reason,
+        capturedAt: row.captured_at,
+        sourceRevision: row.source_revision,
+        businessDate: null,
+      } satisfies RecoveryPointSummary;
+    });
+    const dailyPoints = dailyResult.data.map((value) => {
+      const row = normalizeDailyBackupRow(value);
+      if (row === null) {
+        throw new Error('읽을 수 없는 일일 보관본 항목이 있습니다.');
+      }
+      return {
+        key: `daily:${row.business_date}`,
+        kind: 'DAILY',
+        reason: 'DAILY',
+        capturedAt: row.saved_at,
+        sourceRevision: row.source_revision,
+        businessDate: row.business_date,
+      } satisfies RecoveryPointSummary;
+    });
+    return [...recoveryPoints, ...dailyPoints].sort((left, right) =>
+      right.capturedAt.localeCompare(left.capturedAt),
+    );
+  }
+
+  async loadRecoveryPoint(
+    workspaceId: string,
+    projectId: string,
+    point: RecoveryPointSummary,
+  ): Promise<CloudPlanDocumentV1> {
+    const query =
+      point.kind === 'DAILY'
+        ? this.#client
+            .from('ngplan_daily_backups')
+            .select('document')
+            .eq('workspace_id', workspaceId)
+            .eq('project_id', projectId)
+            .eq('business_date', point.businessDate ?? '')
+        : this.#client
+            .from('ngplan_recovery_backups')
+            .select('document')
+            .eq('workspace_id', workspaceId)
+            .eq('project_id', projectId)
+            .eq('id', point.key.replace(/^recovery:/, ''));
+    const { data, error } = await query.maybeSingle();
+    if (error !== null) fail('보관본을 불러오지 못했습니다', error);
+    if (!isRecord(data)) {
+      throw new Error('선택한 보관본을 찾지 못했습니다.');
+    }
+    const document = normalizeCloudPlanDocument(data.document);
+    if (document === null || document.draft.projectId !== projectId) {
+      throw new Error('선택한 보관본 문서가 현재 계획과 맞지 않습니다.');
+    }
+    return document;
+  }
+
+  async createSafetyBackup(
+    workspaceId: string,
+    projectId: string,
+    reason: SafetyBackupReason,
+    expectedSourceRevision: number,
+  ): Promise<void> {
+    const { error } = await this.#client.rpc('ngplan_create_safety_backup', {
+      target_workspace_id: workspaceId,
+      target_project_id: projectId,
+      target_reason: reason,
+      expected_source_revision: expectedSourceRevision,
+    });
+    if (error !== null) fail('안전 보관본을 만들지 못했습니다', error);
   }
 }

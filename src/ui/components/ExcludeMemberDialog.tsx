@@ -8,6 +8,8 @@ export interface ExcludeMemberDialogProps {
   readonly member: MemberDraft;
   readonly directChildren: readonly MemberDraft[];
   readonly isRoot: boolean;
+  readonly pending?: boolean;
+  readonly safetyBackupEnabled?: boolean;
   readonly onCancel: () => void;
   readonly onConfirm: (strategy: ExclusionStrategy) => void;
 }
@@ -16,6 +18,8 @@ export function ExcludeMemberDialog({
   member,
   directChildren,
   isRoot,
+  pending = false,
+  safetyBackupEnabled = false,
   onCancel,
   onConfirm,
 }: ExcludeMemberDialogProps) {
@@ -39,7 +43,7 @@ export function ExcludeMemberDialog({
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
-        onCancel();
+        if (!pending) onCancel();
         return;
       }
       if (event.key !== 'Tab') {
@@ -66,7 +70,7 @@ export function ExcludeMemberDialog({
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onCancel]);
+  }, [onCancel, pending]);
 
   const displayName = member.name.trim() || member.memberKey;
 
@@ -76,7 +80,7 @@ export function ExcludeMemberDialog({
       role="presentation"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
-          onCancel();
+          if (!pending) onCancel();
         }
       }}
     >
@@ -90,7 +94,9 @@ export function ExcludeMemberDialog({
       >
         <h2 id="exclude-dialog-title">{displayName}님을 삭제할까요?</h2>
         <p id="exclude-dialog-description">
-          이 회원의 이름과 입력한 숫자가 화면에서 사라지며, 현재는 되돌릴 수 없습니다.
+          {safetyBackupEnabled
+            ? '삭제하기를 누르면 먼저 현재 계획을 보관합니다. 나중에 계획 목록의 보관본에서 원래 상태를 새 사본으로 열 수 있습니다.'
+            : '이 회원의 이름과 입력한 숫자가 화면에서 사라집니다.'}
         </p>
 
         {directChildren.length === 0 ? (
@@ -110,6 +116,7 @@ export function ExcludeMemberDialog({
                 name="exclusion-strategy"
                 value="PROMOTE_ONLY_CHILD"
                 checked={strategy === 'PROMOTE_ONLY_CHILD'}
+                disabled={pending}
                 onChange={() => setStrategy('PROMOTE_ONLY_CHILD')}
               />
               <span>
@@ -126,6 +133,7 @@ export function ExcludeMemberDialog({
                 name="exclusion-strategy"
                 value="DETACH_CHILDREN"
                 checked={strategy === 'DETACH_CHILDREN'}
+                disabled={pending}
                 onChange={() => setStrategy('DETACH_CHILDREN')}
               />
               <span>
@@ -162,6 +170,7 @@ export function ExcludeMemberDialog({
             type="button"
             className="secondary-button"
             onClick={onCancel}
+            disabled={pending}
           >
             취소
           </button>
@@ -169,8 +178,9 @@ export function ExcludeMemberDialog({
             type="button"
             className="danger-button"
             onClick={() => onConfirm(strategy)}
+            disabled={pending}
           >
-            삭제하기
+            {pending ? '보관본 만드는 중…' : '삭제하기'}
           </button>
         </div>
       </section>

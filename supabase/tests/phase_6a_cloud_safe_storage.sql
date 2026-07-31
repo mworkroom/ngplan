@@ -7,7 +7,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(11);
+select plan(23);
 
 select has_table(
   'public',
@@ -18,6 +18,11 @@ select has_table(
   'public',
   'ngplan_daily_backups',
   'Phase 6A daily backup table exists'
+);
+select has_table(
+  'public',
+  'ngplan_recovery_backups',
+  'Bounded recovery backup table exists'
 );
 select is(
   (select count(*) from public.workspaces where name = 'ngplan'),
@@ -39,6 +44,34 @@ select ok(
     'select,insert,update'
   ),
   'authenticated project privileges are complete'
+);
+select ok(
+  not has_table_privilege('anon', 'public.ngplan_recovery_backups', 'select'),
+  'anon cannot read ngplan recovery backups'
+);
+select ok(
+  has_table_privilege('authenticated', 'public.ngplan_recovery_backups', 'select'),
+  'authenticated can select recovery backups through RLS'
+);
+select ok(
+  not has_table_privilege('authenticated', 'public.ngplan_recovery_backups', 'delete'),
+  'authenticated cannot delete recovery backups'
+);
+select ok(
+  not has_function_privilege(
+    'anon',
+    'public.ngplan_create_safety_backup(uuid,uuid,text,bigint)',
+    'execute'
+  ),
+  'anon cannot create semantic safety backups'
+);
+select ok(
+  has_function_privilege(
+    'authenticated',
+    'public.ngplan_create_safety_backup(uuid,uuid,text,bigint)',
+    'execute'
+  ),
+  'authenticated can request a constrained semantic safety backup'
 );
 
 do $$
@@ -197,6 +230,117 @@ select set_config(
   true
 );
 
+select set_config(
+  'ngplan.test_rolling_backup_ok',
+  (
+    select (
+      count(*) between 1 and 2
+      and count(*) = count(distinct rolling_slot)
+      and min(source_revision) = 1
+      and bool_and(rolling_slot between 0 and 671)
+    )::text
+    from public.ngplan_recovery_backups
+    where project_id = current_setting('ngplan.test_project_id')::uuid
+      and kind = 'ROLLING'
+  ),
+  true
+);
+
+select public.ngplan_create_safety_backup(
+  current_setting('ngplan.test_workspace_id')::uuid,
+  current_setting('ngplan.test_project_id')::uuid,
+  'BEFORE_MEMBER_EXCLUSION',
+  (
+    select revision
+    from public.ngplan_projects
+    where id = current_setting('ngplan.test_project_id')::uuid
+  )
+);
+
+select set_config(
+  'ngplan.test_explicit_safety_ok',
+  (
+    select (
+      count(*) = 1
+      and bool_and(source_revision = 2)
+    )::text
+    from public.ngplan_recovery_backups
+    where project_id = current_setting('ngplan.test_project_id')::uuid
+      and kind = 'SAFETY'
+      and reason = 'BEFORE_MEMBER_EXCLUSION'
+  ),
+  true
+);
+
+update public.ngplan_projects
+set
+  period_year = 2026,
+  period_month = 8,
+  current_document = jsonb_set(
+    current_document,
+    '{draft,periodProbe}',
+    '"changed"'::jsonb
+  )
+where id = current_setting('ngplan.test_project_id')::uuid;
+
+select set_config(
+  'ngplan.test_period_safety_ok',
+  (
+    select (
+      count(*) = 1
+      and bool_and(source_revision = 2)
+      and bool_and(document #>> '{draft,periodProbe}' is null)
+    )::text
+    from public.ngplan_recovery_backups
+    where project_id = current_setting('ngplan.test_project_id')::uuid
+      and kind = 'SAFETY'
+      and reason = 'BEFORE_PERIOD_CHANGE'
+  ),
+  true
+);
+
+select throws_ok(
+  $statement$
+    select public.ngplan_create_safety_backup(
+      current_setting('ngplan.test_workspace_id')::uuid,
+      current_setting('ngplan.test_project_id')::uuid,
+      'BEFORE_MEMBER_EXCLUSION',
+      2
+    )
+  $statement$,
+  '40001',
+  'ngplan project changed before safety backup',
+  'Safety backup rejects a stale expected project revision'
+);
+
+do $$
+begin
+  for backup_number in 1..55 loop
+    perform public.ngplan_create_safety_backup(
+      current_setting('ngplan.test_workspace_id')::uuid,
+      current_setting('ngplan.test_project_id')::uuid,
+      'BEFORE_AUTOMATIC_PLAN_APPLY',
+      (
+        select revision
+        from public.ngplan_projects
+        where id = current_setting('ngplan.test_project_id')::uuid
+      )
+    );
+  end loop;
+end
+$$;
+
+select set_config(
+  'ngplan.test_safety_retention_ok',
+  (
+    select (count(*) = 50)::text
+    from public.ngplan_recovery_backups
+    where project_id = current_setting('ngplan.test_project_id')::uuid
+      and kind = 'SAFETY'
+  ),
+  true
+);
+
 reset role;
 
 select is(
@@ -211,6 +355,22 @@ select ok(
 select ok(
   current_setting('ngplan.test_daily_backup_ok')::boolean,
   'Daily backup is one latest Sao Paulo day row'
+);
+select ok(
+  current_setting('ngplan.test_rolling_backup_ok')::boolean,
+  'Immediate writes keep unique 15-minute ring slots with the pre-edit revision'
+);
+select ok(
+  current_setting('ngplan.test_explicit_safety_ok')::boolean,
+  'Explicit semantic action stores the current server document'
+);
+select ok(
+  current_setting('ngplan.test_period_safety_ok')::boolean,
+  'Period metadata change stores the previous document automatically'
+);
+select ok(
+  current_setting('ngplan.test_safety_retention_ok')::boolean,
+  'Semantic safety backups are capped at the newest 50 per project'
 );
 
 set local role authenticated;
@@ -260,6 +420,15 @@ select set_config(
   ),
   true
 );
+select set_config(
+  'ngplan.test_nonmember_recovery_count',
+  (
+    select count(*)::text
+    from public.ngplan_recovery_backups
+    where project_id = current_setting('ngplan.test_project_id')::uuid
+  ),
+  true
+);
 
 reset role;
 
@@ -267,6 +436,11 @@ select is(
   current_setting('ngplan.test_nonmember_visible_count')::bigint,
   0::bigint,
   'A non-member cannot read an ngplan project'
+);
+select is(
+  current_setting('ngplan.test_nonmember_recovery_count')::bigint,
+  0::bigint,
+  'A non-member cannot read ngplan recovery backups'
 );
 
 select * from finish();

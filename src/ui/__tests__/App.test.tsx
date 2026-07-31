@@ -8,7 +8,10 @@ import {
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { App, createSessionIdGenerator, type AppProps } from '../App';
-import { WORKSPACE_SESSION_STORAGE_KEY } from '../workspace-session-storage';
+import {
+  WORKSPACE_SESSION_STORAGE_KEY,
+  type WorkspaceSessionSnapshot,
+} from '../workspace-session-storage';
 
 type User = ReturnType<typeof userEvent.setup>;
 
@@ -280,7 +283,7 @@ describe('App project setup flow', () => {
 
     expect(screen.getByText(/설정을 완료하지 못했습니다/)).toBeDefined();
     expect(screen.queryByText('입력 중')).toBeNull();
-    expect(screen.getByText('입력 확인 4건')).toBeDefined();
+    expect(screen.getByText('입력 확인 3건')).toBeDefined();
     expect(screen.queryByLabelText('현재 회원 입력 확인 결과')).toBeNull();
 
     const organizationPanel = screen.getByRole('region', { name: '조직 구조' });
@@ -496,9 +499,18 @@ describe('App project setup flow', () => {
     await replaceInput(user, 'PVP 시작값', '42');
 
     await user.click(screen.getByRole('button', { name: '기간 변경' }));
-    expect(screen.getByRole('dialog', { name: '기간 변경' })).toBeDefined();
+    expect(
+      screen.getByRole('dialog', { name: '기간 확인 및 변경' }),
+    ).toBeDefined();
     await replaceInput(user, '월', '8');
     await user.click(screen.getByRole('button', { name: '닫기' }));
+
+    expect(screen.getByRole('heading', { name: '2026년 7월 상반기' })).toBeDefined();
+    expect(inputByLabel('PVP 시작값').value).toBe('42');
+
+    await user.click(screen.getByRole('button', { name: '기간 변경' }));
+    await replaceInput(user, '월', '8');
+    await user.click(screen.getByRole('button', { name: '변경 적용' }));
 
     expect(screen.getByRole('heading', { name: '2026년 8월 상반기' })).toBeDefined();
     expect(screen.getByRole('button', { name: 'Legacy 회원 상세 편집' })).toBeDefined();
@@ -582,6 +594,108 @@ describe('App project setup flow', () => {
         name: /1 \(수\).*Root.*PVP 계획 PV/,
       }) as HTMLInputElement).value,
     ).toBe('123');
+  });
+
+  it('keeps the original plan and creates a clean new-period copy when entered cells exist', async () => {
+    const onCreatePlanCopy = vi.fn(
+      async (_snapshot: WorkspaceSessionSnapshot) => undefined,
+    );
+    const user = renderApp({ onCreatePlanCopy });
+    await createNamedRoot(user);
+    await user.click(screen.getByRole('button', { name: '수동 플랜 만들기' }));
+    await user.type(
+      screen.getByRole('textbox', {
+        name: /1 \(수\).*Root.*PVP 계획 PV/,
+      }),
+      '123',
+    );
+    await user.click(screen.getByRole('button', { name: '설정으로 돌아가기' }));
+
+    await user.click(screen.getByRole('button', { name: '기간 변경' }));
+    await replaceInput(user, '월', '8');
+    expect(
+      screen.getByText(/입력한 숫자가 있으므로 원본 기간은 바꾸지 않습니다/),
+    ).toBeDefined();
+    await user.click(
+      screen.getByRole('button', {
+        name: '원본을 두고 새 기간 사본 만들기',
+      }),
+    );
+
+    await waitFor(() => expect(onCreatePlanCopy).toHaveBeenCalledTimes(1));
+    const copy = onCreatePlanCopy.mock.calls[0]?.[0] as
+      | WorkspaceSessionSnapshot
+      | undefined;
+    expect(copy).toMatchObject({
+      draft: {
+        projectId: 'project-2',
+        organizationSnapshotId: 'organization-snapshot-2',
+        year: '2026',
+        month: '8',
+        half: 'FIRST_HALF',
+        members: [{ name: 'Root' }],
+        activeBundle: null,
+      },
+      manualPlanDraft: null,
+      screen: 'SETUP',
+    });
+    expect(
+      screen.getByRole('heading', { name: '2026년 7월 상반기' }),
+    ).toBeDefined();
+  });
+
+  it('also treats an explicitly entered zero as date-bound work', async () => {
+    const onCreatePlanCopy = vi.fn(
+      async (_snapshot: WorkspaceSessionSnapshot) => undefined,
+    );
+    const user = renderApp({ onCreatePlanCopy });
+    await createNamedRoot(user);
+    await user.click(screen.getByRole('button', { name: '수동 플랜 만들기' }));
+    await user.type(
+      screen.getByRole('textbox', {
+        name: /1 \(수\).*Root.*PVP 계획 PV/,
+      }),
+      '0',
+    );
+    await user.click(screen.getByRole('button', { name: '설정으로 돌아가기' }));
+    await user.click(screen.getByRole('button', { name: '기간 변경' }));
+    await replaceInput(user, '월', '8');
+
+    expect(
+      screen.getByText(/수동 계획표가 이미 만들어졌으므로 원본 기간은 바꾸지 않습니다/),
+    ).toBeDefined();
+    await user.click(
+      screen.getByRole('button', {
+        name: '원본을 두고 새 기간 사본 만들기',
+      }),
+    );
+    await waitFor(() => expect(onCreatePlanCopy).toHaveBeenCalledTimes(1));
+    expect(onCreatePlanCopy.mock.calls[0]?.[0]).toMatchObject({
+      draft: { month: '8' },
+      manualPlanDraft: null,
+    });
+  });
+
+  it('does not delete a member when the safety backup fails', async () => {
+    const onRequestSafetyBackup = vi.fn(async () => {
+      throw new Error('보관 서버에 연결할 수 없습니다.');
+    });
+    const user = renderApp({ onRequestSafetyBackup });
+    await createNamedRoot(user);
+    await user.click(screen.getByRole('button', { name: '삭제하기' }));
+    expect(screen.getByText(/먼저 현재 계획을 보관합니다/)).toBeDefined();
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: '삭제하기',
+      }),
+    );
+
+    expect(await screen.findByText('보관 서버에 연결할 수 없습니다.')).toBeDefined();
+    expect(onRequestSafetyBackup).toHaveBeenCalledWith(
+      'BEFORE_MEMBER_EXCLUSION',
+    );
+    expect(screen.getByRole('dialog')).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Root 회원 상세 편집' })).toBeDefined();
   });
 
   it('imports only the nickname and member number and prevents selecting the same source UUID twice', async () => {

@@ -58,14 +58,14 @@ class FakeQueryBuilder implements PromiseLike<FakeResponse> {
     return this;
   }
 
-  limit(...args: readonly unknown[]): Promise<FakeResponse> {
+  limit(...args: readonly unknown[]): this {
     this.#owner.calls.push({ action: 'limit', args });
-    return this.#owner.next();
+    return this;
   }
 
-  order(...args: readonly unknown[]): Promise<FakeResponse> {
+  order(...args: readonly unknown[]): this {
     this.#owner.calls.push({ action: 'order', args });
-    return this.#owner.next();
+    return this;
   }
 
   single(): Promise<FakeResponse> {
@@ -99,6 +99,11 @@ class FakeSupabaseClient {
   from(...args: readonly unknown[]): FakeQueryBuilder {
     this.calls.push({ action: 'from', args });
     return new FakeQueryBuilder(this);
+  }
+
+  rpc(...args: readonly unknown[]): Promise<FakeResponse> {
+    this.calls.push({ action: 'rpc', args });
+    return this.next();
   }
 
   next(): Promise<FakeResponse> {
@@ -261,6 +266,88 @@ describe('SupabasePlanRepository', () => {
     expect(repository).not.toHaveProperty('deleteProject');
   });
 
+  it('lists rolling, safety, and daily points and loads each as a read-only document', async () => {
+    const document = createDocument();
+    const { repository, client } = repositoryFor([
+      {
+        data: [
+          {
+            id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+            kind: 'SAFETY',
+            reason: 'BEFORE_PERIOD_CHANGE',
+            captured_at: '2026-07-31T10:00:00.000Z',
+            source_revision: 9,
+          },
+          {
+            id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+            kind: 'ROLLING',
+            reason: 'AUTO_15_MIN',
+            captured_at: '2026-07-31T09:45:00.000Z',
+            source_revision: 8,
+          },
+        ],
+        error: null,
+      },
+      {
+        data: [
+          {
+            business_date: '2026-07-30',
+            saved_at: '2026-07-31T02:59:00.000Z',
+            source_revision: 7,
+          },
+        ],
+        error: null,
+      },
+      { data: { document }, error: null },
+      { data: { document }, error: null },
+      {
+        data: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
+        error: null,
+      },
+    ]);
+
+    const points = await repository.listRecoveryPoints(
+      WORKSPACE_ID,
+      PROJECT_ID,
+    );
+    expect(points).toMatchObject([
+      {
+        kind: 'SAFETY',
+        reason: 'BEFORE_PERIOD_CHANGE',
+        sourceRevision: 9,
+      },
+      { kind: 'ROLLING', reason: 'AUTO_15_MIN', sourceRevision: 8 },
+      { kind: 'DAILY', reason: 'DAILY', businessDate: '2026-07-30' },
+    ]);
+    await expect(
+      repository.loadRecoveryPoint(WORKSPACE_ID, PROJECT_ID, points[0]!),
+    ).resolves.toEqual(document);
+    await expect(
+      repository.loadRecoveryPoint(WORKSPACE_ID, PROJECT_ID, points[2]!),
+    ).resolves.toEqual(document);
+    await expect(
+      repository.createSafetyBackup(
+        WORKSPACE_ID,
+        PROJECT_ID,
+        'BEFORE_MEMBER_EXCLUSION',
+        9,
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(client.calls).toContainEqual({
+      action: 'rpc',
+      args: [
+        'ngplan_create_safety_backup',
+        {
+          target_workspace_id: WORKSPACE_ID,
+          target_project_id: PROJECT_ID,
+          target_reason: 'BEFORE_MEMBER_EXCLUSION',
+          expected_source_revision: 9,
+        },
+      ],
+    });
+  });
+
   it('rejects missing, duplicate, malformed, and inaccessible workspace responses', async () => {
     for (const [response, message] of [
       [
@@ -374,5 +461,99 @@ describe('SupabasePlanRepository', () => {
     await expect(
       missingHideTarget.setProjectHidden(WORKSPACE_ID, PROJECT_ID, true),
     ).rejects.toThrow('계획을 찾지 못했거나 접근 권한이 없습니다.');
+  });
+
+  it('rejects failed and malformed recovery responses without guessing', async () => {
+    await expect(
+      repositoryFor([
+        { data: null, error: { message: 'recent denied' } },
+        { data: [], error: null },
+      ]).repository.listRecoveryPoints(WORKSPACE_ID, PROJECT_ID),
+    ).rejects.toThrow('최근 보관본을 불러오지 못했습니다: recent denied');
+
+    await expect(
+      repositoryFor([
+        { data: [], error: null },
+        { data: null, error: { message: 'daily denied' } },
+      ]).repository.listRecoveryPoints(WORKSPACE_ID, PROJECT_ID),
+    ).rejects.toThrow('일일 보관본을 불러오지 못했습니다: daily denied');
+
+    await expect(
+      repositoryFor([
+        { data: {}, error: null },
+        { data: [], error: null },
+      ]).repository.listRecoveryPoints(WORKSPACE_ID, PROJECT_ID),
+    ).rejects.toThrow('보관본 목록 응답 형식이 올바르지 않습니다.');
+
+    await expect(
+      repositoryFor([
+        {
+          data: [
+            {
+              id: 'bad',
+              kind: 'ROLLING',
+              reason: 'UNKNOWN',
+              captured_at: 'now',
+              source_revision: 1,
+            },
+          ],
+          error: null,
+        },
+        { data: [], error: null },
+      ]).repository.listRecoveryPoints(WORKSPACE_ID, PROJECT_ID),
+    ).rejects.toThrow('읽을 수 없는 최근 보관본 항목이 있습니다.');
+
+    await expect(
+      repositoryFor([
+        { data: [], error: null },
+        {
+          data: [
+            {
+              business_date: '2026-07-30',
+              saved_at: 'now',
+              source_revision: 0,
+            },
+          ],
+          error: null,
+        },
+      ]).repository.listRecoveryPoints(WORKSPACE_ID, PROJECT_ID),
+    ).rejects.toThrow('읽을 수 없는 일일 보관본 항목이 있습니다.');
+
+    const point = {
+      key: 'recovery:missing',
+      kind: 'SAFETY' as const,
+      reason: 'BEFORE_PERIOD_CHANGE' as const,
+      capturedAt: '2026-07-31T12:00:00.000Z',
+      sourceRevision: 1,
+      businessDate: null,
+    };
+    await expect(
+      repositoryFor([
+        { data: null, error: { message: 'load denied' } },
+      ]).repository.loadRecoveryPoint(WORKSPACE_ID, PROJECT_ID, point),
+    ).rejects.toThrow('보관본을 불러오지 못했습니다: load denied');
+    await expect(
+      repositoryFor([{ data: null, error: null }]).repository.loadRecoveryPoint(
+        WORKSPACE_ID,
+        PROJECT_ID,
+        point,
+      ),
+    ).rejects.toThrow('선택한 보관본을 찾지 못했습니다.');
+    await expect(
+      repositoryFor([
+        { data: { document: { version: 99 } }, error: null },
+      ]).repository.loadRecoveryPoint(WORKSPACE_ID, PROJECT_ID, point),
+    ).rejects.toThrow('선택한 보관본 문서가 현재 계획과 맞지 않습니다.');
+
+    await expect(
+      repositoryFor([
+        { data: null, error: { message: 'rpc denied' } },
+      ]).repository.createSafetyBackup(
+        WORKSPACE_ID,
+        PROJECT_ID,
+        'BEFORE_MEMBER_EXCLUSION',
+        9,
+      ),
+    ).rejects.toThrow('안전 보관본을 만들지 못했습니다: rpc denied');
   });
 });

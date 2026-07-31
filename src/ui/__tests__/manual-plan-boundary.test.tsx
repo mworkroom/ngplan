@@ -62,7 +62,7 @@ describe('WP3 App setup handoff', () => {
 
     await user.click(screen.getByRole('button', { name: '기간 변경' }));
     await user.type(screen.getByRole('textbox', { name: '프로젝트명' }), ' 수정');
-    await user.click(screen.getByRole('button', { name: '닫기' }));
+    await user.click(screen.getByRole('button', { name: '변경 적용' }));
     await user.click(screen.getByRole('button', { name: '수동 플랜 만들기' }));
 
     const updatedTitle = await screen.findByRole('heading', { name: '202607A 수정' });

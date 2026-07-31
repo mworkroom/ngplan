@@ -252,4 +252,83 @@ describe('PlanSaveCoordinator', () => {
     });
     coordinator.dispose();
   });
+
+  it('flushes the exact current document before creating a semantic safety backup', async () => {
+    const cache = new MemoryCache();
+    const save = vi.fn(async () => saveResult(4));
+    const createSafetyBackup = vi.fn(async () => undefined);
+    const repository: PlanRepository = {
+      ...repositoryWithSave(save),
+      createSafetyBackup,
+    };
+    const coordinator = new PlanSaveCoordinator({
+      workspaceId: WORKSPACE_ID,
+      projectId: PROJECT_ID,
+      verifiedUserId: 'user-1',
+      repository,
+      cache,
+      onStatus: () => undefined,
+      localDelayMs: 60_000,
+      remoteDelayMs: 60_000,
+    });
+
+    coordinator.schedule(snapshotWithTitle('보관할 최신 입력'));
+    await coordinator.createSafetyBackup('BEFORE_MEMBER_EXCLUSION');
+
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(createSafetyBackup).toHaveBeenCalledWith(
+      WORKSPACE_ID,
+      PROJECT_ID,
+      'BEFORE_MEMBER_EXCLUSION',
+      4,
+    );
+    coordinator.dispose();
+  });
+
+  it('blocks a destructive action while offline or when the latest save failed', async () => {
+    const offlineBackup = vi.fn(async () => undefined);
+    const offlineCoordinator = new PlanSaveCoordinator({
+      workspaceId: WORKSPACE_ID,
+      projectId: PROJECT_ID,
+      verifiedUserId: 'user-1',
+      repository: {
+        ...repositoryWithSave(async () => saveResult(1)),
+        createSafetyBackup: offlineBackup,
+      },
+      cache: new MemoryCache(),
+      onStatus: () => undefined,
+      isOnline: () => false,
+      localDelayMs: 60_000,
+      remoteDelayMs: 60_000,
+    });
+    offlineCoordinator.schedule(snapshotWithTitle('오프라인 입력'));
+    await expect(
+      offlineCoordinator.createSafetyBackup('BEFORE_MEMBER_EXCLUSION'),
+    ).rejects.toThrow('인터넷 연결 후 다시 시도해 주세요');
+    expect(offlineBackup).not.toHaveBeenCalled();
+    offlineCoordinator.dispose();
+
+    const failedBackup = vi.fn(async () => undefined);
+    const failedCoordinator = new PlanSaveCoordinator({
+      workspaceId: WORKSPACE_ID,
+      projectId: PROJECT_ID,
+      verifiedUserId: 'user-1',
+      repository: {
+        ...repositoryWithSave(async () => {
+          throw new Error('save failed');
+        }),
+        createSafetyBackup: failedBackup,
+      },
+      cache: new MemoryCache(),
+      onStatus: () => undefined,
+      localDelayMs: 60_000,
+      remoteDelayMs: 60_000,
+    });
+    failedCoordinator.schedule(snapshotWithTitle('저장 실패 입력'));
+    await expect(
+      failedCoordinator.createSafetyBackup('BEFORE_AUTOMATIC_PLAN_APPLY'),
+    ).rejects.toThrow('위험한 변경을 막았습니다');
+    expect(failedBackup).not.toHaveBeenCalled();
+    failedCoordinator.dispose();
+  });
 });

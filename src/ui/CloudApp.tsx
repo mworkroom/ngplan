@@ -17,6 +17,11 @@ import {
 } from '../cloud/indexeddb-plan-cache';
 import { PlanSaveCoordinator } from '../cloud/plan-save-coordinator';
 import {
+  createRecoveryCopySession,
+  deriveRecommendedPlanningPeriod,
+  type PlanningPeriod,
+} from '../cloud/plan-recovery';
+import {
   SupabaseMemberDirectory,
   type MemberDirectory,
 } from '../cloud/member-directory';
@@ -29,12 +34,16 @@ import type {
   CloudWorkspace,
   PlanCache,
   PlanRepository,
+  RecoveryPointSummary,
+  SafetyBackupReason,
 } from '../cloud/types';
 import { App } from './App';
+import { NewPlanPeriodDialog } from './components/NewPlanPeriodDialog';
 import type { WorkspaceSessionSnapshot } from './workspace-session-storage';
 
 interface EditorSelection {
   readonly projectId: string;
+  readonly initialPeriod: PlanningPeriod | null;
   readonly initialSession: WorkspaceSessionSnapshot | null;
   readonly initialRecord: CachedPlanRecord | null;
   readonly initialRemoteDocument: CloudPlanDocumentV1 | null;
@@ -125,8 +134,10 @@ export function mergeCloudProjectLists(
   };
 }
 
-function createCloudIdGenerator(projectId: string): IdGenerator {
-  let initialProjectIdAvailable = true;
+function createCloudIdGenerator(
+  projectId: string,
+  initialProjectIdAvailable: boolean,
+): IdGenerator {
   return (kind: IdKind) => {
     if (kind === 'PROJECT' && initialProjectIdAvailable) {
       initialProjectIdAvailable = false;
@@ -240,11 +251,15 @@ function LoadingScreen({ message }: { readonly message: string }) {
 function ProjectCard({
   project,
   onOpen,
+  onOpenRecovery,
   onToggleHidden,
   actionPending,
 }: {
   readonly project: CloudProjectSummary;
   readonly onOpen: (project: CloudProjectSummary) => void;
+  readonly onOpenRecovery?:
+    | ((project: CloudProjectSummary) => void)
+    | undefined;
   readonly onToggleHidden: (project: CloudProjectSummary) => void;
   readonly actionPending: boolean;
 }) {
@@ -276,6 +291,16 @@ function ProjectCard({
         >
           계획 열기
         </button>
+        {onOpenRecovery === undefined || project.localOnly ? null : (
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => onOpenRecovery(project)}
+            disabled={actionPending}
+          >
+            보관본 보기
+          </button>
+        )}
         <button
           type="button"
           className="secondary-button"
@@ -301,6 +326,7 @@ function ProjectListScreen({
   error,
   onNew,
   onOpen,
+  onOpenRecovery,
   onToggleHidden,
   onRefresh,
   onSignOut,
@@ -311,6 +337,9 @@ function ProjectListScreen({
   readonly error: string | null;
   readonly onNew: () => void;
   readonly onOpen: (project: CloudProjectSummary) => void;
+  readonly onOpenRecovery?:
+    | ((project: CloudProjectSummary) => void)
+    | undefined;
   readonly onToggleHidden: (project: CloudProjectSummary) => Promise<void>;
   readonly onRefresh: () => Promise<void>;
   readonly onSignOut: () => Promise<void>;
@@ -383,6 +412,7 @@ function ProjectListScreen({
                 key={project.id}
                 project={project}
                 onOpen={onOpen}
+                onOpenRecovery={onOpenRecovery}
                 onToggleHidden={(item) => void toggleHidden(item)}
                 actionPending={actionProjectId === project.id}
               />
@@ -411,6 +441,7 @@ function ProjectListScreen({
                   key={project.id}
                   project={project}
                   onOpen={onOpen}
+                  onOpenRecovery={onOpenRecovery}
                   onToggleHidden={(item) => void toggleHidden(item)}
                   actionPending={actionProjectId === project.id}
                 />
@@ -423,6 +454,161 @@ function ProjectListScreen({
   );
 }
 
+function recoveryReasonLabel(point: RecoveryPointSummary): string {
+  switch (point.reason) {
+    case 'BEFORE_PERIOD_CHANGE':
+      return '기간 변경 직전';
+    case 'BEFORE_AUTOMATIC_PLAN_APPLY':
+      return '자동 계산 적용 직전';
+    case 'BEFORE_MEMBER_EXCLUSION':
+      return '회원 삭제 직전';
+    case 'AUTO_15_MIN':
+      return '15분 자동 보관';
+    case 'DAILY':
+      return '일일 보관';
+  }
+}
+
+function RecoveryPointSection({
+  title,
+  description,
+  points,
+  pendingKey,
+  onOpenCopy,
+  initiallyOpen = false,
+}: {
+  readonly title: string;
+  readonly description: string;
+  readonly points: readonly RecoveryPointSummary[];
+  readonly pendingKey: string | null;
+  readonly onOpenCopy: (point: RecoveryPointSummary) => void;
+  readonly initiallyOpen?: boolean;
+}) {
+  return (
+    <details className="recovery-section" open={initiallyOpen}>
+      <summary>
+        {title} <span>{points.length}개</span>
+      </summary>
+      <p className="help-text">{description}</p>
+      {points.length === 0 ? (
+        <p className="cloud-empty">아직 이 종류의 보관본이 없습니다.</p>
+      ) : (
+        <ul className="recovery-list">
+          {points.map((point) => (
+            <li key={point.key}>
+              <div>
+                <strong>{recoveryReasonLabel(point)}</strong>
+                <span>
+                  한국 {formatSavedAt(point.capturedAt, 'Asia/Seoul')}
+                </span>
+                <span>
+                  브라질 {formatSavedAt(point.capturedAt, 'America/Sao_Paulo')}
+                </span>
+              </div>
+              <button
+                type="button"
+                className="secondary-button"
+                disabled={pendingKey !== null}
+                onClick={() => onOpenCopy(point)}
+              >
+                {pendingKey === point.key ? '사본 만드는 중…' : '사본으로 열기'}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </details>
+  );
+}
+
+function RecoveryDialog({
+  project,
+  points,
+  loading,
+  error,
+  pendingKey,
+  onOpenCopy,
+  onRetry,
+  onClose,
+}: {
+  readonly project: CloudProjectSummary;
+  readonly points: readonly RecoveryPointSummary[];
+  readonly loading: boolean;
+  readonly error: string | null;
+  readonly pendingKey: string | null;
+  readonly onOpenCopy: (point: RecoveryPointSummary) => void;
+  readonly onRetry: () => void;
+  readonly onClose: () => void;
+}) {
+  const safety = points.filter((point) => point.kind === 'SAFETY');
+  const rolling = points.filter((point) => point.kind === 'ROLLING');
+  const daily = points.filter((point) => point.kind === 'DAILY');
+  return (
+    <div className="period-dialog-backdrop" role="presentation">
+      <section
+        className="period-dialog recovery-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="recovery-dialog-title"
+      >
+        <div className="period-dialog__header">
+          <div>
+            <p className="period-confirmation__eyebrow">원본은 그대로 유지됩니다</p>
+            <h2 id="recovery-dialog-title">{project.title} 보관본</h2>
+          </div>
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={onClose}
+            disabled={pendingKey !== null}
+          >
+            닫기
+          </button>
+        </div>
+        <p className="recovery-dialog__notice">
+          보관본을 선택하면 현재 계획을 덮지 않고 ‘복구본’이라는 새 계획을 만듭니다.
+        </p>
+        {loading ? <p role="status">보관본을 불러오는 중…</p> : null}
+        {error === null ? null : (
+          <div className="cloud-message cloud-message--error" role="alert">
+            <span>{error}</span>
+            <button type="button" className="secondary-button" onClick={onRetry}>
+              다시 불러오기
+            </button>
+          </div>
+        )}
+        {loading || error !== null ? null : (
+          <div className="recovery-dialog__sections">
+            <RecoveryPointSection
+              title="중요 작업 직전"
+              description="기간 변경, 자동 계산 적용, 회원 삭제 직전에 만든 보관본입니다. 최근 50개를 유지합니다."
+              points={safety}
+              pendingKey={pendingKey}
+              onOpenCopy={onOpenCopy}
+              initiallyOpen
+            />
+            <RecoveryPointSection
+              title="최근 7일"
+              description="15분 간격의 순환 보관본입니다. 계획마다 최대 672개를 유지합니다."
+              points={rolling}
+              pendingKey={pendingKey}
+              onOpenCopy={onOpenCopy}
+              initiallyOpen={safety.length === 0}
+            />
+            <RecoveryPointSection
+              title="일일 보관"
+              description="브라질 업무일마다 한 개씩 남는 장기 보관본입니다."
+              points={daily}
+              pendingKey={pendingKey}
+              onOpenCopy={onOpenCopy}
+            />
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
 function CloudProjectEditor({
   user,
   workspace,
@@ -431,6 +617,7 @@ function CloudProjectEditor({
   repository,
   cache,
   onBack,
+  onOpenCopy,
 }: {
   readonly user: User;
   readonly workspace: CloudWorkspace;
@@ -439,6 +626,7 @@ function CloudProjectEditor({
   readonly repository: PlanRepository;
   readonly cache: PlanCache;
   readonly onBack: () => void;
+  readonly onOpenCopy: (snapshot: WorkspaceSessionSnapshot) => void;
 }) {
   const [, setStatus] = useState<CloudSaveStatus>(() => ({
     state:
@@ -475,8 +663,12 @@ function CloudProjectEditor({
   }
   const coordinator = coordinatorRef.current;
   const generateId = useMemo(
-    () => createCloudIdGenerator(selection.projectId),
-    [selection.projectId],
+    () =>
+      createCloudIdGenerator(
+        selection.projectId,
+        selection.initialSession === null,
+      ),
+    [selection.initialSession, selection.projectId],
   );
   const handleSessionChange = useCallback(
     (snapshot: WorkspaceSessionSnapshot) => coordinator.schedule(snapshot),
@@ -508,13 +700,31 @@ function CloudProjectEditor({
     onBack();
   };
 
+  const createPlanCopy = async (
+    snapshot: WorkspaceSessionSnapshot,
+  ): Promise<void> => {
+    await coordinator.flushNow();
+    onOpenCopy(snapshot);
+  };
+
+  const createSafetyBackup = async (
+    reason: SafetyBackupReason,
+  ): Promise<void> => coordinator.createSafetyBackup(reason);
+
   return (
     <App
       key={selection.projectId}
       generateId={generateId}
+      initialPeriod={selection.initialPeriod ?? undefined}
       memberDirectory={memberDirectory}
       initialWorkspaceSession={selection.initialSession}
       onWorkspaceSessionChange={handleSessionChange}
+      onCreatePlanCopy={createPlanCopy}
+      onRequestSafetyBackup={
+        repository.createSafetyBackup === undefined
+          ? undefined
+          : createSafetyBackup
+      }
       onBackToPlanList={() => void leaveEditor()}
     />
   );
@@ -540,6 +750,14 @@ function AuthenticatedCloudWorkspace({
   const [loading, setLoading] = useState(true);
   const [offline, setOffline] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [newPlanPeriod, setNewPlanPeriod] = useState<PlanningPeriod | null>(null);
+  const [recoveryProject, setRecoveryProject] =
+    useState<CloudProjectSummary | null>(null);
+  const [recoveryPoints, setRecoveryPoints] =
+    useState<readonly RecoveryPointSummary[]>([]);
+  const [recoveryLoading, setRecoveryLoading] = useState(false);
+  const [recoveryError, setRecoveryError] = useState<string | null>(null);
+  const [recoveryPendingKey, setRecoveryPendingKey] = useState<string | null>(null);
 
   const loadLists = useCallback(
     async (activeWorkspace: CloudWorkspace): Promise<void> => {
@@ -658,6 +876,7 @@ function AuthenticatedCloudWorkspace({
       if (cached?.pendingRemote === true) {
         setSelection({
           projectId: project.id,
+          initialPeriod: null,
           initialSession: cached.workspaceSession,
           initialRecord: cached,
           initialRemoteDocument: null,
@@ -688,6 +907,7 @@ function AuthenticatedCloudWorkspace({
         await cache.put(nextCache);
         setSelection({
           projectId: project.id,
+          initialPeriod: null,
           initialSession: session,
           initialRecord: nextCache,
           initialRemoteDocument: remote.document,
@@ -697,6 +917,7 @@ function AuthenticatedCloudWorkspace({
         setOffline(true);
         setSelection({
           projectId: project.id,
+          initialPeriod: null,
           initialSession: cached.workspaceSession,
           initialRecord: cached,
           initialRemoteDocument: null,
@@ -709,14 +930,80 @@ function AuthenticatedCloudWorkspace({
     }
   };
 
-  const createNewProject = (): void => {
+  const requestNewProject = (): void => {
+    setNewPlanPeriod(deriveRecommendedPlanningPeriod(new Date()));
+  };
+
+  const createNewProject = (period: PlanningPeriod): void => {
     const projectId = crypto.randomUUID();
+    setNewPlanPeriod(null);
     setSelection({
       projectId,
+      initialPeriod: period,
       initialSession: null,
       initialRecord: null,
       initialRemoteDocument: null,
     });
+  };
+
+  const loadRecoveryPoints = async (
+    project: CloudProjectSummary,
+  ): Promise<void> => {
+    if (workspace === null || repository.listRecoveryPoints === undefined) return;
+    setRecoveryLoading(true);
+    setRecoveryError(null);
+    try {
+      setRecoveryPoints(
+        await repository.listRecoveryPoints(workspace.id, project.id),
+      );
+    } catch (recoveryLoadError) {
+      setRecoveryError(messageFromError(recoveryLoadError));
+    } finally {
+      setRecoveryLoading(false);
+    }
+  };
+
+  const openRecovery = (project: CloudProjectSummary): void => {
+    setRecoveryProject(project);
+    setRecoveryPoints([]);
+    void loadRecoveryPoints(project);
+  };
+
+  const openRecoveryCopy = async (
+    point: RecoveryPointSummary,
+  ): Promise<void> => {
+    if (
+      workspace === null ||
+      recoveryProject === null ||
+      repository.loadRecoveryPoint === undefined
+    ) {
+      return;
+    }
+    setRecoveryPendingKey(point.key);
+    setRecoveryError(null);
+    try {
+      const document = await repository.loadRecoveryPoint(
+        workspace.id,
+        recoveryProject.id,
+        point,
+      );
+      const session = createRecoveryCopySession(document, {
+        projectId: crypto.randomUUID(),
+        organizationSnapshotId: crypto.randomUUID(),
+      });
+      setRecoveryProject(null);
+      setSelection({
+        projectId: session.draft.projectId,
+        initialPeriod: null,
+        initialSession: session,
+        initialRecord: null,
+        initialRemoteDocument: null,
+      });
+    } catch (recoveryOpenError) {
+      setRecoveryError(messageFromError(recoveryOpenError));
+    } finally {
+      setRecoveryPendingKey(null);
+    }
   };
 
   const toggleHidden = async (project: CloudProjectSummary): Promise<void> => {
@@ -774,6 +1061,15 @@ function AuthenticatedCloudWorkspace({
         memberDirectory={memberDirectory}
         repository={repository}
         cache={cache}
+        onOpenCopy={(snapshot) => {
+          setSelection({
+            projectId: snapshot.draft.projectId,
+            initialPeriod: null,
+            initialSession: snapshot,
+            initialRecord: null,
+            initialRemoteDocument: null,
+          });
+        }}
         onBack={() => {
           setSelection(null);
           void refresh();
@@ -782,17 +1078,48 @@ function AuthenticatedCloudWorkspace({
     );
   }
   return (
-    <ProjectListScreen
-      visible={visible}
-      hidden={hidden}
-      offline={offline}
-      error={error}
-      onNew={createNewProject}
-      onOpen={(project) => void openProject(project)}
-      onToggleHidden={toggleHidden}
-      onRefresh={refresh}
-      onSignOut={onSignOut}
-    />
+    <>
+      <ProjectListScreen
+        visible={visible}
+        hidden={hidden}
+        offline={offline}
+        error={error}
+        onNew={requestNewProject}
+        onOpen={(project) => void openProject(project)}
+        onOpenRecovery={
+          repository.listRecoveryPoints === undefined ||
+          repository.loadRecoveryPoint === undefined
+            ? undefined
+            : openRecovery
+        }
+        onToggleHidden={toggleHidden}
+        onRefresh={refresh}
+        onSignOut={onSignOut}
+      />
+      {newPlanPeriod === null ? null : (
+        <NewPlanPeriodDialog
+          recommended={newPlanPeriod}
+          onConfirm={createNewProject}
+          onCancel={() => setNewPlanPeriod(null)}
+        />
+      )}
+      {recoveryProject === null ? null : (
+        <RecoveryDialog
+          project={recoveryProject}
+          points={recoveryPoints}
+          loading={recoveryLoading}
+          error={recoveryError}
+          pendingKey={recoveryPendingKey}
+          onOpenCopy={(point) => void openRecoveryCopy(point)}
+          onRetry={() => void loadRecoveryPoints(recoveryProject)}
+          onClose={() => {
+            setRecoveryProject(null);
+            setRecoveryPoints([]);
+            setRecoveryError(null);
+          }}
+        />
+      )}
+    </>
   );
 }
 
