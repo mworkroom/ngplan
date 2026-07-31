@@ -14,6 +14,10 @@ export { editManualPlanField } from './edit-manual-plan';
 export { isManualPlanDraftModified } from './is-manual-plan-draft-modified';
 export { reconcileManualPlanDraft } from './reconcile-manual-plan-draft';
 export {
+  hasManualPlanActualDifference,
+  toggleManualPlanActualDifference,
+} from './toggle-actual-difference-marker';
+export {
   deriveAllManualPlanMemberSummaryRows,
   deriveManualPlanDailyAuditView,
   deriveManualPlanMemberJumpOptions,

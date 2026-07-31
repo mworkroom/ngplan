@@ -40,6 +40,9 @@ export function isManualPlanDraftModified(
   schema: ManualPlanSchema,
   draft: ManualPlanDraft,
 ): boolean {
+  if ((draft.actualDifferenceMarkers?.length ?? 0) > 0) {
+    return true;
+  }
   if (draft.cells.length !== schema.dates.length * schema.members.length) {
     return true;
   }

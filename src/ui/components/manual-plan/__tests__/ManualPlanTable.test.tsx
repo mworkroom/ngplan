@@ -270,6 +270,40 @@ describe('WP4 manual planning worksheet', () => {
     },
   );
 
+  it('marks and clears the selected member day across all three cells', async () => {
+    const { user } = renderWorkspace();
+    const pvp = pvInput('1 (수) 하위 PVP 계획 PV');
+    const left = pvInput('1 (수) 하위 좌 계획 PV');
+    const right = pvInput('1 (수) 하위 우 계획 PV');
+    const control = screen.getByRole('region', { name: '선택한 날짜 표시' });
+
+    expect(within(control).getByText(/7월 1일 \(수\).*하위/)).toBeDefined();
+    await user.click(
+      within(control).getByRole('button', { name: '계획과 달랐음 표시' }),
+    );
+
+    expect(
+      within(control).getByText('계획과 실제 숫자가 다른 날로 표시했습니다.'),
+    ).toBeDefined();
+    for (const input of [pvp, left, right]) {
+      expect(input.closest('td')?.dataset.actualDifference).toBe('true');
+    }
+
+    await user.type(pvp, '300');
+    await user.type(left, '300');
+    await user.type(right, '300');
+    expect(pvp.closest('td')?.dataset.commissionLevel).toBe('300');
+    expect(pvp.closest('td')?.dataset.actualDifference).toBe('true');
+
+    await user.click(within(control).getByRole('button', { name: '표시 지우기' }));
+    for (const input of [pvp, left, right]) {
+      expect(input.closest('td')?.dataset.actualDifference).toBeUndefined();
+    }
+    expect(
+      within(control).getByRole('button', { name: '계획과 달랐음 표시' }),
+    ).toBeDefined();
+  });
+
   it('shows signed achievement balances and marks zero or negative values as met', async () => {
     const { user } = renderWorkspace();
     const pvp = pvInput('1 (수) 하위 PVP 계획 PV');
@@ -401,6 +435,12 @@ describe('WP4 manual planning worksheet', () => {
     expect(screen.getByText('5 (일) · 하위')).toBeDefined();
     expect(screen.getAllByText('정산 제외').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('정산 제외 · 커미션 없음')).toBeDefined();
+    expect(
+      (screen.getByRole('button', {
+        name: '계획과 달랐음 표시',
+      }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+    expect(screen.getByText('입력하지 않는 날은 표시할 수 없습니다.')).toBeDefined();
   });
 
   it('changes the detailed calculation date without moving focus back into the table', async () => {

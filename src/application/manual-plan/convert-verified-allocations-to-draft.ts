@@ -320,7 +320,14 @@ export function convertVerifiedAllocationsToManualPlanDraft(
     return Object.freeze({ status: 'FAILURE', issues: sortIssues(issues) });
   }
 
-  const draft = Object.freeze({ cells: Object.freeze(cells) });
+  const draft = Object.freeze({
+    cells: Object.freeze(cells),
+    actualDifferenceMarkers: Object.freeze(
+      (previousDraft?.actualDifferenceMarkers ?? []).map((marker) =>
+        Object.freeze({ date: marker.date, memberKey: marker.memberKey }),
+      ),
+    ),
+  });
   const normalized = normalizeManualPlanDraft(bundle, draft, schema);
   if (normalized.status === 'FAILURE') {
     return Object.freeze({ status: 'FAILURE', issues: normalized.issues });

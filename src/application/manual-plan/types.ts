@@ -27,8 +27,14 @@ export interface ManualPlanCellDraft {
   readonly selfRight?: string;
 }
 
+export interface ManualPlanActualDifferenceMarker {
+  readonly date: string;
+  readonly memberKey: string;
+}
+
 export interface ManualPlanDraft {
   readonly cells: readonly ManualPlanCellDraft[];
+  readonly actualDifferenceMarkers?: readonly ManualPlanActualDifferenceMarker[];
 }
 
 export interface ManualPlanMemberDescriptor {

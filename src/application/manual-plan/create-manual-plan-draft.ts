@@ -28,5 +28,8 @@ export function createManualPlanDraft(bundle: ProjectSetupBundle): ManualPlanDra
       createCell(date.date, date.settlementMode === 'SKIP_NO_INPUT', member),
     ),
   );
-  return Object.freeze({ cells: Object.freeze(cells) });
+  return Object.freeze({
+    cells: Object.freeze(cells),
+    actualDifferenceMarkers: Object.freeze([]),
+  });
 }

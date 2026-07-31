@@ -65,6 +65,6 @@ export function editManualPlanField(
   cells[cellIndex] = replaceField(cell, request);
   return Object.freeze({
     status: 'SUCCESS',
-    draft: Object.freeze({ cells: Object.freeze(cells) }),
+    draft: Object.freeze({ ...draft, cells: Object.freeze(cells) }),
   });
 }

@@ -53,6 +53,31 @@ describe('CloudPlanDocumentV2', () => {
     expect(normalizeCloudPlanDocument(document)).toEqual(document);
   });
 
+  it('keeps plan-versus-actual difference markers in the shared document', () => {
+    const snapshot: WorkspaceSessionSnapshot = {
+      ...createSnapshot(),
+      manualPlanDraft: {
+        cells: [
+          {
+            date: '2026-07-06',
+            memberKey: 'member-1',
+            pvp: '698',
+          },
+        ],
+        actualDifferenceMarkers: [
+          { date: '2026-07-06', memberKey: 'member-1' },
+        ],
+      },
+    };
+
+    const document = cloudDocumentFromWorkspaceSession(snapshot);
+
+    expect(document.manualPlanDraft?.actualDifferenceMarkers).toEqual([
+      { date: '2026-07-06', memberKey: 'member-1' },
+    ]);
+    expect(normalizeCloudPlanDocument(document)).toEqual(document);
+  });
+
   it('rejects malformed versions and the former Seoul-time document shape', () => {
     const document = cloudDocumentFromWorkspaceSession(createSnapshot());
 

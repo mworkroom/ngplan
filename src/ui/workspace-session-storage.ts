@@ -212,7 +212,15 @@ function looksLikeManualPlanDraft(value: unknown): value is ManualPlanDraft {
         typeof cell.pvp === 'string' &&
         (!Object.hasOwn(cell, 'selfLeft') || typeof cell.selfLeft === 'string') &&
         (!Object.hasOwn(cell, 'selfRight') || typeof cell.selfRight === 'string'),
-    )
+    ) &&
+    (!Object.hasOwn(value, 'actualDifferenceMarkers') ||
+      (Array.isArray(value.actualDifferenceMarkers) &&
+        value.actualDifferenceMarkers.every(
+          (marker) =>
+            isRecord(marker) &&
+            typeof marker.date === 'string' &&
+            typeof marker.memberKey === 'string',
+        )))
   );
 }
 

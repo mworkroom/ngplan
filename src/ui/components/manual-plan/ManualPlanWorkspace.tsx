@@ -7,6 +7,8 @@ import {
   deriveManualPlanMemberSummaryView,
   deriveManualPlanSchema,
   editManualPlanField,
+  hasManualPlanActualDifference,
+  toggleManualPlanActualDifference,
   type ManualPlanCalculationState,
   type ManualPlanDraft,
   type ManualPlanField,
@@ -59,6 +61,20 @@ export function ManualPlanWorkspace({
     () => deriveManualPlanMemberJumpOptions(schema),
     [schema],
   );
+  const selectedDate = schema.dateByIso.get(selection.date);
+  const selectedMember = schema.memberByKey.get(selection.memberKey);
+  const selectedDateLabel = selectedDate === undefined
+    ? selection.date
+    : `${Number(selectedDate.date.slice(5, 7))}월 ${Number(
+        selectedDate.date.slice(8, 10),
+      )}일 (${selectedDate.weekdayLabel})`;
+  const selectedMemberLabel = selectedMember?.displayLabel ?? selection.memberKey;
+  const actualDifferenceMarked = hasManualPlanActualDifference(
+    draft,
+    selection.date,
+    selection.memberKey,
+  );
+  const actualDifferenceDisabled = selectedDate?.settlementMode !== 'SETTLE';
 
   const handleEdit = (
     date: string,
@@ -76,6 +92,18 @@ export function ManualPlanWorkspace({
       return;
     }
     onDraftChange(outcome.draft);
+  };
+
+  const handleToggleActualDifference = (): void => {
+    const next = toggleManualPlanActualDifference(
+      schema,
+      draft,
+      selection.date,
+      selection.memberKey,
+    );
+    if (next !== draft) {
+      onDraftChange(next);
+    }
   };
 
   const visibleIssues =
@@ -154,6 +182,34 @@ export function ManualPlanWorkspace({
             ? `정산 자격 경고 ${calculation.issues.length}개. 실제 초기화 결과를 표시합니다.`
           : '현재 계획 계산 완료'}
       </p>
+
+      <section
+        className={`manual-plan-difference-control${
+          actualDifferenceMarked ? ' manual-plan-difference-control--marked' : ''
+        }`}
+        aria-label="선택한 날짜 표시"
+      >
+        <div className="manual-plan-difference-control__context">
+          <span>선택한 칸</span>
+          <strong>{selectedDateLabel} · {selectedMemberLabel}</strong>
+        </div>
+        <p aria-live="polite">
+          {actualDifferenceDisabled
+            ? '입력하지 않는 날은 표시할 수 없습니다.'
+            : actualDifferenceMarked
+              ? '계획과 실제 숫자가 다른 날로 표시했습니다.'
+              : '계획과 실제 숫자가 다르면 표시해 두세요.'}
+        </p>
+        <button
+          type="button"
+          className="manual-plan-difference-control__button"
+          aria-pressed={actualDifferenceMarked}
+          disabled={actualDifferenceDisabled}
+          onClick={handleToggleActualDifference}
+        >
+          {actualDifferenceMarked ? '표시 지우기' : '계획과 달랐음 표시'}
+        </button>
+      </section>
 
       <ManualPlanTable
         schema={schema}

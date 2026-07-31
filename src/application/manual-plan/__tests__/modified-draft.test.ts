@@ -4,7 +4,9 @@ import {
   createManualPlanDraft,
   deriveManualPlanSchema,
   editManualPlanField,
+  hasManualPlanActualDifference,
   isManualPlanDraftModified,
+  toggleManualPlanActualDifference,
 } from '../index';
 import type { ManualPlanDraft } from '../types';
 
@@ -113,5 +115,45 @@ describe('WP3 manual draft modified detection', () => {
       ),
     };
     expect(isManualPlanDraftModified(schema, changedSundayDraft)).toBe(true);
+  });
+
+  it('toggles one member-day difference marker and rejects input-free dates', () => {
+    const bundle = createBundle();
+    const schema = deriveManualPlanSchema(bundle);
+    const initial = createManualPlanDraft(bundle);
+    const weekday = schema.dates.find((date) => date.settlementMode === 'SETTLE')!;
+    const sunday = schema.dates.find(
+      (date) => date.settlementMode === 'SKIP_NO_INPUT',
+    )!;
+
+    const marked = toggleManualPlanActualDifference(
+      schema,
+      initial,
+      weekday.date,
+      'root',
+    );
+    expect(marked).not.toBe(initial);
+    expect(marked.cells).toBe(initial.cells);
+    expect(marked.actualDifferenceMarkers).toEqual([
+      { date: weekday.date, memberKey: 'root' },
+    ]);
+    expect(hasManualPlanActualDifference(marked, weekday.date, 'root')).toBe(true);
+    expect(isManualPlanDraftModified(schema, marked)).toBe(true);
+
+    expect(
+      toggleManualPlanActualDifference(schema, marked, sunday.date, 'root'),
+    ).toBe(marked);
+    expect(
+      toggleManualPlanActualDifference(schema, marked, weekday.date, 'missing'),
+    ).toBe(marked);
+
+    const cleared = toggleManualPlanActualDifference(
+      schema,
+      marked,
+      weekday.date,
+      'root',
+    );
+    expect(cleared.actualDifferenceMarkers).toEqual([]);
+    expect(isManualPlanDraftModified(schema, cleared)).toBe(false);
   });
 });

@@ -147,6 +147,36 @@ describe('WP1 manual-plan draft and worksheet schema', () => {
     expect(pvpByMember.get('right')).toBe('654');
   });
 
+  it('keeps only valid difference markers when a saved draft is reopened', () => {
+    const originalBundle = bundle([
+      member('root', null, null),
+      member('right', 'root', 'RIGHT'),
+    ]);
+    const initial = createManualPlanDraft(originalBundle);
+    const schema = deriveManualPlanSchema(originalBundle);
+    const weekday = schema.dates.find((date) => date.settlementMode === 'SETTLE')!;
+    const sunday = schema.dates.find(
+      (date) => date.settlementMode === 'SKIP_NO_INPUT',
+    )!;
+    const previous = {
+      ...initial,
+      actualDifferenceMarkers: [
+        { date: weekday.date, memberKey: 'right' },
+        { date: weekday.date, memberKey: 'right' },
+        { date: sunday.date, memberKey: 'right' },
+        { date: weekday.date, memberKey: 'missing' },
+      ],
+    };
+
+    const reopened = reconcileManualPlanDraft(originalBundle, previous);
+
+    expect(reopened.actualDifferenceMarkers).toEqual([
+      { date: weekday.date, memberKey: 'right' },
+    ]);
+    expect(Object.isFrozen(reopened.actualDifferenceMarkers)).toBe(true);
+    expect(Object.isFrozen(reopened.actualDifferenceMarkers?.[0])).toBe(true);
+  });
+
   it('P3-DRAFT-001: first half centers the root between its left and right organizations', () => {
     const setup = treeBundle();
     const schema = deriveManualPlanSchema(setup);

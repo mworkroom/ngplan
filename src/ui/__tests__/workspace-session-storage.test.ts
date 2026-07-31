@@ -90,6 +90,58 @@ describe('persistent workspace storage v4', () => {
     });
   });
 
+  it('persists plan-versus-actual difference markers with the manual plan', () => {
+    const draft = createDraft();
+    const manualPlanDraft = {
+      cells: [
+        {
+          date: '2026-07-06',
+          memberKey: 'member-1',
+          pvp: '698',
+          selfLeft: '700',
+          selfRight: '700',
+        },
+      ],
+      actualDifferenceMarkers: [
+        { date: '2026-07-06', memberKey: 'member-1' },
+      ],
+    };
+
+    writeWorkspaceSession({
+      version: WORKSPACE_SESSION_VERSION,
+      draft,
+      manualPlanDraft,
+      screen: 'SETUP',
+      organizationScale: 1,
+    });
+
+    expect(readWorkspaceSession()?.manualPlanDraft).toEqual(manualPlanDraft);
+  });
+
+  it('discards malformed difference markers without discarding setup work', () => {
+    const draft = createDraft();
+    window.localStorage.setItem(
+      WORKSPACE_SESSION_STORAGE_KEY,
+      JSON.stringify({
+        version: WORKSPACE_SESSION_VERSION,
+        draft,
+        manualPlanDraft: {
+          cells: [{ date: '2026-07-06', memberKey: 'member-1', pvp: '698' }],
+          actualDifferenceMarkers: [{ date: 20260706, memberKey: 'member-1' }],
+        },
+        screen: 'MANUAL_PLAN',
+        organizationScale: 1,
+        automaticPlanCheckpoint: null,
+      }),
+    );
+
+    expect(readWorkspaceSession()).toMatchObject({
+      draft,
+      manualPlanDraft: null,
+      screen: 'SETUP',
+    });
+  });
+
   it('persists the source member UUID used for directory duplicate protection', () => {
     const withRoot = addRootMember(createDraft(), 'member-1');
     if (withRoot.status !== 'SUCCESS') {

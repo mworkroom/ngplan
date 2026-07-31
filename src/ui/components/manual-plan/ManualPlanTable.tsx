@@ -219,6 +219,15 @@ export function ManualPlanTable({
       ),
     [draft],
   );
+  const actualDifferenceKeys = useMemo(
+    () =>
+      new Set(
+        (draft.actualDifferenceMarkers ?? []).map((marker) =>
+          manualPlanCellKey(marker.date, marker.memberKey),
+        ),
+      ),
+    [draft.actualDifferenceMarkers],
+  );
 
   useEffect(() => {
     document.getElementById(manualPlanMemberGroupDomId(schema.rootMemberKey))?.scrollIntoView?.({
@@ -462,6 +471,9 @@ export function ManualPlanTable({
                         connectedValue={connectedValue}
                         calculationBlocked={calculation.status === 'BLOCKED'}
                         selected={selected}
+                        actualDifferenceMarked={actualDifferenceKeys.has(
+                          manualPlanCellKey(date.date, member.memberKey),
+                        )}
                         issue={issueFor(issues, date.date, member.memberKey, field)}
                         anchorCell={fieldIndex === 0}
                         memberRegion={memberRegion(memberIndex)}
