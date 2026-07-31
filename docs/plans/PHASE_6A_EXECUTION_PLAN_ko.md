@@ -189,8 +189,9 @@ IndexedDB는 원본이 아니라 다음 복구 정보를 가진 로컬 사본이
 - 실제 로그인 전 화면을 데스크톱·375px 모바일 폭에서 확인했고 브라우저 오류가 없음을 확인했다.
 - 운영 DB의 두 계정 접근, 익명 차단, 클라이언트 DELETE 차단, 저장 리비전, 숨김/복원과 상파울루 날짜 하루 보관본을 rollback 검증했다.
 - 2026-07-31 복구 보강 마이그레이션을 운영 `ngapps` Free 프로젝트에 `20260731133328_recovery_checkpoints_and_safe_period_changes`로 적용했다. Docker 기반 로컬 pgTAP 23개는 실행하지 않았지만, 적용 전 전체 DDL 트랜잭션 롤백 검사와 적용 후 RLS·권한·트리거·안전 보관·오래된 리비전 거부·15분 보관 동작을 운영 DB 트랜잭션 안에서 실행하고 전부 롤백했다.
+- 커밋 `bf481ab`을 `origin/main`에 푸시했고 CI의 애플리케이션 검증과 격리 Supabase migration/RLS job, GitHub Pages build·deploy가 모두 통과했다. `https://plan.nangok.app/`은 새 번들 `index-BNE8vTVm.js`를 HTTP 200으로 제공하며 데스크톱·375px 로그인 화면과 콘솔 오류 없음까지 확인했다.
 
-### 9.2 배포 전 남은 운영 검수
+### 9.2 배포 후 남은 실사용 검수
 
 - 기존 허용 Google 계정으로 실제 OAuth 왕복과 GitHub Pages 배포 주소의 redirect 허용 여부를 확인한다.
 - 실제 공유 Supabase Auth는 2026-07-26 Dashboard에서 신규 가입을 차단했고, 공개 설정의 `disable_signup=true`와 Google provider 활성 상태를 다시 확인했다. 기존 두 Auth 사용자는 계속 로그인할 수 있다.
