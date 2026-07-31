@@ -313,7 +313,7 @@ export function ManualPlanTable({
                 >
                   <strong>{markedMemberName(member.name, member.sheetMarker)}</strong>
                   <span>
-                    회원번호 {member.memberId ?? '미입력'}
+                    {member.memberId ?? '미입력'}
                     {member.duplicateLabel === null ? '' : ` · ${member.duplicateLabel}`}
                   </span>
                 </th>

@@ -164,7 +164,7 @@ export function ManualPlanWorkspace({
       <header className="setup-command-header plan-command-header">
         <div className="setup-command-header__context plan-command-header__context">
           <h2 className="plan-command-header__eyebrow">
-            {planMode === 'AUTOMATIC' ? '자동 계획표' : '수동 계획표'}
+            {planMode === 'AUTOMATIC' ? '자동 계획표' : '직급 계획표'}
           </h2>
           <h1 id="manual-plan-title" tabIndex={-1}>
             {bundle.project.title}
