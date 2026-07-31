@@ -52,6 +52,7 @@ export function MemberDirectoryPicker({
           .filter(
             (candidate) =>
               candidate.memberKey !== member.memberKey &&
+              candidate.participation === 'ACTIVE' &&
               (candidate.sourceMemberId?.trim() ?? '') !== '',
           )
           .map((candidate) => [candidate.sourceMemberId!, candidate] as const),
@@ -190,9 +191,7 @@ export function MemberDirectoryPicker({
                     const disabled =
                       usedMember !== undefined || isCurrent || memberNumberMissing;
                     const status = usedMember
-                      ? usedMember.participation === 'EXCLUDED'
-                        ? '제외된 회원으로 이미 등록됨'
-                        : '이미 추가됨'
+                      ? '이미 추가됨'
                       : isCurrent
                         ? '현재 선택'
                         : memberNumberMissing

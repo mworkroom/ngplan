@@ -5,6 +5,7 @@ import {
   assignMemberDirectoryIdentity,
   createProjectDraft,
   editMemberIdentity,
+  excludeMember,
   type IdGenerator,
   type ProjectSetupDraft,
 } from '..';
@@ -112,5 +113,96 @@ describe('assignMemberDirectoryIdentity', () => {
       { sourceMemberId: 'directory-member-1', name: 'Bia' },
       { sourceMemberId: 'directory-member-2', name: 'Bia' },
     ]);
+  });
+
+  it('replaces a directory member on the same card and allows selecting the previous member again', () => {
+    const root = successfulDraft(addRootMember(emptyDraft(), 'root'));
+    const hong = assignMemberDirectoryIdentity(root, 'root', {
+      sourceMemberId: 'directory-hong',
+      memberId: '12345678',
+      displayName: '홍길동',
+    });
+    if (hong.status === 'FAILURE') throw new Error(hong.message);
+    const kim = assignMemberDirectoryIdentity(hong.draft, 'root', {
+      sourceMemberId: 'directory-kim',
+      memberId: '98765432',
+      displayName: '김철수',
+    });
+    if (kim.status === 'FAILURE') throw new Error(kim.message);
+
+    const selectedAgain = assignMemberDirectoryIdentity(kim.draft, 'root', {
+      sourceMemberId: 'directory-hong',
+      memberId: '12345678',
+      displayName: '새 홍길동',
+    });
+
+    expect(selectedAgain.status).toBe('SUCCESS');
+    if (selectedAgain.status === 'FAILURE') return;
+    expect(selectedAgain.draft.members[0]).toMatchObject({
+      sourceMemberId: 'directory-hong',
+      memberId: '12345678',
+      name: '새 홍길동',
+    });
+  });
+
+  it('allows a directory member to be selected again after the previous card is excluded', () => {
+    const root = successfulDraft(addRootMember(emptyDraft(), 'old-root'));
+    const assigned = assignMemberDirectoryIdentity(root, 'old-root', {
+      sourceMemberId: 'directory-hong',
+      memberId: '12345678',
+      displayName: '홍길동',
+    });
+    if (assigned.status === 'FAILURE') throw new Error(assigned.message);
+    const excluded = excludeMember(assigned.draft, 'old-root', 'DETACH_CHILDREN');
+    if (excluded.status === 'FAILURE') throw new Error(excluded.error.message);
+    const withNewRoot = successfulDraft(
+      addRootMember(excluded.draft, 'new-root'),
+    );
+
+    const selectedAgain = assignMemberDirectoryIdentity(
+      withNewRoot,
+      'new-root',
+      {
+        sourceMemberId: 'directory-hong',
+        memberId: '12345678',
+        displayName: '홍길동',
+      },
+    );
+
+    expect(selectedAgain.status).toBe('SUCCESS');
+    if (selectedAgain.status === 'FAILURE') return;
+    expect(selectedAgain.draft.members).toEqual([
+      expect.objectContaining({
+        memberKey: 'old-root',
+        participation: 'EXCLUDED',
+        sourceMemberId: 'directory-hong',
+      }),
+      expect.objectContaining({
+        memberKey: 'new-root',
+        participation: 'ACTIVE',
+        sourceMemberId: 'directory-hong',
+      }),
+    ]);
+  });
+
+  it('clears the directory link when imported identity fields are edited manually', () => {
+    const root = successfulDraft(addRootMember(emptyDraft(), 'root'));
+    const assigned = assignMemberDirectoryIdentity(root, 'root', {
+      sourceMemberId: 'directory-hong',
+      memberId: '12345678',
+      displayName: '홍길동',
+    });
+    if (assigned.status === 'FAILURE') throw new Error(assigned.message);
+
+    const manuallyChanged = editMemberIdentity(assigned.draft, 'root', {
+      name: '김철수',
+      memberId: '98765432',
+    });
+
+    expect(manuallyChanged.members[0]).toMatchObject({
+      sourceMemberId: null,
+      memberId: '98765432',
+      name: '김철수',
+    });
   });
 });

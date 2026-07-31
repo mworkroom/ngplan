@@ -91,14 +91,21 @@ export function editMemberIdentity(
 ): ProjectSetupDraft {
   return replaceMember(draft, memberKey, (member) => {
     const name = patch.name ?? member.name;
+    const memberId = patch.memberId ?? member.memberId;
     const nameChanged = name !== member.name;
-    const sourceMemberId = Object.hasOwn(patch, 'sourceMemberId')
+    const sourceMemberIdExplicit = Object.hasOwn(patch, 'sourceMemberId');
+    const manuallyChangedDirectoryIdentity =
+      !sourceMemberIdExplicit &&
+      (nameChanged || memberId !== member.memberId);
+    const sourceMemberId = sourceMemberIdExplicit
       ? patch.sourceMemberId ?? null
-      : member.sourceMemberId ?? null;
+      : manuallyChangedDirectoryIdentity
+        ? null
+        : member.sourceMemberId ?? null;
     const next = {
       ...member,
       sourceMemberId,
-      memberId: patch.memberId ?? member.memberId,
+      memberId,
       name,
       pvpTarget: patch.pvpTarget ?? member.pvpTarget,
       sheetMarker: patch.sheetMarker ?? member.sheetMarker,

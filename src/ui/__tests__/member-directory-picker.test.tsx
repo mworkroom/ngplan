@@ -77,7 +77,7 @@ describe('MemberDirectoryPicker', () => {
     expect(onAssign).toHaveBeenCalledWith(directoryEntries[1], 'Aninha');
   });
 
-  it('disables a source UUID that is already present anywhere in the plan', async () => {
+  it('disables a source UUID that is already used by an active plan member', async () => {
     const user = userEvent.setup();
     const current = createMemberDraft('plan-2');
     const used = {
@@ -98,5 +98,32 @@ describe('MemberDirectoryPicker', () => {
     await user.type(await screen.findByLabelText('회원 검색'), 'Bia');
     const result = screen.getByRole('button', { name: /이미 추가됨/ });
     expect(result.hasAttribute('disabled')).toBe(true);
+  });
+
+  it('allows a source UUID to be selected again when its previous member is excluded', async () => {
+    const user = userEvent.setup();
+    const onAssign = vi.fn(() => ({ status: 'SUCCESS' as const }));
+    const current = createMemberDraft('plan-2');
+    const excluded = {
+      ...createMemberDraft('plan-1'),
+      participation: 'EXCLUDED' as const,
+      sourceMemberId: 'directory-1',
+      name: 'Bia',
+    };
+    render(
+      <MemberDirectoryPicker
+        directory={directory()}
+        member={current}
+        planMembers={[excluded, current]}
+        onAssign={onAssign}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: '불러오기' }));
+    await user.type(await screen.findByLabelText('회원 검색'), 'Bia');
+    const result = screen.getByRole('button', { name: /Bia/ });
+    expect(result.hasAttribute('disabled')).toBe(false);
+    await user.click(result);
+    expect(onAssign).toHaveBeenCalledWith(directoryEntries[0], 'Bia');
   });
 });

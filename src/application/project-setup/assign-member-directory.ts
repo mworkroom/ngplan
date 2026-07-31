@@ -16,6 +16,7 @@ export function assignMemberDirectoryIdentity(
   const sourceDuplicate = draft.members.find(
     (member) =>
       member.memberKey !== memberKey &&
+      member.participation === 'ACTIVE' &&
       member.sourceMemberId === sourceMemberId,
   );
   if (sourceDuplicate !== undefined) {
@@ -24,10 +25,7 @@ export function assignMemberDirectoryIdentity(
       draft,
       existingMemberKey: sourceDuplicate.memberKey,
       reason: 'SOURCE_MEMBER_DUPLICATE',
-      message:
-        sourceDuplicate.participation === 'EXCLUDED'
-          ? '이 회원은 이미 이 계획에 등록되었다가 제외된 회원입니다.'
-          : '이미 이 계획에 추가된 회원입니다.',
+      message: '이미 이 계획에 추가된 회원입니다.',
     };
   }
   const memberIdDuplicate =
@@ -36,6 +34,7 @@ export function assignMemberDirectoryIdentity(
       : draft.members.find(
           (member) =>
             member.memberKey !== memberKey &&
+            member.participation === 'ACTIVE' &&
             member.memberId.trim() === memberId,
         );
   if (memberIdDuplicate !== undefined) {
