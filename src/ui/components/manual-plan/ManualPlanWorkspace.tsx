@@ -19,6 +19,7 @@ import { DailyResultDetails } from './DailyResultDetails';
 import { MemberFortnightSummary } from './MemberFortnightSummary';
 import {
   ManualPlanTable,
+  type ManualPlanActionPoint,
   type ManualPlanSelection,
 } from './ManualPlanTable';
 import { ManualPlanSelectionActions } from './ManualPlanSelectionActions';
@@ -60,21 +61,12 @@ export function ManualPlanWorkspace({
     date: schema.dates[0]!.date,
     memberKey: schema.members[0]!.memberKey,
   }));
-  const [cellActionsOpen, setCellActionsOpen] = useState(false);
+  const [cellActionPoint, setCellActionPoint] = useState<ManualPlanActionPoint | null>(null);
   const memberJumpOptions = useMemo(
     () => deriveManualPlanMemberJumpOptions(schema),
     [schema],
   );
   const selectedDate = schema.dateByIso.get(selection.date);
-  const selectedMember = schema.memberByKey.get(selection.memberKey);
-  const selectedDateLabel = selectedDate === undefined
-    ? selection.date
-    : `${Number(selectedDate.date.slice(5, 7))}월 ${Number(
-        selectedDate.date.slice(8, 10),
-      )}일 (${selectedDate.weekdayLabel})`;
-  const selectedMemberLabel = selectedMember?.name
-    ?? selectedMember?.displayLabel
-    ?? selection.memberKey;
   const actualDifferenceMarked = hasManualPlanActualDifference(
     draft,
     selection.date,
@@ -110,19 +102,27 @@ export function ManualPlanWorkspace({
     if (next !== draft) {
       onDraftChange(next);
     }
+    setCellActionPoint(null);
   };
 
   const handleTableSelect = (nextSelection: ManualPlanSelection): void => {
     setSelection(nextSelection);
-    setCellActionsOpen(true);
+  };
+
+  const handleOpenCellActions = (
+    nextSelection: ManualPlanSelection,
+    point: ManualPlanActionPoint,
+  ): void => {
+    setSelection(nextSelection);
+    setCellActionPoint(point);
   };
 
   const handleContextSelect = (nextSelection: ManualPlanSelection): void => {
     setSelection(nextSelection);
-    setCellActionsOpen(false);
+    setCellActionPoint(null);
   };
   const handleDismissCellActions = useCallback((): void => {
-    setCellActionsOpen(false);
+    setCellActionPoint(null);
   }, []);
 
   const visibleIssues =
@@ -219,19 +219,19 @@ export function ManualPlanWorkspace({
         selection={selection}
         planMode={planMode}
         onSelect={handleTableSelect}
+        onOpenActions={handleOpenCellActions}
         onEdit={handleEdit}
       />
 
-      <ManualPlanSelectionActions
-        selection={selection}
-        open={cellActionsOpen}
-        dateLabel={selectedDateLabel}
-        memberLabel={selectedMemberLabel}
-        marked={actualDifferenceMarked}
-        disabled={actualDifferenceDisabled}
-        onToggle={handleToggleActualDifference}
-        onDismiss={handleDismissCellActions}
-      />
+      {cellActionPoint === null ? null : (
+        <ManualPlanSelectionActions
+          point={cellActionPoint}
+          marked={actualDifferenceMarked}
+          disabled={actualDifferenceDisabled}
+          onToggle={handleToggleActualDifference}
+          onDismiss={handleDismissCellActions}
+        />
+      )}
 
       <details className="manual-result-disclosure">
         <summary>상세 계산과 전체 현황 보기</summary>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { OpeningStateInput } from '../../../../engine';
@@ -276,13 +276,16 @@ describe('WP4 manual planning worksheet', () => {
     const left = pvInput('1 (수) 하위 좌 계획 PV');
     const right = pvInput('1 (수) 하위 우 계획 PV');
 
-    expect(screen.queryByRole('region', { name: '선택한 칸 작업' })).toBeNull();
+    expect(screen.queryByRole('menu', { name: '빨간 표시 작업' })).toBeNull();
     await user.click(pvp);
-    const control = screen.getByRole('region', { name: '선택한 칸 작업' });
-    expect(within(control).getByText(/7월 1일 \(수\).*하위/)).toBeDefined();
+    expect(screen.queryByRole('menu', { name: '빨간 표시 작업' })).toBeNull();
+
+    fireEvent.contextMenu(pvp, { clientX: 180, clientY: 240 });
+    const control = screen.getByRole('menu', { name: '빨간 표시 작업' });
     await user.click(
-      within(control).getByRole('button', { name: '계획과 달랐음 표시' }),
+      within(control).getByRole('menuitem', { name: '계획과 달랐음 표시' }),
     );
+    expect(screen.queryByRole('menu', { name: '빨간 표시 작업' })).toBeNull();
 
     for (const input of [pvp, left, right]) {
       expect(input.closest('td')?.dataset.actualDifference).toBe('true');
@@ -294,16 +297,18 @@ describe('WP4 manual planning worksheet', () => {
     expect(pvp.closest('td')?.dataset.commissionLevel).toBe('300');
     expect(pvp.closest('td')?.dataset.actualDifference).toBe('true');
 
-    await user.click(within(control).getByRole('button', { name: '표시 지우기' }));
+    fireEvent.contextMenu(pvp, { clientX: 180, clientY: 240 });
+    const clearMenu = screen.getByRole('menu', { name: '빨간 표시 작업' });
+    await user.click(
+      within(clearMenu).getByRole('menuitem', { name: '빨간 표시 지우기' }),
+    );
     for (const input of [pvp, left, right]) {
       expect(input.closest('td')?.dataset.actualDifference).toBeUndefined();
     }
-    expect(
-      within(control).getByRole('button', { name: '계획과 달랐음 표시' }),
-    ).toBeDefined();
 
+    fireEvent.contextMenu(pvp, { clientX: 180, clientY: 240 });
     await user.keyboard('{Escape}');
-    expect(screen.queryByRole('region', { name: '선택한 칸 작업' })).toBeNull();
+    expect(screen.queryByRole('menu', { name: '빨간 표시 작업' })).toBeNull();
   });
 
   it('shows signed achievement balances and marks zero or negative values as met', async () => {
@@ -438,16 +443,16 @@ describe('WP4 manual planning worksheet', () => {
     expect(screen.getAllByText('정산 제외').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('정산 제외 · 커미션 없음')).toBeDefined();
 
-    await user.click(screen.getByLabelText('5 (일) 하위 PVP 정산 제외 0'));
-    const control = screen.getByRole('region', { name: '선택한 칸 작업' });
+    const sundayCell = screen.getByLabelText('5 (일) 하위 PVP 정산 제외 0');
+    await user.click(sundayCell);
+    expect(screen.queryByRole('menu', { name: '빨간 표시 작업' })).toBeNull();
+    fireEvent.contextMenu(sundayCell, { clientX: 180, clientY: 240 });
+    const control = screen.getByRole('menu', { name: '빨간 표시 작업' });
     expect(
-      (within(control).getByRole('button', {
-        name: '계획과 달랐음 표시',
+      (within(control).getByRole('menuitem', {
+        name: '입력하지 않는 날',
       }) as HTMLButtonElement).disabled,
     ).toBe(true);
-    expect(
-      within(control).getByText('입력하지 않는 날은 표시할 수 없습니다.'),
-    ).toBeDefined();
   });
 
   it('changes the detailed calculation date without moving focus back into the table', async () => {

@@ -1,4 +1,4 @@
-import type { KeyboardEvent } from 'react';
+import type { KeyboardEvent, MouseEvent } from 'react';
 import {
   manualPlanCellDomId,
   manualPlanFieldDomId,
@@ -30,6 +30,7 @@ export interface ManualPlanCellProps {
   readonly commissionLevel: ManualPlanCommissionLevel | null;
   readonly onChange: (value: string) => void;
   readonly onSelect: () => void;
+  readonly onOpenActions: (point: { readonly x: number; readonly y: number }) => void;
   readonly onNavigateVertical: (direction: -1 | 1) => void;
 }
 
@@ -55,6 +56,7 @@ export function ManualPlanCell({
   commissionLevel,
   onChange,
   onSelect,
+  onOpenActions,
   onNavigateVertical,
 }: ManualPlanCellProps) {
   const inputId = manualPlanFieldDomId(date, memberKey, field);
@@ -80,6 +82,11 @@ export function ManualPlanCell({
     onNavigateVertical(event.shiftKey ? -1 : 1);
   };
 
+  const handleContextMenu = (event: MouseEvent<HTMLTableCellElement>): void => {
+    event.preventDefault();
+    onOpenActions({ x: event.clientX, y: event.clientY });
+  };
+
   return (
     <td
       id={anchorCell ? manualPlanCellDomId(date, memberKey) : undefined}
@@ -89,6 +96,7 @@ export function ManualPlanCell({
       data-actual-difference={actualDifferenceMarked ? 'true' : undefined}
       tabIndex={anchorCell ? -1 : undefined}
       onClick={onSelect}
+      onContextMenu={handleContextMenu}
     >
       {mode === 'EDITABLE' ? (
         <>

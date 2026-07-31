@@ -32,6 +32,11 @@ export interface ManualPlanSelection {
   readonly memberKey: string;
 }
 
+export interface ManualPlanActionPoint {
+  readonly x: number;
+  readonly y: number;
+}
+
 export interface ManualPlanTableProps {
   readonly schema: ManualPlanSchema;
   readonly draft: ManualPlanDraft;
@@ -39,6 +44,10 @@ export interface ManualPlanTableProps {
   readonly selection: ManualPlanSelection;
   readonly planMode?: 'MANUAL' | 'AUTOMATIC';
   readonly onSelect: (selection: ManualPlanSelection) => void;
+  readonly onOpenActions: (
+    selection: ManualPlanSelection,
+    point: ManualPlanActionPoint,
+  ) => void;
   readonly onEdit: (
     date: string,
     memberKey: string,
@@ -196,6 +205,7 @@ export function ManualPlanTable({
   selection,
   planMode = 'MANUAL',
   onSelect,
+  onOpenActions,
   onEdit,
 }: ManualPlanTableProps) {
   const issues = calculation.status === 'CURRENT' ? [] : calculation.issues;
@@ -261,6 +271,9 @@ export function ManualPlanTable({
       className="manual-plan-sheet"
       aria-label={planMode === 'AUTOMATIC' ? '자동 계획표' : '수동 계획표'}
     >
+      <p className="manual-plan-context-hint">
+        빨간 표시: 칸에서 마우스 오른쪽 버튼을 누르세요.
+      </p>
       <div
         className="manual-plan-scroll"
         aria-label={`${planMode === 'AUTOMATIC' ? '자동' : '수동'} 계획표 가로 스크롤 영역`}
@@ -484,6 +497,11 @@ export function ManualPlanTable({
                         }
                         onChange={(value) => onEdit(date.date, member.memberKey, field, value)}
                         onSelect={() => onSelect({ date: date.date, memberKey: member.memberKey })}
+                        onOpenActions={(point) =>
+                          onOpenActions(
+                            { date: date.date, memberKey: member.memberKey },
+                            point,
+                          )}
                         onNavigateVertical={(direction) =>
                           navigateVertical(date.date, member.memberKey, field, direction)
                         }
