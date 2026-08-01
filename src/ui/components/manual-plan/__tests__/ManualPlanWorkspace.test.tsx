@@ -152,6 +152,24 @@ describe('WP3 manual-plan workspace boundary', () => {
       'compact',
     );
     expect(screen.queryByLabelText('화면 크기')).toBeNull();
+    const headerButtons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>(
+        '.setup-command-header__actions > button',
+      ),
+    );
+    expect(headerButtons.map((button) => button.textContent)).toEqual([
+      '이미지 만들기',
+      '설정으로 돌아가기',
+      '전체 목록으로',
+    ]);
+    await user.click(screen.getByRole('button', { name: '이미지 만들기' }));
+    expect(
+      screen.getByRole('heading', { name: '이미지로 보낼 사람을 고르세요' }),
+    ).toBeDefined();
+    await user.click(screen.getByRole('button', { name: '취소' }));
+    await waitFor(() => {
+      expect(document.activeElement).toBe(headerButtons[0]);
+    });
     const resultSummary = screen.getByText('상세 계산과 전체 현황 보기');
     const resultDisclosure = resultSummary.closest('details');
     expect(resultDisclosure?.hasAttribute('open')).toBe(false);

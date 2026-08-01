@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   calculateManualPlan,
   deriveAllManualPlanMemberSummaryRows,
@@ -17,6 +17,7 @@ import {
 import type { ProjectSetupBundle } from '../../../application/project-setup';
 import { DailyResultDetails } from './DailyResultDetails';
 import { MemberFortnightSummary } from './MemberFortnightSummary';
+import { ManualPlanImageDialog } from './ManualPlanImageDialog';
 import {
   ManualPlanTable,
   type ManualPlanActionPoint,
@@ -27,6 +28,7 @@ import {
   ManualPlanSelectedContextIssues,
   ManualPlanValidationSummary,
 } from './ManualPlanValidationSummary';
+import { createManualPlanImage } from './create-manual-plan-image';
 
 export interface ManualPlanWorkspaceProps {
   readonly bundle: ProjectSetupBundle;
@@ -62,6 +64,8 @@ export function ManualPlanWorkspace({
     memberKey: schema.members[0]!.memberKey,
   }));
   const [cellActionPoint, setCellActionPoint] = useState<ManualPlanActionPoint | null>(null);
+  const [imageDialogOpen, setImageDialogOpen] = useState(false);
+  const imageButtonRef = useRef<HTMLButtonElement>(null);
   const memberJumpOptions = useMemo(
     () => deriveManualPlanMemberJumpOptions(schema),
     [schema],
@@ -124,6 +128,18 @@ export function ManualPlanWorkspace({
   const handleDismissCellActions = useCallback((): void => {
     setCellActionPoint(null);
   }, []);
+  const handleCloseImageDialog = useCallback((): void => {
+    setImageDialogOpen(false);
+    window.setTimeout(() => imageButtonRef.current?.focus(), 0);
+  }, []);
+  const handleCreateImage = useCallback(
+    (memberIndices: readonly number[]): Promise<Blob> =>
+      createManualPlanImage({
+        projectTitle: bundle.project.title,
+        memberIndices,
+      }),
+    [bundle.project.title],
+  );
 
   const visibleIssues =
     calculation.status === 'BLOCKED'
@@ -171,6 +187,17 @@ export function ManualPlanWorkspace({
           </h1>
         </div>
         <div className="setup-command-header__actions">
+          <button
+            ref={imageButtonRef}
+            type="button"
+            className="setup-command-header__action"
+            onClick={() => {
+              setCellActionPoint(null);
+              setImageDialogOpen(true);
+            }}
+          >
+            이미지 만들기
+          </button>
           <button
             type="button"
             className="setup-command-header__action"
@@ -232,6 +259,15 @@ export function ManualPlanWorkspace({
           onDismiss={handleDismissCellActions}
         />
       )}
+
+      {imageDialogOpen ? (
+        <ManualPlanImageDialog
+          projectTitle={bundle.project.title}
+          members={schema.members}
+          onCreateImage={handleCreateImage}
+          onClose={handleCloseImageDialog}
+        />
+      ) : null}
 
       <details className="manual-result-disclosure">
         <summary>상세 계산과 전체 현황 보기</summary>

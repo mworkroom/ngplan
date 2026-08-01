@@ -292,7 +292,7 @@ describe('App project setup flow', () => {
       name: '다음 단계',
     }) as HTMLButtonElement;
     expect(automaticButton.disabled).toBe(true);
-    expect(screen.getByText(/1,500 목표 회원이 있어 자동 플랜은 아직 사용할 수 없습니다/))
+    expect(screen.getByText(/1,500 목표 회원이 있어 다음 단계는 아직 사용할 수 없습니다/))
       .toBeDefined();
 
     const manualButton = screen.getByRole('button', { name: '플랜 만들기' });

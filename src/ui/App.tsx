@@ -99,7 +99,7 @@ const EMPTY_AUTOMATIC_PLAN_PROOF: AutomaticPlanProofProgress = Object.freeze({
 });
 
 const AUTOMATIC_PLAN_SIDE_TARGET_UNAVAILABLE_MESSAGE =
-  '좌·우 각 1,500 목표 회원이 있어 자동 플랜은 아직 사용할 수 없습니다. 수동 플랜을 이용해 주세요.';
+  '좌·우 각 1,500 목표 회원이 있어 다음 단계는 아직 사용할 수 없습니다. 플랜 만들기를 이용해 주세요.';
 
 const defaultAutomaticPlanWorkerFactory: AutomaticPlanWorkerFactory = () =>
   new Worker(new URL('../workers/automatic-plan.worker.ts', import.meta.url), {
