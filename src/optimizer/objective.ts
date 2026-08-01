@@ -3,7 +3,7 @@ import type {
   DailySettlement,
   NormalizedAllocationCell,
 } from '../engine';
-import { commissionEquivalentUnitsForTier } from '../engine';
+import { commissionEquivalentUnitsForTier, DEFAULT_RULE_SET } from '../engine';
 import {
   assertCanonicalNonNegativeSafeInteger,
   checkedAddScore,
@@ -242,6 +242,7 @@ export function evaluateAutomaticPlanObjective(
       HighTargetMemberEquivalentUnitCount[] = [];
     const target700MemberEquivalentUnitCounts:
       Target700MemberEquivalentUnitCount[] = [];
+    let target700MembersAtLeastEightEquivalentUnits = 0;
     let target700TotalCommissionEquivalentUnits = 0;
     for (const memberKey of request.canonicalMemberKeys) {
       const member = request.organization.members.find(
@@ -325,6 +326,18 @@ export function evaluateAutomaticPlanObjective(
           target700TotalCommissionEquivalentUnits,
           commissionEquivalentUnits,
         );
+        if (
+          member.fortnightSideTarget ===
+            DEFAULT_RULE_SET.target700CommissionPreference
+              .eligibleFortnightSideTarget &&
+          commissionEquivalentUnits >=
+            AUTOMATIC_PLAN_TARGET_700_RECOMMENDED_EQUIVALENT_UNITS
+        ) {
+          target700MembersAtLeastEightEquivalentUnits = checkedAddScore(
+            target700MembersAtLeastEightEquivalentUnits,
+            1,
+          );
+        }
       }
 
       const opening = request.openingPvpByMember[memberKey];
@@ -353,12 +366,6 @@ export function evaluateAutomaticPlanObjective(
       target700MemberEquivalentUnitCounts
       .map((item) => item.equivalentUnitShortfall)
       .sort((left, right) => right - left);
-    const target700MembersAtLeastEightEquivalentUnits =
-      target700MemberEquivalentUnitCounts.filter(
-        (item) => item.commissionEquivalentUnits >=
-          AUTOMATIC_PLAN_TARGET_700_RECOMMENDED_EQUIVALENT_UNITS,
-      ).length;
-
     const finalDate = request.calendar.dates.at(-1);
     if (finalDate === undefined) {
       throw new TypeError('automatic plan calendar is empty');

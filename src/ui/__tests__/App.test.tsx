@@ -279,7 +279,7 @@ describe('App project setup flow', () => {
     expect(screen.getByText('입력을 확인하고 수동 플랜을 열었습니다.')).toBeDefined();
   });
 
-  it('keeps manual planning available but disables automatic planning for a 1,500 member', async () => {
+  it('keeps manual and automatic planning available for a 1,500 member', async () => {
     const user = renderApp();
     await addRootWithKeyboard(user);
     await fillSelectedMember(user, {
@@ -291,9 +291,9 @@ describe('App project setup flow', () => {
     const automaticButton = screen.getByRole('button', {
       name: '다음 단계',
     }) as HTMLButtonElement;
-    expect(automaticButton.disabled).toBe(true);
-    expect(screen.getByText(/1,500 목표 회원이 있어 다음 단계는 아직 사용할 수 없습니다/))
-      .toBeDefined();
+    expect(automaticButton.disabled).toBe(false);
+    expect(screen.queryByText(/1,500 목표 회원이 있어 다음 단계는 아직 사용할 수 없습니다/))
+      .toBeNull();
 
     const manualButton = screen.getByRole('button', { name: '플랜 만들기' });
     expect((manualButton as HTMLButtonElement).disabled).toBe(false);

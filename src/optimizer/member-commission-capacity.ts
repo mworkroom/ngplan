@@ -68,11 +68,13 @@ function aggregateMatchedPvUpperBound(
 ): number {
   const leftWithAllPvp = checkedAddScore(leftPv, pvp);
   const rightWithAllPvp = checkedAddScore(rightPv, pvp);
-  const combined = checkedAddScore(checkedAddScore(leftPv, rightPv), pvp);
+  const rawSideTotal = checkedAddScore(leftPv, rightPv);
+  const combined = checkedAddScore(rawSideTotal, pvp);
   return Math.min(
     Math.floor(combined / 2),
     leftWithAllPvp,
     rightWithAllPvp,
+    rawSideTotal,
   );
 }
 
@@ -144,15 +146,16 @@ export function deriveMemberCommissionCapacities(
   const rawSidesByMember = new Map<string, { left: number; right: number }>();
   const subtreeTotalByMember = new Map<string, number>();
   for (const memberKey of [...request.canonicalMemberKeys].reverse()) {
+    const member = memberByKey.get(memberKey)!;
     const plannedPvp = requiredPvpByMember.get(memberKey)!;
     const smallerSideRequirement = Math.max(
       0,
-      DEFAULT_RULE_SET.defaultFortnightSideTarget - plannedPvp,
+      member.fortnightSideTarget - plannedPvp,
     );
     const children = childSlots.get(memberKey)!;
     const leftTotal = children.left === undefined
       ? children.right === undefined
-        ? DEFAULT_RULE_SET.defaultFortnightSideTarget
+        ? member.fortnightSideTarget
         : smallerSideRequirement
       : subtreeTotalByMember.get(children.left)!;
     const rightTotal = children.right === undefined

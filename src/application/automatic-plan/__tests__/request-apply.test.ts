@@ -53,9 +53,9 @@ describe('automatic plan request and atomic application', () => {
     expect(createAutomaticPlanRequest(tooMany).status).toBe('FAILURE');
   });
 
-  it('blocks automatic planning when any member selects the 1,500 side target', () => {
+  it('accepts a 1,500 side target and gives it a distinct verified plan', () => {
     const bundle = createAutomaticPlanBundle();
-    const unsupported = {
+    const target1500Bundle = {
       ...bundle,
       organization: {
         ...bundle.organization,
@@ -64,14 +64,82 @@ describe('automatic plan request and atomic application', () => {
           fortnightSideTarget: 1500 as const,
         })),
       },
-    };
+    } as ProjectSetupBundle;
 
-    expect(createAutomaticPlanRequest(unsupported)).toMatchObject({
-      status: 'FAILURE',
-      error: {
-        code: 'AUTOMATIC_PLAN_SIDE_TARGET_UNSUPPORTED',
-        message: expect.stringContaining('수동 플랜'),
+    const baseline = createAutomaticPlanRequest(bundle);
+    const normalized = createAutomaticPlanRequest(target1500Bundle);
+    expect(baseline.status).toBe('SUCCESS');
+    expect(normalized.status).toBe('SUCCESS');
+    if (baseline.status !== 'SUCCESS' || normalized.status !== 'SUCCESS') return;
+    expect(normalized.request.problemFingerprint).not.toBe(
+      baseline.request.problemFingerprint,
+    );
+
+    const built = buildConstructiveCandidate(normalized.request);
+    expect(built.status).toBe('SUCCESS');
+    if (built.status !== 'SUCCESS') return;
+    expect(
+      built.candidate.allocations.reduce(
+        (total, cell) =>
+          total + cell.pvp + (cell.selfLeft ?? 0) + (cell.selfRight ?? 0),
+        0,
+      ),
+    ).toBe(3_000);
+
+    const verified = verifyAutomaticPlanCandidate(normalized.request, built.candidate, {
+      candidateId: 'target-1500',
+      sequence: 1,
+      foundAtElapsedMs: 0,
+    });
+    expect(verified.status).toBe('SUCCESS');
+    if (verified.status !== 'SUCCESS') return;
+    expect(verified.candidate.calculation.finalAssessmentByMember.root).toMatchObject({
+      fortnightSideTarget: 1_500,
+      allTargetsMet: true,
+    });
+  });
+
+  it('keeps a 2,400 PVP target independent from a 1,500 side target', () => {
+    const bundle = createAutomaticPlanBundle();
+    const targetBundle = {
+      ...bundle,
+      organization: {
+        ...bundle.organization,
+        members: bundle.organization.members.map((member) => ({
+          ...member,
+          pvpTarget: 2400 as const,
+          fortnightSideTarget: 1500 as const,
+        })),
       },
+    } as ProjectSetupBundle;
+    const normalized = createAutomaticPlanRequest(targetBundle);
+    expect(normalized.status).toBe('SUCCESS');
+    if (normalized.status !== 'SUCCESS') return;
+
+    const built = buildConstructiveCandidate(normalized.request);
+    expect(built.status).toBe('SUCCESS');
+    if (built.status !== 'SUCCESS') return;
+    const totals = built.candidate.allocations.reduce(
+      (result, cell) => ({
+        pvp: result.pvp + cell.pvp,
+        left: result.left + (cell.selfLeft ?? 0),
+        right: result.right + (cell.selfRight ?? 0),
+      }),
+      { pvp: 0, left: 0, right: 0 },
+    );
+    expect(totals).toEqual({ pvp: 2_400, left: 1_500, right: 0 });
+
+    const verified = verifyAutomaticPlanCandidate(normalized.request, built.candidate, {
+      candidateId: 'target-1500-pvp-2400',
+      sequence: 1,
+      foundAtElapsedMs: 0,
+    });
+    expect(verified.status).toBe('SUCCESS');
+    if (verified.status !== 'SUCCESS') return;
+    expect(verified.candidate.calculation.finalAssessmentByMember.root).toMatchObject({
+      personalPvpTarget: 2_400,
+      fortnightSideTarget: 1_500,
+      allTargetsMet: true,
     });
   });
 

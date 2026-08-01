@@ -424,6 +424,76 @@ describe('Phase 4 canonical objective comparator', () => {
     );
   });
 
+  it('keeps a 1,500 side-target member out of the 2,500-only eight-unit display count', () => {
+    const members = [
+      optimizerMember('root', null, null, 700, 2_500),
+      optimizerMember('member-1500', 'root', 'LEFT', 700, 1_500),
+    ];
+    const achieved = optimizerOpening({
+      openingQualificationPvp: 700,
+      fortnightPvpOpeningCredit: 700,
+    });
+    const request = createOptimizerRequest(
+      members,
+      Object.freeze({ root: achieved, 'member-1500': achieved }),
+    );
+    const built = buildConstructiveCandidate(request);
+    expect(built.status).toBe('SUCCESS');
+    if (built.status !== 'SUCCESS') return;
+    const calculated = calculatePlan({
+      period: request.period,
+      organization: request.organization,
+      allocations: built.candidate.allocations,
+    });
+    expect(calculated.status).toBe('SUCCESS');
+    if (calculated.status !== 'SUCCESS') return;
+
+    const commissionDate = request.calendar.dates.find(
+      (date) =>
+        calculated.result.dailySettlementByDateAndMember[date]?.['member-1500']
+          ?.settlementKind === 'FULL_COMMISSION',
+    );
+    expect(commissionDate).toBeDefined();
+    if (commissionDate === undefined) return;
+    const original = calculated.result.dailySettlementByDateAndMember[commissionDate]![
+      'member-1500'
+    ]!;
+    const calculationWithEightUnitTier: CalculationResult = {
+      ...calculated.result,
+      dailySettlementByDateAndMember: {
+        ...calculated.result.dailySettlementByDateAndMember,
+        [commissionDate]: {
+          ...calculated.result.dailySettlementByDateAndMember[commissionDate],
+          'member-1500': {
+            ...original,
+            preSettlement: {
+              pvp: 2_400 as Pv,
+              left: 2_400 as Pv,
+              right: 0 as Pv,
+            },
+            assessedLeft: 2_400 as Pv,
+            assessedRight: 2_400 as Pv,
+            commissionTier: 2_400,
+          },
+        },
+      },
+    };
+
+    const evaluated = evaluateAutomaticPlanObjective(
+      request,
+      built.candidate.allocations,
+      calculationWithEightUnitTier,
+    );
+    expect(evaluated.status).toBe('SUCCESS');
+    if (evaluated.status !== 'SUCCESS') return;
+    expect(
+      evaluated.display.target700MemberEquivalentUnitCounts.find(
+        (item) => item.memberKey === 'member-1500',
+      )?.commissionEquivalentUnits,
+    ).toBeGreaterThanOrEqual(8);
+    expect(evaluated.display.target700MembersAtLeastEightEquivalentUnits).toBe(0);
+  });
+
   it('uses 1·2·4·8 equivalent units rather than occurrence days in shortfall metrics', () => {
     const members = [
       optimizerMember('root', null, null, 2400),

@@ -96,7 +96,7 @@ Phase 4 is successful when all of the following are true:
 - Business dates are canonical date-only values; Sunday classification never depends on the browser, device, UTC offset, or current locale.
 - Every Sunday allocation is zero.
 - Every candidate shown to the operator has passed the updated, independently tested Phase 1 calculation engine.
-- Every member's selected half-month PVP target is met or exceeded and both assessed side targets are at least 2,500. Worksheet achievement targets use only `MAX(0, selected target - cumulative opening)` plus recursively derived child targets; the root has no fixed 22,500 floor or member-count lookup.
+- Every member's selected half-month PVP target is met or exceeded and both assessed sides meet that member's selected 1,500 or 2,500 target. Worksheet achievement targets use only `MAX(0, selected target - cumulative opening)` plus recursively derived child targets; the root has no fixed 22,500 floor or member-count lookup.
 - A member may not trigger any planned commission before cumulative qualification PVP reaches 300; PVP added on the same date counts before that date's gate is checked.
 - The one visible cumulative PVP opening is capped at 2,400 and starts qualification and personal-PVP target progress. It does not contribute to the half-month side application or first-date daily PVP carry; first-date daily PVP carry is always zero.
 - A member starting at cumulative PVP 2,400 receives no new direct PVP. Every other member's period direct PVP stays within `2,400 - cumulativePvpOpening`.
@@ -222,7 +222,7 @@ U = MAX(
 The optimizer must enforce:
 
 1. `fortnightAssessedPvp(member) >= selectedPvpTarget(member)` for every member;
-2. every member's assessed left and right half-month values are each at least 2,500, with no additional fixed raw-side floor for the root;
+2. every member's assessed left and right half-month values each meet that member's selected 1,500 or 2,500 target, with no additional fixed raw-side floor for the root;
 3. zero new allocation on every `SKIP_NO_INPUT` date, including every canonical Sunday;
 4. no direct value for a connected `CHILD` direction;
 5. non-negative exact integer PV, rejecting decimals, `NaN`, infinities, unsafe integers, overflow, and negative zero at the boundary; every non-zero automatic direct value is at least 30;
@@ -525,7 +525,7 @@ Use explicit versioned types equivalent to:
 const AUTOMATIC_PLAN_PRODUCT_TIME_LIMIT_MS = 1_800_000 as const;
 
 interface AutomaticPlanPolicy {
-  readonly policyVersion: '7.0.0';
+  readonly policyVersion: '8.0.0';
   readonly objectiveVersion: '7.0.0';
   readonly deterministicSeed: number;
 }
@@ -558,7 +558,7 @@ Tests may inject a fake clock, deterministic work/node budget, or test-only shor
 
 The `problemFingerprint` includes the normalized bundle/business inputs, ruleset version, policy version, objective version, calendar version/date set, canonical member sequence, and relevant schema versions. It excludes elapsed time, run ID, candidate sequence, warm start, and transient UI state. A warm start may change search speed but must not change the definition of the problem or the proven optimum.
 
-The synchronized versions are ruleset/engine `8.0.0`, policy/objective `7.0.0`, request/fingerprint/model/model-certificate/checkpoint `4.0.0`, worker protocol `4.0.0`, and calendar `1.0.0`. Automatic requests currently require every member's fortnight side target to be 2,500; a 1,500 member is handled in manual planning and rejected before optimization.
+The synchronized versions are ruleset/engine `8.0.0`, policy `8.0.0`, objective `7.0.0`, request/fingerprint/model/model-certificate/checkpoint `4.0.0`, worker protocol `4.0.0`, and calendar `1.0.0`. Automatic requests accept each member's selected 1,500 or 2,500 fortnight side target, including mixed organizations. Policy 7.0 candidates and checkpoints are incompatible because their constructive totals assumed 2,500 for every member.
 
 ### 6.2 Objective Vector and Display Metrics
 
@@ -704,7 +704,7 @@ A vector objective may require many internal proof steps. A single unconstrained
 - Every date/member qualification trace must equal `cumulativePvpOpening` plus inclusive cumulative direct new PVP.
 - Every member's cumulative PVP opening and period direct PVP obey the lifetime 2,400 cap.
 - No candidate may contain an automatic commission-triggering settlement while that trace is below 300.
-- Every final `FortnightAssessment.allTargetsMet` must be true, including `fortnightAssessedPvp >= selectedPvpTarget` and both 2,500 side targets. The root has no additional fixed raw-side floor.
+- Every final `FortnightAssessment.allTargetsMet` must be true, including `fortnightAssessedPvp >= selectedPvpTarget` and both sides meeting that member's selected 1,500 or 2,500 target. The root has no additional fixed raw-side floor.
 - Recompute `N`, the root minimum-period capacity profile `L/R/P`, opening values `OL/OR`, the exact first-commission tuple set `F`, and aggregate target `U` from the canonical request. Count the root's qualification-valid full-commission days and derive `rootCommissionGoalShortfallDays`; a positive shortfall is a verified warning and objective value, not a rejection reason.
 - A 6,000+ full commission causes `AUTOMATIC_PLAN_PAYOUT_TABLE_INCOMPLETE` until its payout is supplied; the verifier never invents a payout score.
 - Count root occurrence days with the exact section 3.7 predicate, derive every fairness group's equivalent units from confirmed tiers, and derive depth from canonical parent links.
@@ -878,7 +878,7 @@ Before applying, show:
 - whether the complete optimum is proven;
 - total discarded excess;
 - target-1,500/2,400 member actual equivalent-unit counts, fixed-target theoretical caps, and shortfalls;
-- target-700 member actual equivalent-unit counts, fixed-target theoretical caps, shortfalls, display-only members reaching at least 8 equivalent units, and display-only total equivalent units;
+- target-700 member actual equivalent-unit counts, fixed-target theoretical caps, shortfalls, display-only 2,500-side-target members reaching at least 8 equivalent units, and display-only total equivalent units;
 - cost-neutral future cumulative-PVP investment;
 - count of non-zero direct cells outside 100-PV multiples;
 - maximum direct PVP cell;
@@ -1234,6 +1234,10 @@ Do not lower a threshold to make Phase 4 pass. Add optimizer paths to the covera
 | P4-TARGET-001 | Opening half-month PVP plus new direct PVP exactly reaches selected target | Hard target met |
 | P4-TARGET-002 | Final assessed PVP is one below selected target | Candidate invalid |
 | P4-TARGET-003 | Selected target is 300 or any value outside 700/1,500/2,400 | Request rejected before solving |
+| P4-SIDE-001 | One target-700 leaf selects side target 1,500 with zero opening | Constructive totals are `P=700, L=1,500, R=800`, total PV 3,000, both assessed sides 1,500, aggregate equivalent-unit cap 5 |
+| P4-SIDE-002 | A 2,500-side-target root has one 1,500-side-target child | Each member uses its own target; minimum mixed-tree total is 5,500 and both final `allTargetsMet` values are true |
+| P4-SIDE-003 | Same canonical organization changes one member from 2,500 to 1,500 | Problem fingerprint changes; the policy-7.0 candidate/checkpoint is not restored |
+| P4-SIDE-004 | A target-2,400 PVP leaf selects side target 1,500 with zero opening | Constructive totals are `P=2,400, L=1,500, R=0`; both targets pass and PVP above the side target does not inflate the five-unit aggregate cap |
 | P4-CARRY-001 | Non-commission carry at final date | Follows Phase 1 closing result and is not automatically counted as discarded |
 | P4-CARRY-002 | Authoritative rule explicitly erases boundary carry | Only the engine-exposed erasure is counted after a finalized calculation case |
 | P4-OBJ-001 | Lower objective increases total PV | Lower-objective candidate loses |
@@ -1355,7 +1359,7 @@ There is no 3-hour benchmark requirement or product acceptance path. The key mea
 ### 11.5 Manual Browser Case — P4-PAGES-002
 
 1. Run the production preview and open `/ngplan/`.
-2. Create or restore a valid multi-level organization containing only the supported selected PVP targets 700, 1,500, and 2,400, including one member with cumulative PVP opening 33 and one at 2,400.
+2. Create or restore a valid multi-level organization containing the supported selected PVP targets 700, 1,500, and 2,400 plus a mixture of 1,500 and 2,500 side targets, including one member with cumulative PVP opening 33 and one at 2,400.
 3. Confirm the displayed business dates/Sundays match the canonical period when the host timezone is changed.
 4. Start the single automatic-plan action and confirm the maximum shown is 30 minutes.
 5. Confirm the page stays responsive and progress copy is understandable on a typical office laptop.

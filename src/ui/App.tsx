@@ -98,9 +98,6 @@ const EMPTY_AUTOMATIC_PLAN_PROOF: AutomaticPlanProofProgress = Object.freeze({
   primaryLowerBound: null,
 });
 
-const AUTOMATIC_PLAN_SIDE_TARGET_UNAVAILABLE_MESSAGE =
-  '좌·우 각 1,500 목표 회원이 있어 다음 단계는 아직 사용할 수 없습니다. 플랜 만들기를 이용해 주세요.';
-
 const defaultAutomaticPlanWorkerFactory: AutomaticPlanWorkerFactory = () =>
   new Worker(new URL('../workers/automatic-plan.worker.ts', import.meta.url), {
     type: 'module',
@@ -360,9 +357,6 @@ export function App({
   const previousScreenRef = useRef<AppScreen>(screenState);
 
   const topology = useMemo(() => deriveTopology(draft), [draft]);
-  const automaticPlanSideTargetUnavailable = topology.activeMembers.some(
-    (member) => member.fortnightSideTarget !== '2500',
-  );
   const liveValidation = useMemo(() => validateProjectSetupDraft(draft), [draft]);
   const displayedValidation = submittedValidation ?? liveValidation;
   const selectedMember =
@@ -816,10 +810,6 @@ export function App({
   };
 
   const handleStartAutomaticPlanFromSetup = (): void => {
-    if (automaticPlanSideTargetUnavailable) {
-      setCommandError(AUTOMATIC_PLAN_SIDE_TARGET_UNAVAILABLE_MESSAGE);
-      return;
-    }
     const activeBundle = preparePlan();
     if (activeBundle === null) return;
     setManualPlanDraft(reconcileManualPlanDraft(activeBundle, manualPlanDraft));
@@ -1019,12 +1009,6 @@ export function App({
           <button
             type="button"
             className="setup-command-header__action"
-            disabled={automaticPlanSideTargetUnavailable}
-            aria-describedby={
-              automaticPlanSideTargetUnavailable
-                ? 'automatic-plan-side-target-unavailable'
-                : undefined
-            }
             onClick={handleStartAutomaticPlanFromSetup}
           >
             다음 단계
@@ -1040,15 +1024,6 @@ export function App({
           )}
         </div>
       </header>
-
-      {automaticPlanSideTargetUnavailable ? (
-        <p
-          id="automatic-plan-side-target-unavailable"
-          className="help-text automatic-plan-unavailable-notice"
-        >
-          {AUTOMATIC_PLAN_SIDE_TARGET_UNAVAILABLE_MESSAGE}
-        </p>
-      ) : null}
 
       <p className="visually-hidden" aria-live="polite" aria-atomic="true">
         {announcement}

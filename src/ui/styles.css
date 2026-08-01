@@ -143,13 +143,6 @@ a {
   color: #fff;
 }
 
-.automatic-plan-unavailable-notice {
-  margin: -4px 0 12px;
-  padding: 8px 12px;
-  border-left: 3px solid var(--color-accent-action);
-  background: var(--color-accent-soft);
-}
-
 .setup-command-header button:hover,
 .setup-command-header button:focus-visible {
   filter: brightness(0.96);

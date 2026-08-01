@@ -1,4 +1,4 @@
-import { DEFAULT_RULE_SET, type NormalizedAllocationCell } from '../engine';
+import type { NormalizedAllocationCell } from '../engine';
 import {
   automaticPlanCoordinateKey,
   deriveAutomaticPlanCoordinates,
@@ -18,7 +18,6 @@ import type {
 } from './types';
 
 const CUMULATIVE_PVP_CAP = 2_400;
-const FORTNIGHT_SIDE_TARGET = DEFAULT_RULE_SET.defaultFortnightSideTarget;
 const MINIMUM_AUTOMATIC_DIRECT_PV = 30;
 const PREFERRED_DIRECT_PV_BLOCK = 100;
 
@@ -678,6 +677,9 @@ export function buildConstructiveCandidate(
   }
   const pvpDates = settlementDates;
   const childSlots = deriveChildSlots(request);
+  const memberByKey = new Map(
+    request.organization.members.map((member) => [member.memberKey, member] as const),
+  );
   const leafOrdinalByMember = new Map<string, number>();
   for (const memberKey of request.canonicalMemberKeys) {
     const children = childSlots.get(memberKey)!;
@@ -688,9 +690,7 @@ export function buildConstructiveCandidate(
   const plannedPvpByMember = new Map<string, number>();
   const qualificationStartIndexByMember = new Map<string, number>();
   for (const memberKey of request.canonicalMemberKeys) {
-    const member = request.organization.members.find(
-      (candidate) => candidate.memberKey === memberKey,
-    );
+    const member = memberByKey.get(memberKey);
     const opening = request.openingPvpByMember[memberKey];
     if (member === undefined || opening === undefined) {
       return {
@@ -761,19 +761,20 @@ export function buildConstructiveCandidate(
   const sideStartIndexByField = new Map<string, number>();
   const subtreeTotalByMember = new Map<string, number>();
   for (const memberKey of [...request.canonicalMemberKeys].reverse()) {
+    const member = memberByKey.get(memberKey)!;
     const opening = request.openingPvpByMember[memberKey]!;
     const plannedPvp = plannedPvpByMember.get(memberKey)!;
     const smallerSideRequirement = Math.max(
       0,
-      FORTNIGHT_SIDE_TARGET - plannedPvp,
+      member.fortnightSideTarget - plannedPvp,
     );
     const children = childSlots.get(memberKey)!;
     let leftTotal: number;
     let rightTotal: number;
     if (children.left === undefined && children.right === undefined) {
-      // The workbook convention keeps a leaf's full 2,500 PV on the left and
-      // subtracts the member's own PVP from the right-side direct total.
-      leftTotal = FORTNIGHT_SIDE_TARGET;
+      // The workbook convention keeps a leaf's full selected side target on
+      // the left and subtracts the member's own PVP from the right direct total.
+      leftTotal = member.fortnightSideTarget;
       rightTotal = smallerSideRequirement;
       sideTotalByField.set(
         sideFieldKey({ memberKey, field: 'SELF_LEFT' }),

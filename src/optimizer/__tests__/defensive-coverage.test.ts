@@ -253,6 +253,23 @@ describe('optimizer request and shape defensive coverage', () => {
       });
     }
 
+    const invalidSideTarget = invalidRequest(request, {
+      organization: {
+        ...request.organization,
+        members: request.organization.members.map((member) => ({
+          ...member,
+          fortnightSideTarget: 1_999 as 1_500,
+        })),
+      },
+    });
+    expect(validateAutomaticPlanRequest(invalidSideTarget)).toMatchObject({
+      status: 'FAILURE',
+      error: {
+        code: 'AUTOMATIC_PLAN_REQUEST_INVALID',
+        location: { memberKey: 'root' },
+      },
+    });
+
     const firstDate = request.calendar.dates[0]!;
     const firstSkip = request.calendar.skipDateSet[0]!;
     const calendarVariants = [

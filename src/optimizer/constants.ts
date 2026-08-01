@@ -1,5 +1,5 @@
 export const AUTOMATIC_PLAN_REQUEST_VERSION = '4.0.0' as const;
-export const AUTOMATIC_PLAN_POLICY_VERSION = '7.0.0' as const;
+export const AUTOMATIC_PLAN_POLICY_VERSION = '8.0.0' as const;
 export const AUTOMATIC_PLAN_OBJECTIVE_VERSION = '7.0.0' as const;
 export const AUTOMATIC_PLAN_CALENDAR_VERSION = '1.0.0' as const;
 export const AUTOMATIC_PLAN_FINGERPRINT_VERSION = '4.0.0' as const;

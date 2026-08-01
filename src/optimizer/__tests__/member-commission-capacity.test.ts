@@ -31,6 +31,37 @@ describe('member commission capacity', () => {
     });
   });
 
+  it('derives the five-unit aggregate cap from a 1,500 side target', () => {
+    const request = createOptimizerRequest(
+      [optimizerMember('root', null, null, 700, 1_500)],
+      Object.freeze({ root: achievedOpening(700) }),
+    );
+
+    expect(deriveMemberCommissionCapacities(request).byMember.get('root')).toMatchObject({
+      businessDayCount: 13,
+      minimumRawLeftPv: 1_500,
+      minimumRawRightPv: 1_500,
+      requiredPvp: 0,
+      aggregateMatchedPvUpperBound: 1_500,
+      attainableEquivalentUnitsUpperBound: 5,
+    });
+  });
+
+  it('does not let PVP above a 1,500 side target inflate the aggregate cap', () => {
+    const request = createOptimizerRequest(
+      [optimizerMember('root', null, null, 2_400, 1_500)],
+      Object.freeze({ root: optimizerOpening() }),
+    );
+
+    expect(deriveMemberCommissionCapacities(request).byMember.get('root')).toMatchObject({
+      minimumRawLeftPv: 1_500,
+      minimumRawRightPv: 0,
+      requiredPvp: 2_400,
+      aggregateMatchedPvUpperBound: 1_500,
+      attainableEquivalentUnitsUpperBound: 5,
+    });
+  });
+
   it('lets required PVP balance the smaller side without increasing the fixed target total', () => {
     const request = createOptimizerRequest(
       [optimizerMember('root', null, null, 1_500)],
@@ -69,6 +100,36 @@ describe('member commission capacity', () => {
       requiredPvp: 0,
       aggregateMatchedPvUpperBound: 5_000,
       attainableEquivalentUnitsUpperBound: 16,
+    });
+  });
+
+  it('derives each member capacity from its own target in a mixed organization', () => {
+    const members = [
+      optimizerMember('root', null, null, 700, 2_500),
+      optimizerMember('left', 'root', 'LEFT', 700, 1_500),
+    ] as const;
+    const request = createOptimizerRequest(
+      members,
+      Object.freeze({
+        root: optimizerOpening(),
+        left: optimizerOpening(),
+      }),
+    );
+    const capacities = deriveMemberCommissionCapacities(request).byMember;
+
+    expect(capacities.get('root')).toMatchObject({
+      minimumRawLeftPv: 3_000,
+      minimumRawRightPv: 1_800,
+      requiredPvp: 700,
+      aggregateMatchedPvUpperBound: 2_500,
+      attainableEquivalentUnitsUpperBound: 8,
+    });
+    expect(capacities.get('left')).toMatchObject({
+      minimumRawLeftPv: 1_500,
+      minimumRawRightPv: 800,
+      requiredPvp: 700,
+      aggregateMatchedPvUpperBound: 1_500,
+      attainableEquivalentUnitsUpperBound: 5,
     });
   });
 

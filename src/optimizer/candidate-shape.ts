@@ -166,18 +166,19 @@ export function validateAutomaticPlanRequest(
       ),
     };
   }
-  const unsupportedSideTargetMember = members.find(
+  const invalidSideTargetMember = members.find(
     (member) =>
-      member.fortnightSideTarget !==
-      DEFAULT_RULE_SET.defaultFortnightSideTarget,
+      !DEFAULT_RULE_SET.allowedFortnightSideTargets.includes(
+        member.fortnightSideTarget,
+      ),
   );
-  if (unsupportedSideTargetMember !== undefined) {
+  if (invalidSideTargetMember !== undefined) {
     return {
       status: 'FAILURE',
       error: automaticPlanError(
-        'AUTOMATIC_PLAN_SIDE_TARGET_UNSUPPORTED',
-        '좌·우 각 1,500 목표 회원이 있어 자동 플랜은 아직 사용할 수 없습니다.',
-        { location: { memberKey: unsupportedSideTargetMember.memberKey } },
+        'AUTOMATIC_PLAN_REQUEST_INVALID',
+        '회원의 좌·우 목표는 1,500 또는 2,500이어야 합니다.',
+        { location: { memberKey: invalidSideTargetMember.memberKey } },
       ),
     };
   }

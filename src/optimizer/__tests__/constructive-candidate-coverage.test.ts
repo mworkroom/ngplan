@@ -13,6 +13,7 @@ import {
   buildConstructiveCandidate,
   buildConstructiveCandidateVariants,
 } from '../constructive-candidate';
+import { verifyAutomaticPlanCandidate } from '../candidate-verifier';
 import {
   createOptimizerRequest,
   optimizerMember,
@@ -147,6 +148,47 @@ describe('constructive candidate branch coverage', () => {
     expect(candidate.allocations.some((cell) => cell.memberKey === 'root' && cell.selfRight! > 0))
       .toBe(true);
     expect(candidate.allocations.some((cell) => cell.memberKey === 'left' && cell.selfLeft! > 0))
+      .toBe(true);
+  });
+
+  it('constructs and verifies member-specific totals in a mixed 2,500/1,500 tree', () => {
+    const members = [
+      optimizerMember('root', null, null, 700, 2_500),
+      optimizerMember('left', 'root', 'LEFT', 700, 1_500),
+    ];
+    const request = createOptimizerRequest(
+      members,
+      Object.freeze({
+        root: optimizerOpening(),
+        left: optimizerOpening(),
+      }),
+    );
+
+    const candidate = successfulCandidate(request);
+    const totalsFor = (memberKey: string) => candidate.allocations
+      .filter((cell) => cell.memberKey === memberKey)
+      .reduce(
+        (totals, cell) => ({
+          pvp: totals.pvp + cell.pvp,
+          left: totals.left + (cell.selfLeft ?? 0),
+          right: totals.right + (cell.selfRight ?? 0),
+        }),
+        { pvp: 0, left: 0, right: 0 },
+      );
+
+    expect(totalsFor('root')).toEqual({ pvp: 700, left: 0, right: 1_800 });
+    expect(totalsFor('left')).toEqual({ pvp: 700, left: 1_500, right: 800 });
+
+    const verified = verifyAutomaticPlanCandidate(request, candidate, {
+      candidateId: 'mixed-side-targets',
+      sequence: 1,
+      foundAtElapsedMs: 0,
+    });
+    expect(verified.status).toBe('SUCCESS');
+    if (verified.status !== 'SUCCESS') return;
+    expect(verified.candidate.calculation.finalAssessmentByMember.root?.allTargetsMet)
+      .toBe(true);
+    expect(verified.candidate.calculation.finalAssessmentByMember.left?.allTargetsMet)
       .toBe(true);
   });
 
