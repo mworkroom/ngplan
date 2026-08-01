@@ -17,6 +17,7 @@ import type {
   ValidationReport,
 } from '../domain/types';
 import {
+  createValidationReport,
   isCalculatePlanInputStructure,
   validatePlan,
 } from '../domain/validation';
@@ -125,16 +126,42 @@ function belowQualificationWarning(
   });
 }
 
-/** 검증부터 전체 반월의 조직·일일·보름 장부까지 한 번에 계산한다. */
-export function calculatePlan(
+type CumulativePvpAllocationPolicy = 'BLOCK' | 'WARN';
+
+function applyCumulativePvpAllocationPolicy(
+  validation: ValidationReport,
+  policy: CumulativePvpAllocationPolicy,
+): ValidationReport {
+  if (policy === 'BLOCK') {
+    return validation;
+  }
+  return createValidationReport(
+    validation.issues.map((issue) =>
+      issue.code === 'CUMULATIVE_PVP_ALLOCATION_EXCEEDS_CAP'
+        ? {
+            ...issue,
+            severity: 'WARNING' as const,
+            suggestion:
+              '입력한 값으로 계속 계산합니다. 2,400을 넘은 PVP는 개인 PVP 목표에 추가 도움이 되지 않아 손해가 될 수 있습니다.',
+          }
+        : issue,
+    ),
+  );
+}
+
+function calculatePlanWithPolicy(
   input: CalculatePlanInput,
-  rules: RuleSet = DEFAULT_RULE_SET,
+  rules: RuleSet,
+  cumulativePvpAllocationPolicy: CumulativePvpAllocationPolicy,
 ): CalculationOutcome {
   if (!isCalculatePlanInputStructure(input)) {
     return { status: 'FAILURE', validation: validatePlan(input, rules) };
   }
   const sourceSnapshot = snapshotInput(input);
-  const validation = validatePlan(sourceSnapshot, rules);
+  const validation = applyCumulativePvpAllocationPolicy(
+    validatePlan(sourceSnapshot, rules),
+    cumulativePvpAllocationPolicy,
+  );
   if (!validation.isValid) {
     return { status: 'FAILURE', validation };
   }
@@ -273,4 +300,20 @@ export function calculatePlan(
     }
     throw error;
   }
+}
+
+/** 검증부터 전체 반월의 조직·일일·보름 장부까지 한 번에 계산한다. */
+export function calculatePlan(
+  input: CalculatePlanInput,
+  rules: RuleSet = DEFAULT_RULE_SET,
+): CalculationOutcome {
+  return calculatePlanWithPolicy(input, rules, 'BLOCK');
+}
+
+/** 수동 입력은 누적 PVP 상한 초과를 안내하면서 입력값 그대로 계산한다. */
+export function calculatePlanForManualEditing(
+  input: CalculatePlanInput,
+  rules: RuleSet = DEFAULT_RULE_SET,
+): CalculationOutcome {
+  return calculatePlanWithPolicy(input, rules, 'WARN');
 }

@@ -177,8 +177,8 @@ describe('WP4 manual planning worksheet', () => {
     const headers = within(table).getAllByRole('columnheader');
     expect(headers.map((header) => header.textContent)).toEqual([
       'ID',
-      '하위회원번호 미입력',
-      '1. 루트회원번호 1000',
+      '하위미입력',
+      '1. 루트1000',
       'ID',
       '목표값',
       '700',
@@ -332,6 +332,43 @@ describe('WP4 manual planning worksheet', () => {
     await user.type(pvInput('1 (수) 하위 PVP 계획 PV'), '100');
 
     expect(screen.getByLabelText('하위 PVP 잔액 +300 PV')).toBeDefined();
+  });
+
+  it('keeps calculated totals visible and warns when manual PVP exceeds 2,400', async () => {
+    const { user } = renderWorkspace(vi.fn(), [], createTreeBundle(2_400));
+    const pvp = pvInput('1 (수) 하위 PVP 계획 PV');
+
+    await user.type(pvp, '1');
+
+    expect(pvp.value).toBe('1');
+    expect(screen.getByText('확인이 필요한 안내 1개')).toBeDefined();
+    expect(
+      screen.getByText(
+        '누적 PVP 2,400에 이번 기간 신규 PVP 1을 더하면 평생 상한 2,400을 넘습니다.',
+      ),
+    ).toBeDefined();
+    expect(
+      screen.getByText(
+        '입력한 값으로 계속 계산합니다. 2,400을 넘은 PVP는 개인 PVP 목표에 추가 도움이 되지 않아 손해가 될 수 있습니다.',
+      ),
+    ).toBeDefined();
+    expect(screen.queryByRole('button', { name: '첫 오류로 이동' })).toBeNull();
+    expect(
+      screen.getByLabelText('1 (수) 1. 루트 · 회원 ID 1000 좌 조직 합계 1 PV'),
+    ).toBeDefined();
+    expect(screen.getByLabelText('하위 이번 기간 PVP 총합 1 PV')).toBeDefined();
+  });
+
+  it('selects the entire editable value when a number cell receives focus or is clicked', async () => {
+    const { user } = renderWorkspace();
+    const input = pvInput('1 (수) 하위 PVP 계획 PV');
+
+    await user.type(input, '123');
+    expect(input.value).toBe('123');
+
+    await user.click(input);
+    expect(input.selectionStart).toBe(0);
+    expect(input.selectionEnd).toBe(3);
   });
 
   it('P3-UI-001 updates ancestors, removes stale results, and focuses the exact first error', async () => {

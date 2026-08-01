@@ -1,4 +1,4 @@
-import type { KeyboardEvent, MouseEvent } from 'react';
+import type { FocusEvent, KeyboardEvent, MouseEvent } from 'react';
 import {
   manualPlanCellDomId,
   manualPlanFieldDomId,
@@ -82,6 +82,17 @@ export function ManualPlanCell({
     onNavigateVertical(event.shiftKey ? -1 : 1);
   };
 
+  const selectInputValue = (event: FocusEvent<HTMLInputElement>): void => {
+    onSelect();
+    event.currentTarget.select();
+  };
+
+  const selectInputValueOnClick = (
+    event: MouseEvent<HTMLInputElement>,
+  ): void => {
+    event.currentTarget.select();
+  };
+
   const handleContextMenu = (event: MouseEvent<HTMLTableCellElement>): void => {
     event.preventDefault();
     onOpenActions({ x: event.clientX, y: event.clientY });
@@ -109,7 +120,8 @@ export function ManualPlanCell({
             inputMode="numeric"
             value={draftValue ?? ''}
             onChange={(event) => onChange(event.currentTarget.value)}
-            onFocus={onSelect}
+            onFocus={selectInputValue}
+            onClick={selectInputValueOnClick}
             onKeyDown={handleKeyDown}
           />
           {issue === undefined ? null : (

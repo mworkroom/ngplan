@@ -572,21 +572,35 @@ describe('WP2 whole-period calculation orchestration', () => {
     expect(current.result.rawPerformanceByDateAndMember[date]?.B?.directPvp).toBe(1);
   });
 
-  it('P3-CALC-004 returns a cumulative PVP cap violation as blocked with no partial result', () => {
-    const bundle = setupBundle([member('A', null, null)]);
+  it('P3-CALC-004 keeps calculating with a warning when manual PVP exceeds the cumulative cap', () => {
+    const bundle = setupBundle(
+      [member('A', null, null)],
+      {
+        A: {
+          openingQualificationPvp: 2_400,
+          fortnightPvpOpeningCredit: 2_400,
+        },
+      },
+    );
     const schema = deriveManualPlanSchema(bundle);
     const date = schema.dates.find((item) => item.settlementMode === 'SETTLE')!.date;
     let draft = createManualPlanDraft(bundle);
-    draft = edit(schema, draft, date, 'A', 'pvp', String(Number.MAX_SAFE_INTEGER));
+    draft = edit(schema, draft, date, 'A', 'pvp', '1');
     const state = calculateManualPlan(bundle, draft, schema);
 
-    expect(state.status).toBe('BLOCKED');
-    expect('result' in state).toBe(false);
-    if (state.status !== 'BLOCKED') throw new Error('expected blocked');
-    expect(state.issues).toContainEqual(
+    expect(state.status).toBe('CURRENT');
+    if (state.status !== 'CURRENT') throw new Error('expected current');
+    expect(state.result.rawPerformanceByDateAndMember[date]?.A?.directPvp).toBe(1);
+    expect(state.result.finalAssessmentByMember.A).toMatchObject({
+      newPvpTotal: 1,
+      personalPvpTotal: 2_401,
+    });
+    expect(state.warnings).toContainEqual(
       expect.objectContaining({
         code: 'CUMULATIVE_PVP_ALLOCATION_EXCEEDS_CAP',
+        severity: 'WARNING',
         location: expect.objectContaining({ memberKey: 'A', field: 'pvp' }),
+        suggestion: expect.stringContaining('입력한 값으로 계속 계산합니다.'),
       }),
     );
   });
@@ -595,7 +609,7 @@ describe('WP2 whole-period calculation orchestration', () => {
     const bundle = setupBundle();
     const schema = deriveManualPlanSchema(bundle);
     const calculateSpy = vi
-      .spyOn(engine, 'calculatePlan')
+      .spyOn(engine, 'calculatePlanForManualEditing')
       .mockImplementationOnce(() => {
         throw new Error('simulated engine failure');
       });

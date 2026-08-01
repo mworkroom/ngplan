@@ -144,7 +144,7 @@ describe('WP3 manual-plan workspace boundary', () => {
 
     expect(screen.getByRole('heading', { name: '2026년 7월 상반기 수당 계획' }))
       .toBeDefined();
-    expect(screen.getByRole('heading', { name: '수동 계획표' })).toBeDefined();
+    expect(screen.getByRole('heading', { name: '직급 계획표' })).toBeDefined();
     expect(screen.queryByText('2026년 7월 1일 ~ 15일')).toBeNull();
     expect(screen.queryByText('✓ 계산 완료')).toBeNull();
     expect(screen.queryByText('15일 · 1명 계획표')).toBeNull();

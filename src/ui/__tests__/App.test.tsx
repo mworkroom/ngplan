@@ -887,7 +887,7 @@ describe('App project setup flow', () => {
     expect(restoredYuriInput.value).toBe('123');
 
     await restoredUser.type(restoredYuriInput, '4');
-    expect(restoredYuriInput.value).toBe('1234');
+    expect(restoredYuriInput.value).toBe('4');
   });
 
   it('moves an existing subtree through explicit parent and side controls', async () => {

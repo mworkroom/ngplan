@@ -18,7 +18,10 @@ export {
   validatePlan,
 } from '../domain/validation';
 export { parsePv } from '../domain/pv';
-export { calculatePlan } from './calculate-period';
+export {
+  calculatePlan,
+  calculatePlanForManualEditing,
+} from './calculate-period';
 export { settleDaily } from './daily-ledger';
 export {
   accumulateFortnightDay,

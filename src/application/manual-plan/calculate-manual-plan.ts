@@ -1,4 +1,4 @@
-import { calculatePlan } from '../../engine';
+import { calculatePlanForManualEditing } from '../../engine';
 import type { ProjectSetupBundle } from '../project-setup';
 import { deriveManualPlanSchema } from './derive-manual-plan-schema';
 import { mapEngineIssueToManualPlanIssue } from './map-manual-plan-issues';
@@ -22,7 +22,7 @@ export function calculateManualPlan(
   }
 
   try {
-    const outcome = calculatePlan(normalized.input);
+    const outcome = calculatePlanForManualEditing(normalized.input);
     if (outcome.status === 'FAILURE') {
       return Object.freeze({
         status: 'BLOCKED',
