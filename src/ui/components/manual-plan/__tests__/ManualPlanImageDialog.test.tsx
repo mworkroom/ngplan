@@ -78,30 +78,35 @@ describe('ManualPlanImageDialog', () => {
     expect(
       screen.getByRole('img', { name: '선택한 2명의 계획표 이미지 미리보기' }),
     ).toBeDefined();
-    expect(screen.getByText('선택한 2명이 계획표 순서대로 들어갔습니다.'))
+    expect(screen.getByText(/선택한 2명이 계획표 순서대로 들어갔습니다/))
       .toBeDefined();
   });
 
-  it('allows at most five people', async () => {
+  it('allows all six people when needed', async () => {
     const user = userEvent.setup();
+    const onCreateImage = vi.fn(async () => new Blob(['png'], { type: 'image/png' }));
     render(
       <ManualPlanImageDialog
         projectTitle="202608A 민경욱"
         members={MEMBERS}
-        onCreateImage={vi.fn()}
+        onCreateImage={onCreateImage}
         onClose={vi.fn()}
       />,
     );
 
-    for (const member of MEMBERS.slice(0, 5)) {
+    for (const member of MEMBERS) {
       await user.click(screen.getByRole('checkbox', { name: member.name }));
     }
 
     expect(
       (screen.getByRole('checkbox', { name: '이순자' }) as HTMLInputElement).disabled,
-    ).toBe(true);
-    expect(screen.getByRole('button', { name: '선택한 5명 이미지 만들기' }))
-      .toBeDefined();
+    ).toBe(false);
+    await user.click(
+      screen.getByRole('button', { name: '선택한 6명 이미지 만들기' }),
+    );
+    await waitFor(() =>
+      expect(onCreateImage).toHaveBeenCalledWith([0, 1, 2, 3, 4, 5]),
+    );
   });
 
   it('shows creation errors and keeps cancellation unavailable while generating', async () => {

@@ -1387,10 +1387,14 @@ fieldset {
 }
 
 .manual-plan-image-dialog__preview {
-  display: grid;
-  place-items: center;
-  max-height: min(560px, 58vh);
-  overflow: auto;
+  --manual-plan-image-preview-height: min(560px, 58vh);
+
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  height: var(--manual-plan-image-preview-height);
+  overflow-x: auto;
+  overflow-y: hidden;
   padding: 10px;
   border: 1px solid var(--color-line);
   background: #eef1f4;
@@ -1398,8 +1402,10 @@ fieldset {
 
 .manual-plan-image-dialog__preview img {
   display: block;
-  max-width: 100%;
-  height: auto;
+  width: auto;
+  max-width: none;
+  height: calc(var(--manual-plan-image-preview-height) - 38px);
+  flex: 0 0 auto;
   border: 1px solid var(--color-line);
   background: #fff;
 }

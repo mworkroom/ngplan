@@ -1,5 +1,3 @@
-export const MAX_MANUAL_PLAN_IMAGE_MEMBERS = 5;
-
 const DATE_COLUMN_WIDTH_PX = 50;
 const MEMBER_COLUMN_WIDTH_PX = 168;
 const IMAGE_SCALE = 2;
@@ -10,8 +8,7 @@ export function normalizeManualPlanImageMemberIndices(
 ): readonly number[] {
   return [...new Set(indices)]
     .filter((index) => Number.isInteger(index) && index >= 0 && index < memberCount)
-    .sort((left, right) => left - right)
-    .slice(0, MAX_MANUAL_PLAN_IMAGE_MEMBERS);
+    .sort((left, right) => left - right);
 }
 
 function keepChildrenAtIndices(element: Element, indices: ReadonlySet<number>): void {
@@ -39,6 +36,22 @@ export function buildManualPlanImageTable(
   }
 
   const clone = sourceTable.cloneNode(true) as HTMLTableElement;
+  const densityRoot = sourceTable.closest<HTMLElement>('[data-density]');
+  const renderedZoom = Number.parseFloat(
+    densityRoot === null
+      ? ''
+      : getComputedStyle(densityRoot).getPropertyValue('zoom'),
+  );
+  const sourceZoom = Number.isFinite(renderedZoom) && renderedZoom > 0
+    ? renderedZoom
+    : 1;
+  Array.from(sourceTable.rows).forEach((sourceRow, index) => {
+    const cloneRow = clone.rows[index];
+    const sourceHeight = sourceRow.getBoundingClientRect().height;
+    if (cloneRow !== undefined && sourceHeight > 0) {
+      cloneRow.style.height = `${sourceHeight / sourceZoom}px`;
+    }
+  });
   const sourceInputs = sourceTable.querySelectorAll<HTMLInputElement>('input');
   const cloneInputs = clone.querySelectorAll<HTMLInputElement>('input');
   sourceInputs.forEach((input, index) => {
@@ -213,16 +226,14 @@ function canvasToPngBlob(canvas: HTMLCanvasElement): Promise<Blob> {
 }
 
 export interface CreateManualPlanImageOptions {
-  readonly projectTitle: string;
   readonly memberIndices: readonly number[];
 }
 
 export async function createManualPlanImage({
-  projectTitle,
   memberIndices,
 }: CreateManualPlanImageOptions): Promise<Blob> {
   const sourceTable = document.querySelector<HTMLTableElement>(
-    '#manual-plan-workspace .manual-plan-table',
+    '#manual-plan-workspace .manual-plan-scroll > .manual-plan-table:not(.manual-plan-table--sticky)',
   );
   if (sourceTable === null) {
     throw new Error('계획표를 찾지 못했습니다. 화면을 다시 열어 주세요.');
@@ -242,21 +253,20 @@ export async function createManualPlanImage({
   exportRoot.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
   Object.assign(exportRoot.style, {
     boxSizing: 'border-box',
-    width: `${tableWidth + 24}px`,
-    padding: '12px',
+    width: `${tableWidth}px`,
+    padding: '0',
     background: '#ffffff',
     color: '#171717',
     fontFamily: '"Noto Sans KR", "Malgun Gothic", sans-serif',
   });
-  const title = document.createElement('h1');
-  title.textContent = projectTitle;
-  Object.assign(title.style, {
-    margin: '0 0 10px',
-    fontSize: '20px',
-    lineHeight: '1.35',
-    fontWeight: '800',
+  table.querySelectorAll<HTMLElement>(
+    'thead, thead th, .manual-plan-table__date-heading, .manual-plan-table__date-cell',
+  ).forEach((element) => {
+    element.style.position = 'static';
+    element.style.top = 'auto';
+    element.style.left = 'auto';
   });
-  exportRoot.append(title, table);
+  exportRoot.append(table);
   host.append(exportRoot);
   document.body.append(host);
 

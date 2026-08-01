@@ -134,11 +134,8 @@ export function ManualPlanWorkspace({
   }, []);
   const handleCreateImage = useCallback(
     (memberIndices: readonly number[]): Promise<Blob> =>
-      createManualPlanImage({
-        projectTitle: bundle.project.title,
-        memberIndices,
-      }),
-    [bundle.project.title],
+      createManualPlanImage({ memberIndices }),
+    [],
   );
 
   const visibleIssues =

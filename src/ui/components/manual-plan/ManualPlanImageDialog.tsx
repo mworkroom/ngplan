@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  MAX_MANUAL_PLAN_IMAGE_MEMBERS,
   downloadManualPlanImage,
   manualPlanImageFilename,
 } from './create-manual-plan-image';
@@ -102,7 +101,7 @@ export function ManualPlanImageDialog({
       const next = new Set(current);
       if (next.has(memberKey)) {
         next.delete(memberKey);
-      } else if (next.size < MAX_MANUAL_PLAN_IMAGE_MEMBERS) {
+      } else {
         next.add(memberKey);
       }
       return next;
@@ -181,8 +180,7 @@ export function ManualPlanImageDialog({
               이미지로 보낼 사람을 고르세요
             </h2>
             <p className="manual-plan-image-dialog__intro">
-              한 번에 5명까지 고를 수 있습니다. 계획표에 보이는 순서대로
-              이미지가 만들어집니다.
+              고른 사람은 계획표에 보이는 순서대로 이미지에 들어갑니다.
             </p>
             <div
               className="manual-plan-image-dialog__members"
@@ -190,8 +188,6 @@ export function ManualPlanImageDialog({
             >
               {members.map((member, index) => {
                 const checked = selectedKeys.has(member.memberKey);
-                const disabled = !checked
-                  && selectedKeys.size >= MAX_MANUAL_PLAN_IMAGE_MEMBERS;
                 return (
                   <label
                     className="manual-plan-image-dialog__member"
@@ -201,7 +197,6 @@ export function ManualPlanImageDialog({
                       ref={index === 0 ? firstCheckboxRef : undefined}
                       type="checkbox"
                       checked={checked}
-                      disabled={disabled}
                       onChange={() => toggleMember(member.memberKey)}
                     />
                     <span>{member.displayLabel}</span>
@@ -245,6 +240,7 @@ export function ManualPlanImageDialog({
             <h2 id="manual-plan-image-dialog-title">이미지를 만들었습니다</h2>
             <p className="manual-plan-image-dialog__intro">
               선택한 {preview.memberCount}명이 계획표 순서대로 들어갔습니다.
+              오른쪽 사람이 보이지 않으면 이미지를 좌우로 움직이세요.
             </p>
             <div className="manual-plan-image-dialog__preview">
               <img

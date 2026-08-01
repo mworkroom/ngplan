@@ -21,6 +21,9 @@ function sourceTable(): HTMLTableElement {
     <tbody>
       <tr><th>1일</th><td class="manual-plan-cell--selected" data-commission-level="700" data-actual-difference="true"><input value="고1" /></td><td>고2</td><td>고3</td><td>베1</td><td>베2</td><td>베3</td><td>김1</td><td>김2</td><td>김3</td><th>1일 끝</th></tr>
     </tbody>
+    <tfoot>
+      <tr><th>합계</th><td>10</td><td>20</td><td>30</td><td>40</td><td>50</td><td>60</td><td>70</td><td>80</td><td>90</td><th>합계 끝</th></tr>
+    </tfoot>
   `;
   return table;
 }
@@ -41,12 +44,16 @@ function installCanvas(options: { readonly blob?: Blob | null; readonly context?
   return context;
 }
 
-function installImage(result: 'load' | 'error' = 'load'): void {
+function installImage(
+  result: 'load' | 'error' = 'load',
+  onSource?: (source: string) => void,
+): void {
   class TestImage {
     onload: (() => void) | null = null;
     onerror: (() => void) | null = null;
 
-    set src(_value: string) {
+    set src(value: string) {
+      onSource?.(value);
       queueMicrotask(() => {
         if (result === 'load') this.onload?.();
         else this.onerror?.();
@@ -59,9 +66,19 @@ function installImage(result: 'load' | 'error' = 'load'): void {
 function mountWorkspaceTable(): HTMLTableElement {
   const workspace = document.createElement('div');
   workspace.id = 'manual-plan-workspace';
+  const stickyHeader = document.createElement('div');
+  stickyHeader.className = 'manual-plan-sticky-header';
+  const stickyTable = sourceTable();
+  stickyTable.className = 'manual-plan-table manual-plan-table--sticky';
+  stickyTable.querySelector('tbody')?.remove();
+  stickyTable.querySelector('tfoot')?.remove();
+  stickyHeader.append(stickyTable);
+  const scroll = document.createElement('div');
+  scroll.className = 'manual-plan-scroll';
   const table = sourceTable();
   table.className = 'manual-plan-table';
-  workspace.append(table);
+  scroll.append(table);
+  workspace.append(stickyHeader, scroll);
   document.body.append(workspace);
   return table;
 }
@@ -93,10 +110,29 @@ describe('manual plan image table', () => {
     expect(table.querySelector('.manual-plan-cell--selected')).toBeNull();
   });
 
-  it('removes invalid and duplicate indices, sorts, and limits the result to five', () => {
+  it('keeps the worksheet row height after removing the compact screen zoom', () => {
+    const workspace = document.createElement('div');
+    workspace.dataset.density = 'compact';
+    workspace.style.setProperty('zoom', '0.9');
+    const source = sourceTable();
+    workspace.append(source);
+    document.body.append(workspace);
+    Array.from(source.rows).forEach((row) => {
+      vi.spyOn(row, 'getBoundingClientRect').mockReturnValue({
+        height: 34.2,
+      } as DOMRect);
+    });
+
+    const table = buildManualPlanImageTable(source, [0]);
+
+    expect(Array.from(table.rows).map((row) => row.style.height))
+      .toEqual(Array.from(table.rows, () => '38px'));
+  });
+
+  it('removes invalid and duplicate indices and keeps every valid member in worksheet order', () => {
     expect(
       normalizeManualPlanImageMemberIndices([5, -1, 3, 1, 0, 4, 2, 1], 6),
-    ).toEqual([0, 1, 2, 3, 4]);
+    ).toEqual([0, 1, 2, 3, 4, 5]);
   });
 
   it('rejects an empty selection and a missing worksheet', async () => {
@@ -104,21 +140,23 @@ describe('manual plan image table', () => {
       '이미지로 만들 회원을 한 명 이상 골라 주세요.',
     );
     await expect(
-      createManualPlanImage({ projectTitle: '202608A 민경욱', memberIndices: [0] }),
+      createManualPlanImage({ memberIndices: [0] }),
     ).rejects.toThrow('계획표를 찾지 못했습니다.');
   });
 
-  it('renders the selected worksheet as a PNG blob', async () => {
+  it('renders the full worksheet without the project title as a PNG blob', async () => {
     mountWorkspaceTable();
     const context = installCanvas();
-    installImage();
-
-    const blob = await createManualPlanImage({
-      projectTitle: '202608A 민경욱',
-      memberIndices: [0],
+    let imageSource = '';
+    installImage('load', (source) => {
+      imageSource = source;
     });
 
+    const blob = await createManualPlanImage({ memberIndices: [0] });
+
     expect(blob.type).toBe('image/png');
+    expect(decodeURIComponent(imageSource)).toContain('합계');
+    expect(decodeURIComponent(imageSource)).not.toContain('202608A 민경욱');
     expect(context.scale).toHaveBeenCalledWith(2, 2);
     expect(context.fillRect).toHaveBeenCalled();
     expect(context.drawImage).toHaveBeenCalled();
@@ -130,21 +168,21 @@ describe('manual plan image table', () => {
     installCanvas({ context: false });
     installImage();
     await expect(
-      createManualPlanImage({ projectTitle: '계획', memberIndices: [0] }),
+      createManualPlanImage({ memberIndices: [0] }),
     ).rejects.toThrow('계획표 이미지를 만들 수 없는 브라우저입니다.');
 
     vi.restoreAllMocks();
     installCanvas();
     installImage('error');
     await expect(
-      createManualPlanImage({ projectTitle: '계획', memberIndices: [0] }),
+      createManualPlanImage({ memberIndices: [0] }),
     ).rejects.toThrow('계획표 이미지를 그리지 못했습니다.');
 
     vi.restoreAllMocks();
     installCanvas({ blob: null });
     installImage();
     await expect(
-      createManualPlanImage({ projectTitle: '계획', memberIndices: [0] }),
+      createManualPlanImage({ memberIndices: [0] }),
     ).rejects.toThrow('계획표 이미지를 저장할 수 없습니다.');
   }, 15_000);
 
