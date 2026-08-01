@@ -470,13 +470,35 @@ export function ManualPlanTable({
       <p className="manual-plan-context-hint">
         빨간 표시: 칸에서 마우스 오른쪽 버튼을 누르세요.
       </p>
-      <div className="manual-plan-sticky-header" aria-hidden="true">
+      <div className="manual-plan-table-frame">
+        <div className="manual-plan-sticky-header" aria-hidden="true">
+          <div
+            className="manual-plan-sticky-header__viewport"
+            ref={stickyHeaderViewportRef}
+          >
+            <table
+              className="manual-plan-table manual-plan-table--sticky"
+              style={{ width: tableWidth }}
+            >
+              <ManualPlanColumnGroup schema={schema} />
+              <ManualPlanTableHeader
+                schema={schema}
+                calculation={calculation}
+                achievementTargetsByMember={achievementTargetsByMember}
+                memberRegion={memberRegion}
+                stickyCopy
+              />
+            </table>
+          </div>
+        </div>
         <div
-          className="manual-plan-sticky-header__viewport"
-          ref={stickyHeaderViewportRef}
+          className="manual-plan-scroll"
+          aria-label={`${planMode === 'AUTOMATIC' ? '자동' : '수동'} 계획표 가로 스크롤 영역`}
+          onScroll={syncStickyHeader}
+          tabIndex={0}
         >
           <table
-            className="manual-plan-table manual-plan-table--sticky"
+            className="manual-plan-table"
             style={{ width: tableWidth }}
           >
             <ManualPlanColumnGroup schema={schema} />
@@ -485,29 +507,8 @@ export function ManualPlanTable({
               calculation={calculation}
               achievementTargetsByMember={achievementTargetsByMember}
               memberRegion={memberRegion}
-              stickyCopy
             />
-          </table>
-        </div>
-      </div>
-      <div
-        className="manual-plan-scroll"
-        aria-label={`${planMode === 'AUTOMATIC' ? '자동' : '수동'} 계획표 가로 스크롤 영역`}
-        onScroll={syncStickyHeader}
-        tabIndex={0}
-      >
-        <table
-          className="manual-plan-table"
-          style={{ width: tableWidth }}
-        >
-          <ManualPlanColumnGroup schema={schema} />
-          <ManualPlanTableHeader
-            schema={schema}
-            calculation={calculation}
-            achievementTargetsByMember={achievementTargetsByMember}
-            memberRegion={memberRegion}
-          />
-          <tbody>
+            <tbody>
             {schema.dates.map((date) => (
               <tr
                 className={
@@ -595,8 +596,8 @@ export function ManualPlanTable({
                 </th>
               </tr>
             ))}
-          </tbody>
-          <tfoot>
+            </tbody>
+            <tfoot>
             <tr className="manual-plan-table__total-row">
               <th className="manual-plan-table__date-cell" scope="row">
                 <span>합계</span>
@@ -627,8 +628,9 @@ export function ManualPlanTable({
                 <span>합계</span>
               </th>
             </tr>
-          </tfoot>
-        </table>
+            </tfoot>
+          </table>
+        </div>
       </div>
     </section>
   );

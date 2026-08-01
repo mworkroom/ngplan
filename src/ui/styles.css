@@ -2102,6 +2102,18 @@ body {
   width: 100%;
 }
 
+.manual-plan-table-frame {
+  display: grid;
+  min-width: 0;
+  align-items: start;
+}
+
+.manual-plan-table-frame > .manual-plan-scroll,
+.manual-plan-table-frame > .manual-plan-sticky-header {
+  grid-area: 1 / 1;
+  min-width: 0;
+}
+
 .manual-plan-scroll {
   position: relative;
   max-width: 100%;
@@ -2117,21 +2129,15 @@ body {
   position: sticky;
   z-index: 40;
   top: 0;
-  height: 156px;
   pointer-events: none;
 }
 
 .manual-plan-sticky-header__viewport {
   width: 100%;
-  height: 156px;
   overflow: hidden;
   border: 1px solid var(--color-line);
   border-radius: var(--radius-control) var(--radius-control) 0 0;
   background: var(--color-panel);
-}
-
-.manual-plan-sticky-header + .manual-plan-scroll {
-  margin-top: -156px;
 }
 
 .manual-plan-table {
