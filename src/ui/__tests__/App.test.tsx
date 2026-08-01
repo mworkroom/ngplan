@@ -830,7 +830,9 @@ describe('App project setup flow', () => {
     await user.click(screen.getByRole('button', { name: '플랜 만들기' }));
     expect(
       Array.from(
-        document.querySelectorAll('.manual-plan-table__member-heading strong'),
+        document.querySelectorAll(
+          '.manual-plan-scroll .manual-plan-table__member-heading strong',
+        ),
         (heading) => heading.textContent,
       ),
     ).toEqual(['Root', 'Yuri', 'Kelly']);
@@ -877,7 +879,9 @@ describe('App project setup flow', () => {
     render(<App initialDate={INITIAL_DATE} />);
     expect(
       Array.from(
-        document.querySelectorAll('.manual-plan-table__member-heading strong'),
+        document.querySelectorAll(
+          '.manual-plan-scroll .manual-plan-table__member-heading strong',
+        ),
         (heading) => heading.textContent,
       ),
     ).toEqual(['Root', 'Yuri', 'Kelly']);

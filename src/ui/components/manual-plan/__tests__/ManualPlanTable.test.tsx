@@ -229,7 +229,13 @@ describe('WP4 manual planning worksheet', () => {
     ).toBeNull();
     expect(screen.getAllByLabelText(/5 \(일\).*정산 제외 0/)).toHaveLength(6);
     expect(document.querySelectorAll('.manual-plan-scroll')).toHaveLength(1);
-    expect(document.querySelectorAll('.manual-plan-table thead tr')).toHaveLength(4);
+    expect(table.querySelectorAll('thead tr')).toHaveLength(4);
+    expect(
+      document.querySelectorAll('.manual-plan-table--sticky thead tr'),
+    ).toHaveLength(4);
+    expect(
+      document.querySelector('.manual-plan-sticky-header')?.getAttribute('aria-hidden'),
+    ).toBe('true');
     expect(screen.getByLabelText('하위 PVP 목표값 700 PV')).toBeDefined();
     expect(
       screen.getByLabelText('1. 루트 · 회원 ID 1000 좌 목표값 5,000 PV'),
@@ -250,6 +256,13 @@ describe('WP4 manual planning worksheet', () => {
     expect(parent?.getAttribute('headers')).toContain('manual-plan-date-');
     expect(parent?.getAttribute('headers')).toContain('manual-plan-member-');
     expect(parent?.getAttribute('headers')).toContain('manual-plan-column-');
+
+    const scrollArea = screen.getByLabelText('수동 계획표 가로 스크롤 영역');
+    const stickyViewport = document.querySelector('.manual-plan-sticky-header__viewport');
+    expect(stickyViewport).toBeInstanceOf(HTMLDivElement);
+    scrollArea.scrollLeft = 120;
+    fireEvent.scroll(scrollArea);
+    expect(stickyViewport?.scrollLeft).toBe(120);
   });
 
   it.each([300, 700, 1500, 2400] as const)(

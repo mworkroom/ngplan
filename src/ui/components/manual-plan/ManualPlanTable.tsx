@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef, type UIEvent } from 'react';
 import {
   deriveManualPlanAchievementTargets,
   deriveManualPlanWorksheetCellView,
@@ -198,6 +198,194 @@ function commissionLevelFor(
   }
 }
 
+function ManualPlanColumnGroup({ schema }: { readonly schema: ManualPlanSchema }) {
+  return (
+    <colgroup>
+      <col className="manual-plan-table__date-column" />
+      {schema.members.flatMap((member) =>
+        FIELD_DEFINITIONS.map(({ field }) => (
+          <col
+            className={`manual-plan-table__value-column manual-plan-table__value-column--field-${field.toLowerCase()}`}
+            key={`${member.memberKey}-${field}-column`}
+          />
+        )),
+      )}
+      <col className="manual-plan-table__date-column" />
+    </colgroup>
+  );
+}
+
+interface ManualPlanTableHeaderProps {
+  readonly schema: ManualPlanSchema;
+  readonly calculation: ManualPlanCalculationState;
+  readonly achievementTargetsByMember: ReadonlyMap<
+    string,
+    ManualPlanAchievementTargets
+  >;
+  readonly memberRegion: (memberIndex: number) => ManualPlanMemberRegion;
+  readonly stickyCopy?: boolean;
+}
+
+function ManualPlanTableHeader({
+  schema,
+  calculation,
+  achievementTargetsByMember,
+  memberRegion,
+  stickyCopy = false,
+}: ManualPlanTableHeaderProps) {
+  return (
+    <thead className={stickyCopy ? 'manual-plan-table__sticky-copy' : undefined}>
+      <tr>
+        <th className="manual-plan-table__date-heading" scope="col">
+          ID
+        </th>
+        {schema.members.map((member, memberIndex) => (
+          <th
+            id={stickyCopy ? undefined : manualPlanMemberGroupDomId(member.memberKey)}
+            className={`manual-plan-table__member-heading manual-plan-table__member-heading--${memberRegion(memberIndex).toLowerCase()} ${sheetMarkerClassName(member.sheetMarker)}`}
+            key={member.memberKey}
+            scope="colgroup"
+            colSpan={3}
+            tabIndex={stickyCopy ? undefined : -1}
+          >
+            <strong>{markedMemberName(member.name, member.sheetMarker)}</strong>
+            <span>
+              {member.memberId ?? '미입력'}
+              {member.duplicateLabel === null ? '' : ` · ${member.duplicateLabel}`}
+            </span>
+          </th>
+        ))}
+        <th
+          className="manual-plan-table__date-heading manual-plan-table__date-heading--end"
+          scope="col"
+        >
+          ID
+        </th>
+      </tr>
+      <tr>
+        <th className="manual-plan-table__date-heading" scope="col">
+          목표값
+        </th>
+        {schema.members.flatMap((member, memberIndex) => {
+          const targets = achievementTargetsByMember.get(member.memberKey);
+          return FIELD_DEFINITIONS.map(({ field, label }) => {
+            const value = targets?.[field] ?? null;
+            const valueLabel = value === null ? '—' : value.toLocaleString('ko-KR');
+            return (
+              <th
+                className={`manual-plan-table__target-heading manual-plan-table__target-heading--field-${field.toLowerCase()} manual-plan-table__target-heading--${memberRegion(memberIndex).toLowerCase()}`}
+                key={`${member.memberKey}-${field}-target`}
+                scope="col"
+                aria-label={
+                  stickyCopy
+                    ? undefined
+                    : `${member.displayLabel} ${label} 목표값 ${valueLabel} PV`
+                }
+              >
+                <strong className="manual-plan-table__target-value">{valueLabel}</strong>
+              </th>
+            );
+          });
+        })}
+        <th
+          className="manual-plan-table__date-heading manual-plan-table__date-heading--end"
+          scope="col"
+        >
+          목표값
+        </th>
+      </tr>
+      <tr>
+        <th className="manual-plan-table__date-heading" scope="col">
+          잔액
+        </th>
+        {schema.members.flatMap((member, memberIndex) => {
+          const balances = achievementBalancesFor(
+            calculation,
+            achievementTargetsByMember,
+            member.memberKey,
+          );
+          return FIELD_DEFINITIONS.map(({ field, label }) => {
+            const value = balances?.[field] ?? null;
+            return (
+              <th
+                className={`manual-plan-table__achievement-heading manual-plan-table__achievement-heading--field-${field.toLowerCase()} manual-plan-table__achievement-heading--${memberRegion(memberIndex).toLowerCase()}`}
+                key={`${member.memberKey}-${field}-achievement`}
+                scope="col"
+                title={`${label} 목표값 - 현재 합계`}
+                aria-label={
+                  stickyCopy
+                    ? undefined
+                    : `${member.displayLabel} ${label} 잔액 ${formatAchievementBalance(value)} PV`
+                }
+              >
+                <strong
+                  className={
+                    value !== null && value <= 0
+                      ? 'manual-plan-table__achievement-value manual-plan-table__achievement-value--met'
+                      : 'manual-plan-table__achievement-value'
+                  }
+                >
+                  {formatAchievementBalance(value)}
+                </strong>
+              </th>
+            );
+          });
+        })}
+        <th
+          className="manual-plan-table__date-heading manual-plan-table__date-heading--end"
+          scope="col"
+        >
+          잔액
+        </th>
+      </tr>
+      <tr>
+        <th className="manual-plan-table__date-heading" scope="col">
+          날짜
+        </th>
+        {schema.members.flatMap((member, memberIndex) =>
+          FIELD_DEFINITIONS.map(({ field, label, openingLabel }) => {
+            const openingValue =
+              field === 'pvp'
+                ? member.openingState.fortnightPvpOpeningCredit
+                : field === 'selfLeft'
+                  ? member.openingState.dailyCarryLeft
+                  : member.openingState.dailyCarryRight;
+            return (
+              <th
+                id={
+                  stickyCopy
+                    ? undefined
+                    : manualPlanColumnHeaderDomId(member.memberKey, field)
+                }
+                className={`manual-plan-table__column-heading manual-plan-table__column-heading--field-${field.toLowerCase()} manual-plan-table__column-heading--${memberRegion(memberIndex).toLowerCase()}`}
+                key={`${member.memberKey}-${field}`}
+                scope="col"
+              >
+                <span>{label}</span>
+                <small
+                  aria-label={
+                    stickyCopy
+                      ? undefined
+                      : `${openingLabel} ${openingValue.toLocaleString('ko-KR')} PV`
+                  }
+                >
+                  {openingValue.toLocaleString('ko-KR')}
+                </small>
+              </th>
+            );
+          }),
+        )}
+        <th
+          className="manual-plan-table__date-heading manual-plan-table__date-heading--end"
+          scope="col"
+        >
+          날짜
+        </th>
+      </tr>
+    </thead>
+  );
+}
+
 export function ManualPlanTable({
   schema,
   draft,
@@ -238,6 +426,8 @@ export function ManualPlanTable({
       ),
     [draft.actualDifferenceMarkers],
   );
+  const stickyHeaderViewportRef = useRef<HTMLDivElement>(null);
+  const tableWidth = `${DATE_COLUMN_WIDTH_PX * 2 + schema.members.length * MEMBER_COLUMN_WIDTH_PX}px`;
 
   useEffect(() => {
     document.getElementById(manualPlanMemberGroupDomId(schema.rootMemberKey))?.scrollIntoView?.({
@@ -266,6 +456,12 @@ export function ManualPlanTable({
     }
   };
 
+  const syncStickyHeader = (event: UIEvent<HTMLDivElement>): void => {
+    if (stickyHeaderViewportRef.current !== null) {
+      stickyHeaderViewportRef.current.scrollLeft = event.currentTarget.scrollLeft;
+    }
+  };
+
   return (
     <section
       className="manual-plan-sheet"
@@ -274,162 +470,43 @@ export function ManualPlanTable({
       <p className="manual-plan-context-hint">
         빨간 표시: 칸에서 마우스 오른쪽 버튼을 누르세요.
       </p>
+      <div className="manual-plan-sticky-header" aria-hidden="true">
+        <div
+          className="manual-plan-sticky-header__viewport"
+          ref={stickyHeaderViewportRef}
+        >
+          <table
+            className="manual-plan-table manual-plan-table--sticky"
+            style={{ width: tableWidth }}
+          >
+            <ManualPlanColumnGroup schema={schema} />
+            <ManualPlanTableHeader
+              schema={schema}
+              calculation={calculation}
+              achievementTargetsByMember={achievementTargetsByMember}
+              memberRegion={memberRegion}
+              stickyCopy
+            />
+          </table>
+        </div>
+      </div>
       <div
         className="manual-plan-scroll"
         aria-label={`${planMode === 'AUTOMATIC' ? '자동' : '수동'} 계획표 가로 스크롤 영역`}
+        onScroll={syncStickyHeader}
         tabIndex={0}
       >
         <table
           className="manual-plan-table"
-          style={{
-            width: `${DATE_COLUMN_WIDTH_PX * 2 + schema.members.length * MEMBER_COLUMN_WIDTH_PX}px`,
-          }}
+          style={{ width: tableWidth }}
         >
-          <colgroup>
-            <col className="manual-plan-table__date-column" />
-            {schema.members.flatMap((member) =>
-              FIELD_DEFINITIONS.map(({ field }) => (
-                <col
-                  className={`manual-plan-table__value-column manual-plan-table__value-column--field-${field.toLowerCase()}`}
-                  key={`${member.memberKey}-${field}-column`}
-                />
-              )),
-            )}
-            <col className="manual-plan-table__date-column" />
-          </colgroup>
-          <thead>
-            <tr>
-              <th className="manual-plan-table__date-heading" scope="col">
-                ID
-              </th>
-              {schema.members.map((member, memberIndex) => (
-                <th
-                  id={manualPlanMemberGroupDomId(member.memberKey)}
-                  className={`manual-plan-table__member-heading manual-plan-table__member-heading--${memberRegion(memberIndex).toLowerCase()} ${sheetMarkerClassName(member.sheetMarker)}`}
-                  key={member.memberKey}
-                  scope="colgroup"
-                  colSpan={3}
-                  tabIndex={-1}
-                >
-                  <strong>{markedMemberName(member.name, member.sheetMarker)}</strong>
-                  <span>
-                    {member.memberId ?? '미입력'}
-                    {member.duplicateLabel === null ? '' : ` · ${member.duplicateLabel}`}
-                  </span>
-                </th>
-              ))}
-              <th
-                className="manual-plan-table__date-heading manual-plan-table__date-heading--end"
-                scope="col"
-              >
-                ID
-              </th>
-            </tr>
-            <tr>
-              <th className="manual-plan-table__date-heading" scope="col">
-                목표값
-              </th>
-              {schema.members.flatMap((member, memberIndex) => {
-                const targets = achievementTargetsByMember.get(member.memberKey);
-                return FIELD_DEFINITIONS.map(({ field, label }) => {
-                  const value = targets?.[field] ?? null;
-                  const valueLabel = value === null ? '—' : value.toLocaleString('ko-KR');
-                  return (
-                    <th
-                      className={`manual-plan-table__target-heading manual-plan-table__target-heading--field-${field.toLowerCase()} manual-plan-table__target-heading--${memberRegion(memberIndex).toLowerCase()}`}
-                      key={`${member.memberKey}-${field}-target`}
-                      scope="col"
-                      aria-label={`${member.displayLabel} ${label} 목표값 ${valueLabel} PV`}
-                    >
-                      <strong className="manual-plan-table__target-value">
-                        {valueLabel}
-                      </strong>
-                    </th>
-                  );
-                });
-              })}
-              <th
-                className="manual-plan-table__date-heading manual-plan-table__date-heading--end"
-                scope="col"
-              >
-                목표값
-              </th>
-            </tr>
-            <tr>
-              <th className="manual-plan-table__date-heading" scope="col">
-                잔액
-              </th>
-              {schema.members.flatMap((member, memberIndex) => {
-                const balances = achievementBalancesFor(
-                  calculation,
-                  achievementTargetsByMember,
-                  member.memberKey,
-                );
-                return FIELD_DEFINITIONS.map(({ field, label }) => {
-                  const value = balances?.[field] ?? null;
-                  return (
-                    <th
-                      className={`manual-plan-table__achievement-heading manual-plan-table__achievement-heading--field-${field.toLowerCase()} manual-plan-table__achievement-heading--${memberRegion(memberIndex).toLowerCase()}`}
-                      key={`${member.memberKey}-${field}-achievement`}
-                      scope="col"
-                      title={`${label} 목표값 - 현재 합계`}
-                      aria-label={`${member.displayLabel} ${label} 잔액 ${formatAchievementBalance(value)} PV`}
-                    >
-                      <strong
-                        className={
-                          value !== null && value <= 0
-                            ? 'manual-plan-table__achievement-value manual-plan-table__achievement-value--met'
-                            : 'manual-plan-table__achievement-value'
-                        }
-                      >
-                        {formatAchievementBalance(value)}
-                      </strong>
-                    </th>
-                  );
-                });
-              })}
-              <th
-                className="manual-plan-table__date-heading manual-plan-table__date-heading--end"
-                scope="col"
-              >
-                잔액
-              </th>
-            </tr>
-            <tr>
-              <th className="manual-plan-table__date-heading" scope="col">
-                날짜
-              </th>
-              {schema.members.flatMap((member, memberIndex) =>
-                FIELD_DEFINITIONS.map(({ field, label, openingLabel }) => {
-                  const openingValue =
-                    field === 'pvp'
-                      ? member.openingState.fortnightPvpOpeningCredit
-                      : field === 'selfLeft'
-                      ? member.openingState.dailyCarryLeft
-                      : member.openingState.dailyCarryRight;
-                  return (
-                  <th
-                    id={manualPlanColumnHeaderDomId(member.memberKey, field)}
-                    className={`manual-plan-table__column-heading manual-plan-table__column-heading--field-${field.toLowerCase()} manual-plan-table__column-heading--${memberRegion(memberIndex).toLowerCase()}`}
-                    key={`${member.memberKey}-${field}`}
-                    scope="col"
-                  >
-                    <span>{label}</span>
-                    <small aria-label={`${openingLabel} ${openingValue.toLocaleString('ko-KR')} PV`}>
-                      {openingValue.toLocaleString('ko-KR')}
-                    </small>
-                  </th>
-                  );
-                }),
-              )}
-              <th
-                className="manual-plan-table__date-heading manual-plan-table__date-heading--end"
-                scope="col"
-              >
-                날짜
-              </th>
-            </tr>
-          </thead>
+          <ManualPlanColumnGroup schema={schema} />
+          <ManualPlanTableHeader
+            schema={schema}
+            calculation={calculation}
+            achievementTargetsByMember={achievementTargetsByMember}
+            memberRegion={memberRegion}
+          />
           <tbody>
             {schema.dates.map((date) => (
               <tr
