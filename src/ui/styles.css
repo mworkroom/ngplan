@@ -1960,8 +1960,8 @@ body {
 
 .button--primary,
 .primary-button {
-  border-color: var(--color-action);
-  background: var(--color-action);
+  border-color: var(--color-accent);
+  background: var(--color-accent);
 }
 
 .button--primary:hover,
