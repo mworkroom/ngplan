@@ -153,7 +153,7 @@ describe('Phase 4 canonical objective comparator', () => {
     expect(compareAutomaticPlanObjectives(goalMet, morePayoutWithShortfall)).toBe(-1);
   });
 
-  it('maximizes confirmed payout before minimizing discarded excess', () => {
+  it('maximizes confirmed payout and protects member fairness before discarded excess', () => {
     const morePayout = objective({
       confirmedPayoutWon: 120_000,
       discardedExcessPv: 999,
@@ -163,6 +163,18 @@ describe('Phase 4 canonical objective comparator', () => {
       discardedExcessPv: 0,
     });
     expect(compareAutomaticPlanObjectives(morePayout, lessPayout)).toBe(-1);
+
+    const fairerWithMoreDiscard = objective({
+      discardedExcessPv: 999,
+      highTargetDescendingEquivalentUnitShortfallVector: [0],
+    });
+    const lessFairWithNoDiscard = objective({
+      discardedExcessPv: 0,
+      highTargetDescendingEquivalentUnitShortfallVector: [1],
+    });
+    expect(
+      compareAutomaticPlanObjectives(fairerWithMoreDiscard, lessFairWithNoDiscard),
+    ).toBe(-1);
 
     const clean = objective({ discardedExcessPv: 0 });
     const waste = objective({

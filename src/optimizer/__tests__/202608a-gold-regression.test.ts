@@ -130,14 +130,14 @@ describe('202608A approved manual-plan regression', () => {
     });
   });
 
-  it('beats the approved total payout without extra PV and remains deterministic', () => {
+  it('beats the approved payout, preserves every period target, and remains deterministic', () => {
     const first = heuristicBest();
 
     expect(first.objective).toMatchObject({
       totalNewPv: 23_500,
       confirmedPayoutWon: 6_060_000,
       rootCommissionGoalShortfallDays: 0,
-      discardedExcessPv: 32_952,
+      discardedExcessPv: 32_756,
     });
     expect(memberEquivalentUnits(first)).toEqual({
       veronica: 10,
@@ -150,8 +150,21 @@ describe('202608A approved manual-plan regression', () => {
       siawon: 8,
       'park-jinsook': 8,
     });
+    expect(
+      Object.values(first.calculation.finalAssessmentByMember).every(
+        (assessment) => assessment.allTargetsMet,
+      ),
+    ).toBe(true);
+    expect(first.calculation.finalAssessmentByMember['kim-jeongmi']).toMatchObject({
+      fortnightSideTarget: 2_500,
+      newPvpTotal: 200,
+      rawLeftTotal: 2_300,
+      assessedLeft: 2_500,
+      leftTargetMet: true,
+      allTargetsMet: true,
+    });
     expect(createProblemFingerprint(first.allocations)).toBe(
-      '3.0.0:fnv1a64-canonical-json-v1:49db36d5f058dd4b',
+      '3.0.0:fnv1a64-canonical-json-v1:dcf9dc632d750079',
     );
   }, 180_000);
 });

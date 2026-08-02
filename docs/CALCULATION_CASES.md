@@ -34,7 +34,7 @@
 ### Phase 4 버전 계약
 
 - 누적 PVP 원천 분리, 회원별 좌·우 목표, 순수 재귀 목표와 수당 환산을 포함한 현재 규칙 계산 계약과 엔진 계약은 `8.0.0`이다.
-- 자동 계획 request/fingerprint/checkpoint/model/certificate와 worker protocol은 `4.0.0`, policy는 `9.0.0`, objective는 `8.0.0`, calendar는 `1.0.0`이다. 이전 policy/objective 후보·체크포인트와 모델 인증서는 호환되지 않는다.
+- 자동 계획 request/fingerprint/checkpoint/model/certificate와 worker protocol은 `4.0.0`, policy는 `10.0.0`, objective는 `9.0.0`, calendar는 `1.0.0`이다. 이전 policy/objective 후보·체크포인트와 모델 인증서는 호환되지 않는다.
 - 수동 계획, 계산 엔진과 자동 계획은 회원별 좌·우 각 2,500 또는 1,500 및 두 값이 섞인 조직을 지원한다.
 - 제품의 `PVP 시작값`은 0~2,400 회사 누적 달성값이다. 정규화 시 같은 값을 `openingQualificationPvp`와 `fortnightPvpOpeningCredit`에 기록하고 `dailyCarryPvp`는 0으로 기록한다. 일일 좌·우 시작값은 별도 사용자 입력이다.
 - `qualificationPvp`는 `openingQualificationPvp + 해당 날짜까지의 직접 신규 PVP 누계`이며 일일 정산으로 초기화되지 않는다. 당일 직접 PVP를 먼저 포함한 뒤 300 자격을 판정한다.
@@ -741,7 +741,7 @@ PVP 목표 700인 회원 한 명에게 다음을 입력한다.
 
 이 절은 Phase 4에서 구현한다. Phase 1 계산 코어는 후보 결과를 재계산하는 데 사용한다.
 
-별도 언급이 없는 두 자동 후보 비교는 `rootCommissionGoalShortfallDays`가 서로 같다고 가정한다. Policy `9.0.0`·objective `8.0.0`은 구조상 최소 총량 `M+30`을 하드 상한으로 두고, 맨 위 회원 목표 미달을 먼저 최소화한 뒤 확인 수당을 최대화하며 같은 수당이면 총 신규 PV를 최소화한다.
+별도 언급이 없는 두 자동 후보 비교는 `rootCommissionGoalShortfallDays`가 서로 같다고 가정한다. Policy `10.0.0`·objective `9.0.0`은 구조상 최소 총량 `M+30`을 하드 상한으로 두고, 맨 위 회원 목표 미달을 먼저 최소화한 뒤 확인 수당을 최대화하며 같은 수당이면 총 신규 PV를 최소화한다. 이후 핵심 회원 환산 공평성, 일일 소멸 초과분 순서로 비교한다.
 
 ### OPT-P01 — 13영업일 단일 루트의 총량상 8일 목표와 8일 분산
 
@@ -883,7 +883,7 @@ A의 원본 좌·우는 각각 자식 서브트리 5,000이므로 별도 좌·�
 
 직접 편집 가능한 0이 아닌 셀 중 100의 배수가 아닌 셀 수는 후보 A가 0, 후보 B가 2다.
 
-**기대 선택:** 후보 A. `nonHundredCellCount`는 root shortfall, known payout, 총 신규 PV, 초과 소멸량, 두 일반 공평성 환산 미달 vector와 미래 PVP 투자가 모두 같은 뒤에만 비교한다. 0인 셀은 이 수에 포함하지 않는다.
+**기대 선택:** 후보 A. `nonHundredCellCount`는 root shortfall, known payout, 총 신규 PV, 두 일반 공평성 환산 미달 vector, 초과 소멸량과 미래 PVP 투자가 모두 같은 뒤에만 비교한다. 0인 셀은 이 수에 포함하지 않는다.
 
 ### OPT-006 — 8회를 위해 30 PV를 넘겨 추가하지 않음
 
@@ -916,15 +916,25 @@ Sanitized fixture `202608A 민경욱`은 회원별 1,500/2,500 좌·우 목표�
 |---|---:|---:|---:|---:|
 | 엄마 승인 수동안 | 23,510 | 6,000,000원 | 0 | 34,355 |
 | policy 8 비교 사본 | 23,500 | 5,640,000원 | 0 | 38,315 |
-| policy 9 결정적 휴리스틱 | 23,500 | 6,060,000원 | 0 | 32,952 |
+| policy 10 결정적 휴리스틱 | 23,500 | 6,060,000원 | 0 | 32,756 |
 
-Policy 9 결과의 주요 환산 횟수는 베로니카 10, 고규식 5, 김정미 7, 까리나 김 5, Kelly 18, 남승우 8, 김길주 8, 시아원 8, 박진숙 8이다. 엄마안의 Kelly 19·김정미 8·박진숙 9보다 낮은 개인 결과가 있으므로 사람의 날짜표를 복제했다고 주장하지 않는다. 이 fixture의 회귀선은 루트 목표를 보존하고 총수당 6,060,000원·총 신규 PV 23,500을 만들며, 전체 allocation이 고정 canonical fingerprint와 일치하는 것이다.
+Policy 10 결과의 주요 환산 횟수는 베로니카 10, 고규식 5, 김정미 7, 까리나 김 5, Kelly 18, 남승우 8, 김길주 8, 시아원 8, 박진숙 8이다. 엄마안의 Kelly 19·김정미 8·박진숙 9보다 낮은 개인 결과가 있으므로 사람의 날짜표를 복제했다고 주장하지 않는다. 모든 회원의 보름 목표는 충족하며 김정미는 신규 PVP 200과 원본 좌 2,300을 합산한 판정 좌 2,500으로 고정한다. 이 fixture의 회귀선은 루트 목표를 보존하고 총수당 6,060,000원·총 신규 PV 23,500·소멸 초과 32,756을 만들며, 전체 allocation이 고정 canonical fingerprint와 일치하는 것이다. 엄마가 백업본에서 본 `250+2,150=2,400`은 이 policy-10 재계산 결과와 다른 저장 계획이므로 policy-10 정답으로 간주하지 않는다.
+
+### OPT-006C — 여러 하위 칸의 200+100으로 경계를 실제 완성
+
+**상태:** 확정 · **대상:** Phase 4
+
+- 한 상위 회원의 목표 날짜는 왼쪽 300, 오른쪽 0이라 300단계까지 오른쪽 300이 부족하다.
+- 다른 날짜의 같은 오른쪽 하위 가지에는 서로 다른 직접 입력칸 세 개에 200씩 있고, 그 날짜는 합계 600 중 300을 빼도 기존 300단계를 유지한다.
+- 단일 칸에서 100 또는 200만 옮기면 목표 날짜의 경계를 넘지 못한다.
+
+**기대 결과:** 후보 생성기는 미완성 단일 이동을 후보 제한에 넣지 않고, 서로 다른 하위 칸에서 200+100을 모아 총 300을 옮기는 제한된 다중 이동을 만든다. 두 날짜 모두 300단계를 유지·달성하고 총 신규 PV는 변하지 않는다. 이름이나 8월 날짜를 하드코딩하면 오답이다.
 
 ### OPT-P02 — 환산 8회 초과가 가능한 동률 계획
 
 **상태:** 확정 · **대상:** Phase 4
 
-root shortfall, known payout, 총 신규 PV, 초과 소멸량과 비교 대상보다 앞선 공평성 vector가 같은 두 후보 중 한 회원의 수당 환산 횟수는 8회, 다른 후보는 9회다.
+root shortfall, known payout, 총 신규 PV와 비교 대상보다 앞선 공평성 vector가 같은 두 후보 중 한 회원의 수당 환산 횟수는 8회, 다른 후보는 9회다.
 
 두 회원의 이론상 상한이 같고 다른 조건도 같다면 환산 9회 후보의 미달이 8회 후보보다 작으므로 **환산 9회 후보를 선택한다**. 8회는 하드 cap이나 별도 threshold objective가 아니며, 9회를 만들기 위해 총 신규 PV를 늘리거나 known payout 등 높은 목적을 악화시킬 수는 없다.
 
@@ -950,7 +960,7 @@ root shortfall, known payout, 총 신규 PV, 초과 소멸량과 비교 대상�
 - 후보 B: 상위 회원 자신의 `SELF`에 둬 한 회원의 목표에만 100 기여한다.
 - 공통 나머지 계획 때문에 두 후보 모두 최종 목표는 충족한다.
 
-**기대 결과:** 공동 기여 횟수·양이나 트리 깊이는 독립 목적함수가 아니다. 하위 배치가 여러 상위 목표를 함께 채워 총 신규 PV를 줄이면, root shortfall과 known payout이 같은 후보끼리 OPT-001/OPT-002처럼 목적 3에서 이긴다. 이 사례처럼 총 신규 PV까지 앞선 목적이 이미 같으면 공동 기여만으로 후보 A를 선택하지 않고 초과 소멸량, 목표군 환산 미달 vector, 미래 PVP 투자, 100단위, 최대 직접 PVP, 결정적 배정 벡터 순서로 계속 비교한다.
+**기대 결과:** 공동 기여 횟수·양이나 트리 깊이는 독립 목적함수가 아니다. 하위 배치가 여러 상위 목표를 함께 채워 총 신규 PV를 줄이면, root shortfall과 known payout이 같은 후보끼리 OPT-001/OPT-002처럼 목적 3에서 이긴다. 이 사례처럼 총 신규 PV까지 앞선 목적이 이미 같으면 공동 기여만으로 후보 A를 선택하지 않고 목표군 환산 미달 vector, 초과 소멸량, 미래 PVP 투자, 100단위, 최대 직접 PVP, 결정적 배정 벡터 순서로 계속 비교한다.
 
 ### OPT-P05 — 완전 동률 계획의 결정적 타이브레이커
 
@@ -979,7 +989,7 @@ root shortfall, known payout, 총 신규 PV, 초과 소멸량과 비교 대상�
 | 자식 배치 | `P100/L300/R300`, `T(B)=700` | 0 | `700/700` | 1,400 | B의 `700-600=100` |
 | 부모 배치 | `P0/L300/R300`, `T(B)=600` | 100 | `600/700`, PVP가 왼쪽에 적용 | 1,400 | 0 |
 
-두 후보 모두 B는 300 단계, A는 700 단계 full commission을 얻고 모든 하드 목표, root shortfall, known payout과 총 신규 PV가 같다. **부모 배치가 초과 소멸량 0으로 이긴다.** exact PVP 100을 관습적으로 자식에게 고정하면 오답이다.
+두 후보 모두 B는 300 단계, A는 700 단계 full commission을 얻고 모든 하드 목표, root shortfall, known payout, 총 신규 PV와 두 공평성 vector가 같다. **부모 배치가 초과 소멸량 0으로 이긴다.** exact PVP 100을 관습적으로 자식에게 고정하면 오답이다.
 
 ### OPT-008 — 자식이 PVP 100을 필요로 하면 하위 배치가 총 PV를 줄임
 
@@ -996,7 +1006,7 @@ OPT-007과 같은 조직에서 B의 회사 누적 PVP 시작값과 다른 신규
 
 **상태:** 확정 · **대상:** Phase 4
 
-루트가 아닌 목표 700 회원 세 명의 이론상 환산 상한이 모두 8회다. root shortfall, known payout, 총 신규 PV, 초과 소멸량과 high-target 미달 vector는 두 후보가 같다.
+루트가 아닌 목표 700 회원 세 명의 이론상 환산 상한이 모두 8회다. root shortfall, known payout, 총 신규 PV와 high-target 미달 vector는 두 후보가 같다.
 
 - 후보 A의 실제 환산/내림차순 미달 벡터: `[0,8,8]` / `[8,0,0]`, 환산 8회 이상 회원 수 2
 - 후보 B의 실제 환산/내림차순 미달 벡터: `[7,7,7]` / `[1,1,1]`, 환산 8회 이상 회원 수 0
@@ -1034,7 +1044,7 @@ OPT-007과 같은 조직에서 B의 회사 누적 PVP 시작값과 다른 신규
 
 **상태:** 확정 · **대상:** Phase 4
 
-모든 하드 제약, root shortfall, known payout, 총 신규 PV, 초과 소멸량, 목표 집단별 환산 미달 vector, 미래 PVP 투자와 `nonHundredCellCount`가 같은 두 후보가 있다.
+모든 하드 제약, root shortfall, known payout, 총 신규 PV, 목표 집단별 환산 미달 vector, 초과 소멸량, 미래 PVP 투자와 `nonHundredCellCount`가 같은 두 후보가 있다.
 
 - 후보 A 직접 PVP 분포: `[200,200]`, `maxDirectPvp=200`
 - 후보 B 직접 PVP 분포: `[300,100]`, `maxDirectPvp=300`
@@ -1073,7 +1083,7 @@ OPT-007과 같은 조직에서 B의 회사 누적 PVP 시작값과 다른 신규
 
 **상태:** 확정 · **대상:** Phase 4
 
-root shortfall, known payout, 총 직접 신규 PV와 초과 소멸량이 같은 두 후보에서 같은 목표 집단의 세 회원은 구조상 이론적 환산 상한이 각각 `[8,16,16]`이다.
+root shortfall, known payout과 총 직접 신규 PV가 같은 두 후보에서 같은 목표 집단의 세 회원은 구조상 이론적 환산 상한이 각각 `[8,16,16]`이다.
 
 - 후보 A 실제/내림차순 미달: `[8,8,16]` / `[8,0,0]`
 - 후보 B 실제/내림차순 미달: `[8,12,12]` / `[4,4,0]`
@@ -1092,7 +1102,7 @@ root shortfall, known payout, 총 직접 신규 PV와 초과 소멸량이 같은
 
 **상태:** 확정 · **대상:** Phase 4
 
-회사 누적 PVP 600, 선택 목표 700인 회원이 있고 두 후보의 root shortfall, 수당, 총 직접 신규 PV, 초과 소멸량과 두 일반 공평성 환산 미달 vector가 모두 같다.
+회사 누적 PVP 600, 선택 목표 700인 회원이 있고 두 후보의 root shortfall, 수당, 총 직접 신규 PV, 두 일반 공평성 환산 미달 vector와 초과 소멸량이 모두 같다.
 
 - 후보 A의 closing cumulative PVP: 700
 - 후보 B의 closing cumulative PVP: 800
@@ -1150,7 +1160,7 @@ root shortfall, known payout, 총 직접 신규 PV와 초과 소멸량이 같은
 
 각 직접 셀은 허용 범위 안이지만 전체 후보의 총 신규 PV 또는 재시뮬레이션 점수 합계가 선택한 정수 표현 범위를 넘는다.
 
-**기대 결과:** 부동소수점 반올림, 거대한 가중합 또는 가중치 포화 상태로 후보 순서를 정하지 않는다. `rootCommissionGoalShortfallDays`, known payout, 총 신규 PV, 초과 소멸량, 환산 미달 vector, 미래 투자와 각 파생 합계에 checked integer 연산을 사용한다. 모델 생성 전에 솔버의 정확한 정수 범위를 검증하고 하나라도 표현할 수 없으면 명시적인 `OPTIMIZATION_SCORE_OUT_OF_RANGE` 오류를 반환한다. 목적 단계는 `objectiveVersion=8.0.0` 순서대로 각각 정확히 고정한다.
+**기대 결과:** 부동소수점 반올림, 거대한 가중합 또는 가중치 포화 상태로 후보 순서를 정하지 않는다. `rootCommissionGoalShortfallDays`, known payout, 총 신규 PV, 환산 미달 vector, 초과 소멸량, 미래 투자와 각 파생 합계에 checked integer 연산을 사용한다. 모델 생성 전에 솔버의 정확한 정수 범위를 검증하고 하나라도 표현할 수 없으면 명시적인 `OPTIMIZATION_SCORE_OUT_OF_RANGE` 오류를 반환한다. 목적 단계는 `objectiveVersion=9.0.0` 순서대로 각각 정확히 고정한다.
 
 ### MODEL-001 — 모델 해는 정본 엔진에 대해 sound해야 함
 
@@ -1174,13 +1184,13 @@ root shortfall, known payout, 총 직접 신규 PV와 초과 소멸량이 같은
 
 솔버가 한 후보의 `rootCommissionGoalShortfallDays`, 초과 소멸량, high-target 미달 벡터, target-700 미달 벡터, `nonHundredCellCount`, `maxDirectPvp` 또는 결정적 배정 벡터를 정본 재계산과 다르게 보고한다.
 
-**기대 결과:** `objectiveVersion=8.0.0` 정본 evaluator의 값만 권위가 있으며 후보를 model-consistency failure로 거부한다. 솔버 점수를 덮어써서 usable candidate로 계속 사용하거나 낮은 목적 단계로 진행하면 오답이다.
+**기대 결과:** `objectiveVersion=9.0.0` 정본 evaluator의 값만 권위가 있으며 후보를 model-consistency failure로 거부한다. 솔버 점수를 덮어써서 usable candidate로 계속 사용하거나 낮은 목적 단계로 진행하면 오답이다.
 
 ### MODEL-004 — model certificate와 활성 버전의 정확한 결합
 
 **상태:** 설계 계약 · **대상:** Phase 4
 
-`ModelCertificate 4.0.0`은 최소한 모델 구현, 계산 규칙·엔진 `8.0.0`, 정책 `9.0.0`·목적 `8.0.0`, 달력/fingerprint 버전, 솔버 adapter와 버전, exact integer·tolerance 조건, soundness/completeness/objective-preservation 증거 모음을 식별한다.
+`ModelCertificate 4.0.0`은 최소한 모델 구현, 계산 규칙·엔진 `8.0.0`, 정책 `10.0.0`·목적 `9.0.0`, 달력/fingerprint 버전, 솔버 adapter와 버전, exact integer·tolerance 조건, soundness/completeness/objective-preservation 증거 모음을 식별한다.
 
 **기대 결과:** 활성 요청과 certificate의 식별자 중 하나라도 다르면 proof 상태를 사용할 수 없다. 후보는 현재 버전으로 독립 재검증될 때만 unproven candidate로 사용할 수 있으며, 이전 certificate의 `OPTIMAL`·`INFEASIBLE`을 승계하지 않는다.
 

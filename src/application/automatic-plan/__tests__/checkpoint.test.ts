@@ -48,7 +48,7 @@ describe('verified automatic-plan workspace checkpoint', () => {
     expect(serialized).not.toContain('proof');
     expect(snapshot.checkpointVersion).toBe('4.0.0');
     expect(snapshot.checkpointVersion).toBe(AUTOMATIC_PLAN_CHECKPOINT_VERSION);
-    expect(snapshot.objectiveVersion).toBe('8.0.0');
+    expect(snapshot.objectiveVersion).toBe('9.0.0');
     expect(snapshot.objective).toMatchObject({
       confirmedPayoutWon: expect.any(Number),
       futureCumulativePvpInvestmentPv: expect.any(Number),

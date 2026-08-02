@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { calculatePlan } from '../../engine';
 import {
   buildBranchRotationCandidateVariants,
   buildBranchSynchronizedCandidateVariants,
@@ -7,6 +8,7 @@ import {
   totalAutomaticPlanDirectPv,
   type AutomaticPlanRequest,
   type RawAutomaticPlanCandidate,
+  type VerifiedAutomaticPlanCandidate,
 } from '..';
 import {
   createOptimizerRequest,
@@ -277,6 +279,89 @@ describe('branch-synchronized candidate boundaries', () => {
     expect(variants.every((candidate) =>
       totalAutomaticPlanDirectPv(candidate.allocations) === sourceTotal,
     )).toBe(true);
+  });
+
+  it('combines 200 and 100 from separate descendant fields to complete a boundary', () => {
+    const members = Object.freeze([
+      optimizerMember('root'),
+      optimizerMember('focus', 'root', 'LEFT'),
+      optimizerMember('leaf', 'focus', 'RIGHT'),
+    ]);
+    const openings = Object.freeze(Object.fromEntries(members.map((member) => [
+      member.memberKey,
+      optimizerOpening({
+        openingQualificationPvp: 700,
+        fortnightPvpOpeningCredit: 700,
+      }),
+    ])));
+    const request = createOptimizerRequest(members, openings);
+    const businessDates = request.calendar.dates.filter((date) =>
+      !request.calendar.skipDateSet.includes(date));
+    const targetDate = businessDates[0]!;
+    const donorDate = businessDates[1]!;
+    const allocations = Object.freeze(request.calendar.dates.flatMap((date) => [
+      Object.freeze({
+        date,
+        memberKey: 'root',
+        pvp: 0,
+        selfRight: 0,
+      }),
+      Object.freeze({
+        date,
+        memberKey: 'focus',
+        pvp: 0,
+        selfLeft: date === targetDate || date === donorDate ? 300 : 0,
+      }),
+      Object.freeze({
+        date,
+        memberKey: 'leaf',
+        pvp: date === donorDate ? 200 : 0,
+        selfLeft: date === donorDate ? 200 : 0,
+        selfRight: date === donorDate ? 200 : 0,
+      }),
+    ]));
+    const calculated = calculatePlan({
+      period: request.period,
+      organization: request.organization,
+      allocations,
+    });
+    expect(calculated.status).toBe('SUCCESS');
+    if (calculated.status !== 'SUCCESS') return;
+    const source = Object.freeze({
+      allocations,
+      calculation: calculated.result,
+    }) as unknown as VerifiedAutomaticPlanCandidate;
+
+    expect(
+      calculated.result.dailySettlementByDateAndMember[targetDate]!.focus!
+        .commissionTier,
+    ).toBeNull();
+    const variants = buildCommissionBoundaryCandidateVariants(
+      request,
+      source,
+      ['focus'],
+    );
+    const completed = variants.find((candidate) => {
+      const result = calculatePlan({
+        period: request.period,
+        organization: request.organization,
+        allocations: candidate.allocations,
+      });
+      return result.status === 'SUCCESS' &&
+        result.result.dailySettlementByDateAndMember[targetDate]!.focus!
+          .commissionTier === 300;
+    });
+
+    expect(completed).toBeDefined();
+    expect(totalAutomaticPlanDirectPv(completed!.allocations)).toBe(
+      totalAutomaticPlanDirectPv(source.allocations),
+    );
+    const movedToTarget = completed!.allocations
+      .filter((cell) => cell.date === targetDate && cell.memberKey === 'leaf')
+      .flatMap((cell) => [cell.pvp, cell.selfLeft!, cell.selfRight!])
+      .filter((value) => value > 0)
+      .reduce((total, value) => total + value, 0);
+    expect(movedToTarget).toBe(300);
   });
 
 });

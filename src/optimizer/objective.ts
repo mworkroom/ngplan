@@ -178,7 +178,6 @@ export function compareAutomaticPlanObjectives(
     ) ||
     compareMax(left.confirmedPayoutWon, right.confirmedPayoutWon) ||
     compareMin(left.totalNewPv, right.totalNewPv) ||
-    compareMin(left.discardedExcessPv, right.discardedExcessPv) ||
     compareMinVector(
       left.highTargetDescendingEquivalentUnitShortfallVector,
       right.highTargetDescendingEquivalentUnitShortfallVector,
@@ -187,6 +186,7 @@ export function compareAutomaticPlanObjectives(
       left.target700DescendingEquivalentUnitShortfallVector,
       right.target700DescendingEquivalentUnitShortfallVector,
     ) ||
+    compareMin(left.discardedExcessPv, right.discardedExcessPv) ||
     compareMax(
       left.futureCumulativePvpInvestmentPv,
       right.futureCumulativePvpInvestmentPv,

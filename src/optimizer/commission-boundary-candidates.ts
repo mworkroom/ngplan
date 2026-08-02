@@ -264,6 +264,8 @@ function transferPlansForSide(
   const seen = new Set<string>();
   const add = (plan: TransferPlan | null): void => {
     if (plan === null || plan.length === 0) return;
+    const movedPv = plan.reduce((total, item) => total + item.amount, 0);
+    if (movedPv < deficit) return;
     const signature = transferSignature(plan);
     if (seen.has(signature)) return;
     seen.add(signature);
@@ -300,6 +302,16 @@ function transferPlansForSide(
       right.dateIndex - left.dateIndex || left.sourceIndex - right.sourceIndex),
     [...donors].sort((left, right) =>
       left.dateIndex - right.dateIndex || left.sourceIndex - right.sourceIndex),
+    [...donors].sort((left, right) =>
+      left.donorValue - right.donorValue || right.slack - left.slack ||
+      left.sourceIndex - right.sourceIndex),
+    [...donors].sort((left, right) =>
+      Math.abs(left.donorValue - 100) - Math.abs(right.donorValue - 100) ||
+      Number(left.ref.field === 'pvp') - Number(right.ref.field === 'pvp') ||
+      left.sourceIndex - right.sourceIndex),
+    [...donors].sort((left, right) =>
+      Math.abs(left.slack - deficit) - Math.abs(right.slack - deficit) ||
+      left.donorValue - right.donorValue || left.sourceIndex - right.sourceIndex),
   ];
   for (const order of donorOrders) add(buildGreedyTransferPlan(order, deficit));
   return Object.freeze(plans.slice(0, TRANSFER_PLAN_LIMIT));
