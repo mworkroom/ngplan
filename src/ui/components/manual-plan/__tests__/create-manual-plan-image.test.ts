@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   buildManualPlanImageTable,
+  buildManualPlanImageSvg,
   createManualPlanImage,
   downloadManualPlanImage,
   manualPlanImageFilename,
@@ -13,16 +14,21 @@ const originalRevokeObjectUrl = Object.getOwnPropertyDescriptor(URL, 'revokeObje
 function sourceTable(): HTMLTableElement {
   const table = document.createElement('table');
   table.innerHTML = `
-    <colgroup>${Array.from({ length: 11 }, () => '<col />').join('')}</colgroup>
+    <colgroup><col class="manual-plan-table__date-column" />${Array.from(
+      { length: 9 },
+      (_, index) => `<col class="manual-plan-table__value-column${index % 3 === 0 ? ' manual-plan-table__value-column--field-pvp' : ''}" />`,
+    ).join('')}<col class="manual-plan-table__date-column" /></colgroup>
     <thead>
-      <tr><th>날짜</th><th colspan="3">고규식</th><th colspan="3">베로니카</th><th colspan="3">김정미</th><th>끝 날짜</th></tr>
-      <tr><th>날짜</th><th>고-P</th><th>고-좌</th><th>고-우</th><th>베-P</th><th>베-좌</th><th>베-우</th><th>김-P</th><th>김-좌</th><th>김-우</th><th>끝 날짜</th></tr>
+      <tr><th class="manual-plan-table__date-heading">ID</th><th class="manual-plan-table__member-heading manual-plan-table__member-heading--left sheet-marker--green-2" colspan="3"><strong>고규식</strong><span>1001</span></th><th class="manual-plan-table__member-heading manual-plan-table__member-heading--root sheet-marker--pink-1" colspan="3"><strong>베로니카</strong><span>1002</span></th><th class="manual-plan-table__member-heading manual-plan-table__member-heading--right sheet-marker--purple-4" colspan="3"><strong>김정미</strong><span>1003</span></th><th class="manual-plan-table__date-heading manual-plan-table__date-heading--end">ID</th></tr>
+      <tr><th class="manual-plan-table__date-heading">목표값</th><th class="manual-plan-table__target-heading manual-plan-table__target-heading--left"><strong>700</strong></th><th class="manual-plan-table__target-heading manual-plan-table__target-heading--left"><strong>2,500</strong></th><th class="manual-plan-table__target-heading manual-plan-table__target-heading--left"><strong>1,800</strong></th><th>700</th><th>5,000</th><th>5,000</th><th>700</th><th>2,500</th><th>1,800</th><th>목표값</th></tr>
+      <tr><th class="manual-plan-table__date-heading">잔액</th><th class="manual-plan-table__achievement-heading manual-plan-table__achievement-heading--left"><strong>+700</strong></th><th class="manual-plan-table__achievement-heading manual-plan-table__achievement-heading--left"><strong>+2,500</strong></th><th class="manual-plan-table__achievement-heading manual-plan-table__achievement-heading--left"><strong>+1,800</strong></th><th>+700</th><th>+5,000</th><th>+5,000</th><th>+700</th><th>+2,500</th><th>+1,800</th><th>잔액</th></tr>
+      <tr><th class="manual-plan-table__date-heading">날짜</th><th class="manual-plan-table__column-heading manual-plan-table__column-heading--left"><span>PVP</span><small>0</small></th><th class="manual-plan-table__column-heading manual-plan-table__column-heading--left"><span>좌</span><small>0</small></th><th class="manual-plan-table__column-heading manual-plan-table__column-heading--left"><span>우</span><small>0</small></th><th>PVP</th><th>좌</th><th>우</th><th>PVP</th><th>좌</th><th>우</th><th>날짜</th></tr>
     </thead>
     <tbody>
-      <tr><th>1일</th><td class="manual-plan-cell--selected" data-commission-level="700" data-actual-difference="true"><input value="고1" /></td><td>고2</td><td>고3</td><td>베1</td><td>베2</td><td>베3</td><td>김1</td><td>김2</td><td>김3</td><th>1일 끝</th></tr>
+      <tr><th class="manual-plan-table__date-cell"><span>1 (토)</span></th><td class="manual-plan-cell manual-plan-cell--selected manual-plan-cell--member-left" data-commission-level="700" data-actual-difference="true"><input value="고1" /></td><td class="manual-plan-cell manual-plan-cell--member-left">고2</td><td class="manual-plan-cell manual-plan-cell--member-left">고3</td><td>베1</td><td>베2</td><td>베3</td><td>김1</td><td>김2</td><td>김3</td><th>1일 끝</th></tr>
     </tbody>
     <tfoot>
-      <tr><th>합계</th><td>10</td><td>20</td><td>30</td><td>40</td><td>50</td><td>60</td><td>70</td><td>80</td><td>90</td><th>합계 끝</th></tr>
+      <tr><th class="manual-plan-table__date-cell"><span>합계</span></th><td class="manual-plan-table__total-cell manual-plan-table__total-cell--left"><strong>10</strong></td><td class="manual-plan-table__total-cell manual-plan-table__total-cell--left"><strong>20</strong></td><td class="manual-plan-table__total-cell manual-plan-table__total-cell--left"><strong>30</strong></td><td>40</td><td>50</td><td>60</td><td>70</td><td>80</td><td>90</td><th>합계 끝</th></tr>
     </tfoot>
   `;
   return table;
@@ -100,33 +106,29 @@ describe('manual plan image table', () => {
 
     expect(
       Array.from(table.tHead!.rows[0]!.cells).map((cell) => cell.textContent),
-    ).toEqual(['날짜', '고규식', '김정미']);
+    ).toEqual(['ID', '고규식1001', '김정미1003']);
     expect(
       Array.from(table.tBodies[0]!.rows[0]!.cells).map((cell) => cell.textContent),
-    ).toEqual(['1일', '', '고2', '고3', '김1', '김2', '김3']);
+    ).toEqual(['1 (토)', '', '고2', '고3', '김1', '김2', '김3']);
     expect(table.querySelectorAll('col')).toHaveLength(7);
     expect(table.style.width).toBe('386px');
     expect(table.querySelector('input')?.value).toBe('고1');
     expect(table.querySelector('.manual-plan-cell--selected')).toBeNull();
   });
 
-  it('keeps the worksheet row height after removing the compact screen zoom', () => {
-    const workspace = document.createElement('div');
-    workspace.dataset.density = 'compact';
-    workspace.style.setProperty('zoom', '0.9');
-    const source = sourceTable();
-    workspace.append(source);
-    document.body.append(workspace);
-    Array.from(source.rows).forEach((row) => {
-      vi.spyOn(row, 'getBoundingClientRect').mockReturnValue({
-        height: 34.2,
-      } as DOMRect);
-    });
+  it('builds a fixed export SVG without browser HTML rendering', () => {
+    const table = buildManualPlanImageTable(sourceTable(), [0]);
 
-    const table = buildManualPlanImageTable(source, [0]);
+    const image = buildManualPlanImageSvg(table);
 
-    expect(Array.from(table.rows).map((row) => row.style.height))
-      .toEqual(Array.from(table.rows, () => '38px'));
+    expect(image.width).toBe(218);
+    expect(image.height).toBe(237);
+    expect(image.markup).toContain('고규식');
+    expect(image.markup).toContain('고1');
+    expect(image.markup).toContain('합계');
+    expect(image.markup).toContain('#91d6ab');
+    expect(image.markup).toContain('#a62b22');
+    expect(image.markup).not.toContain('foreignObject');
   });
 
   it('removes invalid and duplicate indices and keeps every valid member in worksheet order', () => {
@@ -156,6 +158,8 @@ describe('manual plan image table', () => {
 
     expect(blob.type).toBe('image/png');
     expect(decodeURIComponent(imageSource)).toContain('합계');
+    expect(decodeURIComponent(imageSource)).toContain('고규식');
+    expect(decodeURIComponent(imageSource)).not.toContain('foreignObject');
     expect(decodeURIComponent(imageSource)).not.toContain('202608A 민경욱');
     expect(context.scale).toHaveBeenCalledWith(2, 2);
     expect(context.fillRect).toHaveBeenCalled();
