@@ -238,6 +238,35 @@ describe('CloudApp', () => {
     });
   });
 
+  it('toggles the mobile settings menu without changing the logout action', async () => {
+    const { client, signOut } = authenticatedClient();
+    const snapshot = createSnapshot();
+    const document = cloudDocumentFromWorkspaceSession(snapshot);
+    const { repository } = mutableRepository(projectRecord(document));
+
+    render(
+      <CloudApp
+        client={client}
+        repository={repository}
+        cache={new MemoryCache()}
+      />,
+    );
+
+    await screen.findByRole('heading', { name: '애터미 직급 계획표' });
+    const settings = screen.getByRole('button', {
+      name: '설정',
+      hidden: true,
+    });
+    expect(settings.getAttribute('aria-expanded')).toBe('false');
+
+    await userEvent.setup().click(settings);
+    expect(settings.getAttribute('aria-expanded')).toBe('true');
+
+    await userEvent.setup().click(screen.getByRole('button', { name: '로그아웃' }));
+    expect(signOut).toHaveBeenCalledTimes(1);
+    expect(settings.getAttribute('aria-expanded')).toBe('false');
+  });
+
   it('shows a simple login error when Google OAuth cannot start', async () => {
     const { client, signInWithOAuth } = authenticatedClient(null);
     signInWithOAuth.mockResolvedValueOnce({

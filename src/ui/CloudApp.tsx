@@ -378,6 +378,7 @@ function ProjectListScreen({
   readonly onSignOut: () => Promise<void>;
 }) {
   const [showHidden, setShowHidden] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [actionProjectId, setActionProjectId] = useState<string | null>(null);
 
   const toggleHidden = async (project: CloudProjectSummary): Promise<void> => {
@@ -406,10 +407,28 @@ function ProjectListScreen({
           <button type="button" className="setup-command-header__action" onClick={onNew}>
             새 계획 만들기
           </button>
+        </div>
+        <div
+          className={`cloud-projects__settings${showSettings ? ' cloud-projects__settings--open' : ''}`}
+        >
           <button
             type="button"
-            className="setup-command-header__action"
-            onClick={() => void onSignOut()}
+            className="cloud-projects__settings-button"
+            aria-label="설정"
+            aria-expanded={showSettings}
+            aria-controls="cloud-projects-settings-menu"
+            onClick={() => setShowSettings((current) => !current)}
+          >
+            <img src="/assets/settings.png" alt="" />
+          </button>
+          <button
+            id="cloud-projects-settings-menu"
+            type="button"
+            className="setup-command-header__action cloud-projects__logout"
+            onClick={() => {
+              setShowSettings(false);
+              void onSignOut();
+            }}
           >
             로그아웃
           </button>
