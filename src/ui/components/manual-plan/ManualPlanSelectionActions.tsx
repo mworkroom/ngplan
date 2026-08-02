@@ -6,13 +6,14 @@ import {
   type CSSProperties,
 } from 'react';
 import { createPortal } from 'react-dom';
+import type { ManualPlanMarkerKind } from '../../../application/manual-plan';
 import type { ManualPlanActionPoint } from './ManualPlanTable';
 
 export interface ManualPlanSelectionActionsProps {
   readonly point: ManualPlanActionPoint;
-  readonly marked: boolean;
+  readonly markerKind: ManualPlanMarkerKind | null;
   readonly disabled: boolean;
-  readonly onToggle: () => void;
+  readonly onChange: (markerKind: ManualPlanMarkerKind | null) => void;
   readonly onDismiss: () => void;
 }
 
@@ -26,9 +27,9 @@ const POINTER_GAP_PX = 4;
 
 export function ManualPlanSelectionActions({
   point,
-  marked,
+  markerKind,
   disabled,
-  onToggle,
+  onChange,
   onDismiss,
 }: ManualPlanSelectionActionsProps) {
   const menuRef = useRef<HTMLDivElement>(null);
@@ -96,22 +97,49 @@ export function ManualPlanSelectionActions({
       ref={menuRef}
       className="manual-plan-cell-actions"
       role="menu"
-      aria-label="빨간 표시 작업"
+      aria-label="칸 표시 작업"
       style={style}
     >
-      <button
-        type="button"
-        role="menuitem"
-        className="manual-plan-cell-actions__button"
-        disabled={disabled}
-        onClick={onToggle}
-      >
-        {disabled
-          ? '입력하지 않는 날'
-          : marked
-            ? '빨간 표시 지우기'
-            : '계획과 달랐음 표시'}
-      </button>
+      {disabled ? (
+        <button
+          type="button"
+          role="menuitem"
+          className="manual-plan-cell-actions__button"
+          disabled
+        >
+          입력하지 않는 날
+        </button>
+      ) : (
+        <>
+          <button
+            type="button"
+            role="menuitem"
+            className="manual-plan-cell-actions__button manual-plan-cell-actions__button--recalculate"
+            data-active={markerKind === 'ACTUAL_DIFFERENCE' ? 'true' : undefined}
+            onClick={() => onChange('ACTUAL_DIFFERENCE')}
+          >
+            다시 계산할 곳
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className="manual-plan-cell-actions__button manual-plan-cell-actions__button--reminder"
+            data-active={markerKind === 'REMINDER' ? 'true' : undefined}
+            onClick={() => onChange('REMINDER')}
+          >
+            나중에 확인할 곳
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className="manual-plan-cell-actions__button manual-plan-cell-actions__button--clear"
+            disabled={markerKind === null}
+            onClick={() => onChange(null)}
+          >
+            표시 지우기
+          </button>
+        </>
+      )}
     </div>,
     document.body,
   );

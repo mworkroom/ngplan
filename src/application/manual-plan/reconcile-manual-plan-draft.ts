@@ -8,6 +8,7 @@ import type {
   ManualPlanActualDifferenceMarker,
   ManualPlanCellDraft,
   ManualPlanDraft,
+  ManualPlanReminderMarker,
 } from './types';
 
 function keepString(value: unknown, fallback: string): string {
@@ -66,8 +67,29 @@ export function reconcileManualPlanDraft(
       date: marker.date,
       memberKey: marker.memberKey,
     }));
+  const reminderMarkerKeys = new Set<string>();
+  const reminderMarkers = (previous.reminderMarkers ?? [])
+    .filter((marker): marker is ManualPlanReminderMarker => {
+      const date = schema.dateByIso.get(marker.date);
+      const key = manualPlanCellKey(marker.date, marker.memberKey);
+      if (
+        date?.settlementMode !== 'SETTLE' ||
+        !validCellKeys.has(key) ||
+        markerKeys.has(key) ||
+        reminderMarkerKeys.has(key)
+      ) {
+        return false;
+      }
+      reminderMarkerKeys.add(key);
+      return true;
+    })
+    .map((marker) => Object.freeze({
+      date: marker.date,
+      memberKey: marker.memberKey,
+    }));
   return Object.freeze({
     cells: Object.freeze(cells),
     actualDifferenceMarkers: Object.freeze(actualDifferenceMarkers),
+    reminderMarkers: Object.freeze(reminderMarkers),
   });
 }

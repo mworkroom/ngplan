@@ -25,7 +25,7 @@ function sourceTable(): HTMLTableElement {
       <tr><th class="manual-plan-table__date-heading">날짜</th><th class="manual-plan-table__column-heading manual-plan-table__column-heading--left"><span>PVP</span><small>0</small></th><th class="manual-plan-table__column-heading manual-plan-table__column-heading--left"><span>좌</span><small>0</small></th><th class="manual-plan-table__column-heading manual-plan-table__column-heading--left"><span>우</span><small>0</small></th><th>PVP</th><th>좌</th><th>우</th><th>PVP</th><th>좌</th><th>우</th><th>날짜</th></tr>
     </thead>
     <tbody>
-      <tr><th class="manual-plan-table__date-cell"><span>1 (토)</span></th><td class="manual-plan-cell manual-plan-cell--selected manual-plan-cell--member-left" data-commission-level="700" data-actual-difference="true"><input value="고1" /></td><td class="manual-plan-cell manual-plan-cell--member-left">고2</td><td class="manual-plan-cell manual-plan-cell--member-left">고3</td><td>베1</td><td>베2</td><td>베3</td><td>김1</td><td>김2</td><td>김3</td><th>1일 끝</th></tr>
+      <tr><th class="manual-plan-table__date-cell"><span>1 (토)</span></th><td class="manual-plan-cell manual-plan-cell--selected manual-plan-cell--member-left" data-commission-level="700" data-actual-difference="true"><input value="고1" /></td><td class="manual-plan-cell manual-plan-cell--member-left" data-reminder="true">고2</td><td class="manual-plan-cell manual-plan-cell--member-left">고3</td><td>베1</td><td>베2</td><td>베3</td><td>김1</td><td>김2</td><td>김3</td><th>1일 끝</th></tr>
     </tbody>
     <tfoot>
       <tr><th class="manual-plan-table__date-cell"><span>합계</span></th><td class="manual-plan-table__total-cell manual-plan-table__total-cell--left"><strong>10</strong></td><td class="manual-plan-table__total-cell manual-plan-table__total-cell--left"><strong>20</strong></td><td class="manual-plan-table__total-cell manual-plan-table__total-cell--left"><strong>30</strong></td><td>40</td><td>50</td><td>60</td><td>70</td><td>80</td><td>90</td><th>합계 끝</th></tr>
@@ -128,6 +128,8 @@ describe('manual plan image table', () => {
     expect(image.markup).toContain('합계');
     expect(image.markup).toContain('#91d6ab');
     expect(image.markup).toContain('#a62b22');
+    expect(image.markup).toContain('#7b4db0');
+    expect(image.markup).not.toContain('stroke-dasharray');
     expect(image.markup).not.toContain('foreignObject');
   });
 

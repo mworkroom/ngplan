@@ -220,6 +220,14 @@ function looksLikeManualPlanDraft(value: unknown): value is ManualPlanDraft {
             isRecord(marker) &&
             typeof marker.date === 'string' &&
             typeof marker.memberKey === 'string',
+        ))) &&
+    (!Object.hasOwn(value, 'reminderMarkers') ||
+      (Array.isArray(value.reminderMarkers) &&
+        value.reminderMarkers.every(
+          (marker) =>
+            isRecord(marker) &&
+            typeof marker.date === 'string' &&
+            typeof marker.memberKey === 'string',
         )))
   );
 }

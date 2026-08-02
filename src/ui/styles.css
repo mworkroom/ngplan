@@ -2040,12 +2040,14 @@ body {
 }
 
 .manual-plan-cell-actions__button {
+  display: block;
+  width: 100%;
   min-height: 36px;
   padding: 7px 11px;
   border: 0;
   border-radius: 4px;
   background: #fff;
-  color: var(--color-danger);
+  color: var(--color-text);
   font-weight: 800;
   text-align: left;
   white-space: nowrap;
@@ -2054,7 +2056,44 @@ body {
 
 .manual-plan-cell-actions__button:hover,
 .manual-plan-cell-actions__button:focus-visible {
-  background: var(--color-danger-soft);
+  background: #f2f4f6;
+}
+
+.manual-plan-cell-actions__button::before {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 8px;
+  border-radius: 3px;
+  background: #9aa2aa;
+  content: '';
+  vertical-align: -1px;
+}
+
+.manual-plan-cell-actions__button--recalculate::before {
+  background: var(--color-danger);
+}
+
+.manual-plan-cell-actions__button--reminder::before {
+  background: #7b4db0;
+}
+
+.manual-plan-cell-actions__button--clear::before {
+  border: 2px solid #9aa2aa;
+  background: transparent;
+}
+
+.manual-plan-cell-actions__button[data-active="true"] {
+  background: #f2f4f6;
+  box-shadow: inset 3px 0 0 currentColor;
+}
+
+.manual-plan-cell-actions__button--recalculate {
+  color: var(--color-danger);
+}
+
+.manual-plan-cell-actions__button--reminder {
+  color: #684096;
 }
 
 .manual-plan-cell-actions__button:disabled {
@@ -2413,6 +2452,16 @@ body {
   inset: 0;
   border-top: 4px solid var(--color-danger);
   border-bottom: 4px solid var(--color-danger);
+  content: '';
+  pointer-events: none;
+}
+
+.manual-plan-cell--reminder::after {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  border-top: 4px solid #7b4db0;
+  border-bottom: 4px solid #7b4db0;
   content: '';
   pointer-events: none;
 }

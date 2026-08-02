@@ -31,5 +31,6 @@ export function createManualPlanDraft(bundle: ProjectSetupBundle): ManualPlanDra
   return Object.freeze({
     cells: Object.freeze(cells),
     actualDifferenceMarkers: Object.freeze([]),
+    reminderMarkers: Object.freeze([]),
   });
 }

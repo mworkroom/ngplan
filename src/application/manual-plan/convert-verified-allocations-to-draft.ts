@@ -327,6 +327,11 @@ export function convertVerifiedAllocationsToManualPlanDraft(
         Object.freeze({ date: marker.date, memberKey: marker.memberKey }),
       ),
     ),
+    reminderMarkers: Object.freeze(
+      (previousDraft?.reminderMarkers ?? []).map((marker) =>
+        Object.freeze({ date: marker.date, memberKey: marker.memberKey }),
+      ),
+    ),
   });
   const normalized = normalizeManualPlanDraft(bundle, draft, schema);
   if (normalized.status === 'FAILURE') {

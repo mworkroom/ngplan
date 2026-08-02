@@ -24,6 +24,7 @@ export interface ManualPlanCellProps {
   readonly calculationBlocked: boolean;
   readonly selected: boolean;
   readonly actualDifferenceMarked: boolean;
+  readonly reminderMarked: boolean;
   readonly issue: ManualPlanIssue | undefined;
   readonly anchorCell: boolean;
   readonly memberRegion: ManualPlanMemberRegion;
@@ -50,6 +51,7 @@ export function ManualPlanCell({
   calculationBlocked,
   selected,
   actualDifferenceMarked,
+  reminderMarked,
   issue,
   anchorCell,
   memberRegion,
@@ -68,6 +70,7 @@ export function ManualPlanCell({
     `manual-plan-cell--member-${memberRegion.toLowerCase()}`,
     selected ? 'manual-plan-cell--selected' : '',
     actualDifferenceMarked ? 'manual-plan-cell--actual-difference' : '',
+    reminderMarked ? 'manual-plan-cell--reminder' : '',
     issue === undefined ? '' : 'manual-plan-cell--error',
   ]
     .filter(Boolean)
@@ -105,6 +108,7 @@ export function ManualPlanCell({
       headers={headers}
       data-commission-level={commissionLevel ?? undefined}
       data-actual-difference={actualDifferenceMarked ? 'true' : undefined}
+      data-reminder={reminderMarked ? 'true' : undefined}
       tabIndex={anchorCell ? -1 : undefined}
       onClick={onSelect}
       onContextMenu={handleContextMenu}

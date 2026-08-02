@@ -166,6 +166,13 @@ describe('WP1 manual-plan draft and worksheet schema', () => {
         { date: sunday.date, memberKey: 'right' },
         { date: weekday.date, memberKey: 'missing' },
       ],
+      reminderMarkers: [
+        { date: weekday.date, memberKey: 'root' },
+        { date: weekday.date, memberKey: 'root' },
+        { date: weekday.date, memberKey: 'right' },
+        { date: sunday.date, memberKey: 'root' },
+        { date: weekday.date, memberKey: 'missing' },
+      ],
     };
 
     const reopened = reconcileManualPlanDraft(originalBundle, previous);
@@ -175,6 +182,11 @@ describe('WP1 manual-plan draft and worksheet schema', () => {
     ]);
     expect(Object.isFrozen(reopened.actualDifferenceMarkers)).toBe(true);
     expect(Object.isFrozen(reopened.actualDifferenceMarkers?.[0])).toBe(true);
+    expect(reopened.reminderMarkers).toEqual([
+      { date: weekday.date, memberKey: 'root' },
+    ]);
+    expect(Object.isFrozen(reopened.reminderMarkers)).toBe(true);
+    expect(Object.isFrozen(reopened.reminderMarkers?.[0])).toBe(true);
   });
 
   it('rebuilds missing or malformed legacy cells from the current schema', () => {
@@ -201,6 +213,7 @@ describe('WP1 manual-plan draft and worksheet schema', () => {
     expect(reopened.cells[0]).toEqual(first);
     expect(reopened.cells[1]).toEqual(fresh.cells[1]);
     expect(reopened.actualDifferenceMarkers).toEqual([]);
+    expect(reopened.reminderMarkers).toEqual([]);
   });
 
   it('P3-DRAFT-001: first half centers the root between its left and right organizations', () => {

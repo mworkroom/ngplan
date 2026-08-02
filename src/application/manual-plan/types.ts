@@ -32,9 +32,17 @@ export interface ManualPlanActualDifferenceMarker {
   readonly memberKey: string;
 }
 
+export interface ManualPlanReminderMarker {
+  readonly date: string;
+  readonly memberKey: string;
+}
+
+export type ManualPlanMarkerKind = 'ACTUAL_DIFFERENCE' | 'REMINDER';
+
 export interface ManualPlanDraft {
   readonly cells: readonly ManualPlanCellDraft[];
   readonly actualDifferenceMarkers?: readonly ManualPlanActualDifferenceMarker[];
+  readonly reminderMarkers?: readonly ManualPlanReminderMarker[];
 }
 
 export interface ManualPlanMemberDescriptor {

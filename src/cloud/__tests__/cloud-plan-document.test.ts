@@ -53,7 +53,7 @@ describe('CloudPlanDocumentV2', () => {
     expect(normalizeCloudPlanDocument(document)).toEqual(document);
   });
 
-  it('keeps plan-versus-actual difference markers in the shared document', () => {
+  it('keeps recalculation and reminder markers in the shared document', () => {
     const snapshot: WorkspaceSessionSnapshot = {
       ...createSnapshot(),
       manualPlanDraft: {
@@ -67,6 +67,9 @@ describe('CloudPlanDocumentV2', () => {
         actualDifferenceMarkers: [
           { date: '2026-07-06', memberKey: 'member-1' },
         ],
+        reminderMarkers: [
+          { date: '2026-07-07', memberKey: 'member-1' },
+        ],
       },
     };
 
@@ -74,6 +77,9 @@ describe('CloudPlanDocumentV2', () => {
 
     expect(document.manualPlanDraft?.actualDifferenceMarkers).toEqual([
       { date: '2026-07-06', memberKey: 'member-1' },
+    ]);
+    expect(document.manualPlanDraft?.reminderMarkers).toEqual([
+      { date: '2026-07-07', memberKey: 'member-1' },
     ]);
     expect(normalizeCloudPlanDocument(document)).toEqual(document);
   });

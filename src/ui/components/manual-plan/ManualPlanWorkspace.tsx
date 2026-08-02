@@ -7,12 +7,13 @@ import {
   deriveManualPlanMemberSummaryView,
   deriveManualPlanSchema,
   editManualPlanField,
-  hasManualPlanActualDifference,
-  toggleManualPlanActualDifference,
+  manualPlanMarkerKind,
+  setManualPlanMarker,
   type ManualPlanCalculationState,
   type ManualPlanDraft,
   type ManualPlanField,
   type ManualPlanIssue,
+  type ManualPlanMarkerKind,
 } from '../../../application/manual-plan';
 import type { ProjectSetupBundle } from '../../../application/project-setup';
 import { DailyResultDetails } from './DailyResultDetails';
@@ -71,7 +72,7 @@ export function ManualPlanWorkspace({
     [schema],
   );
   const selectedDate = schema.dateByIso.get(selection.date);
-  const actualDifferenceMarked = hasManualPlanActualDifference(
+  const selectedMarkerKind = manualPlanMarkerKind(
     draft,
     selection.date,
     selection.memberKey,
@@ -96,12 +97,13 @@ export function ManualPlanWorkspace({
     onDraftChange(outcome.draft);
   };
 
-  const handleToggleActualDifference = (): void => {
-    const next = toggleManualPlanActualDifference(
+  const handleChangeMarker = (markerKind: ManualPlanMarkerKind | null): void => {
+    const next = setManualPlanMarker(
       schema,
       draft,
       selection.date,
       selection.memberKey,
+      markerKind,
     );
     if (next !== draft) {
       onDraftChange(next);
@@ -250,9 +252,9 @@ export function ManualPlanWorkspace({
       {cellActionPoint === null ? null : (
         <ManualPlanSelectionActions
           point={cellActionPoint}
-          marked={actualDifferenceMarked}
+          markerKind={selectedMarkerKind}
           disabled={actualDifferenceDisabled}
-          onToggle={handleToggleActualDifference}
+          onChange={handleChangeMarker}
           onDismiss={handleDismissCellActions}
         />
       )}

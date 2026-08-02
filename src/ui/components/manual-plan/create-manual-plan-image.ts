@@ -11,6 +11,7 @@ const EXPORT_COLORS = {
   muted: '#616b74',
   line: '#c9d2dc',
   danger: '#a62b22',
+  reminder: '#7b4db0',
   dangerSoft: '#fff1ef',
   success: '#1f7a45',
   panel: '#ffffff',
@@ -312,6 +313,12 @@ export function buildManualPlanImageSvg(table: HTMLTableElement): ManualPlanImag
         parts.push(
           `<line x1="${x}" y1="${y + 2}" x2="${x + cellWidth}" y2="${y + 2}" stroke="${EXPORT_COLORS.danger}" stroke-width="4"/>`,
           `<line x1="${x}" y1="${y + heightForRow - 2}" x2="${x + cellWidth}" y2="${y + heightForRow - 2}" stroke="${EXPORT_COLORS.danger}" stroke-width="4"/>`,
+        );
+      }
+      if (cell.dataset.reminder === 'true') {
+        parts.push(
+          `<line x1="${x}" y1="${y + 2}" x2="${x + cellWidth}" y2="${y + 2}" stroke="${EXPORT_COLORS.reminder}" stroke-width="4"/>`,
+          `<line x1="${x}" y1="${y + heightForRow - 2}" x2="${x + cellWidth}" y2="${y + heightForRow - 2}" stroke="${EXPORT_COLORS.reminder}" stroke-width="4"/>`,
         );
       }
       columnIndex += span;

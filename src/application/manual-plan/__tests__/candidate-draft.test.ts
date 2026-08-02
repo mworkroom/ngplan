@@ -12,6 +12,7 @@ import {
   convertVerifiedAllocationsToManualPlanDraft,
   createManualPlanDraft,
   deriveManualPlanSchema,
+  setManualPlanMarker,
   toggleManualPlanActualDifference,
   editManualPlanField,
 } from '../index';
@@ -229,11 +230,18 @@ describe('Phase 4 verified allocation conversion', () => {
     const activeDate = schema.dates.find(
       (date) => date.settlementMode === 'SETTLE',
     )!.date;
-    const markedDraft = toggleManualPlanActualDifference(
+    const redDraft = toggleManualPlanActualDifference(
       schema,
       createManualPlanDraft(setup),
       activeDate,
       'B',
+    );
+    const markedDraft = setManualPlanMarker(
+      schema,
+      redDraft,
+      activeDate,
+      'A',
+      'REMINDER',
     );
 
     const converted = convertVerifiedAllocationsToManualPlanDraft(
@@ -249,6 +257,11 @@ describe('Phase 4 verified allocation conversion', () => {
     ]);
     expect(Object.isFrozen(converted.draft.actualDifferenceMarkers)).toBe(true);
     expect(Object.isFrozen(converted.draft.actualDifferenceMarkers?.[0])).toBe(true);
+    expect(converted.draft.reminderMarkers).toEqual([
+      { date: activeDate, memberKey: 'A' },
+    ]);
+    expect(Object.isFrozen(converted.draft.reminderMarkers)).toBe(true);
+    expect(Object.isFrozen(converted.draft.reminderMarkers?.[0])).toBe(true);
   });
 
   it('P4-APPLY-002 reports when a successful conversion would replace manual work', () => {

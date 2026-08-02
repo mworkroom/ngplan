@@ -426,6 +426,15 @@ export function ManualPlanTable({
       ),
     [draft.actualDifferenceMarkers],
   );
+  const reminderKeys = useMemo(
+    () =>
+      new Set(
+        (draft.reminderMarkers ?? []).map((marker) =>
+          manualPlanCellKey(marker.date, marker.memberKey),
+        ),
+      ),
+    [draft.reminderMarkers],
+  );
   const stickyHeaderViewportRef = useRef<HTMLDivElement>(null);
   const tableWidth = `${DATE_COLUMN_WIDTH_PX * 2 + schema.members.length * MEMBER_COLUMN_WIDTH_PX}px`;
 
@@ -468,7 +477,7 @@ export function ManualPlanTable({
       aria-label={planMode === 'AUTOMATIC' ? '자동 계획표' : '수동 계획표'}
     >
       <p className="manual-plan-context-hint">
-        빨간 표시: 칸에서 마우스 오른쪽 버튼을 누르세요.
+        표시하려면 칸에서 마우스 오른쪽 버튼을 누르세요.
       </p>
       <div className="manual-plan-table-frame">
         <div className="manual-plan-sticky-header" aria-hidden="true">
@@ -563,6 +572,9 @@ export function ManualPlanTable({
                         calculationBlocked={calculation.status === 'BLOCKED'}
                         selected={selected}
                         actualDifferenceMarked={actualDifferenceKeys.has(
+                          manualPlanCellKey(date.date, member.memberKey),
+                        )}
+                        reminderMarked={reminderKeys.has(
                           manualPlanCellKey(date.date, member.memberKey),
                         )}
                         issue={issueFor(issues, date.date, member.memberKey, field)}

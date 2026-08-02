@@ -15,6 +15,9 @@ export { isManualPlanDraftModified } from './is-manual-plan-draft-modified';
 export { reconcileManualPlanDraft } from './reconcile-manual-plan-draft';
 export {
   hasManualPlanActualDifference,
+  hasManualPlanReminder,
+  manualPlanMarkerKind,
+  setManualPlanMarker,
   toggleManualPlanActualDifference,
 } from './toggle-actual-difference-marker';
 export {

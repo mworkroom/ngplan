@@ -5,7 +5,10 @@ import {
   deriveManualPlanSchema,
   editManualPlanField,
   hasManualPlanActualDifference,
+  hasManualPlanReminder,
   isManualPlanDraftModified,
+  manualPlanMarkerKind,
+  setManualPlanMarker,
   toggleManualPlanActualDifference,
 } from '../index';
 import type { ManualPlanDraft } from '../types';
@@ -144,7 +147,22 @@ describe('WP3 manual draft modified detection', () => {
       { date: weekday.date, memberKey: 'root' },
     ]);
     expect(hasManualPlanActualDifference(marked, weekday.date, 'root')).toBe(true);
+    expect(manualPlanMarkerKind(marked, weekday.date, 'root')).toBe('ACTUAL_DIFFERENCE');
     expect(isManualPlanDraftModified(schema, marked)).toBe(true);
+
+    const reminded = setManualPlanMarker(
+      schema,
+      marked,
+      weekday.date,
+      'root',
+      'REMINDER',
+    );
+    expect(reminded.actualDifferenceMarkers).toEqual([]);
+    expect(reminded.reminderMarkers).toEqual([
+      { date: weekday.date, memberKey: 'root' },
+    ]);
+    expect(hasManualPlanReminder(reminded, weekday.date, 'root')).toBe(true);
+    expect(manualPlanMarkerKind(reminded, weekday.date, 'root')).toBe('REMINDER');
 
     expect(
       toggleManualPlanActualDifference(schema, marked, sunday.date, 'root'),
@@ -153,13 +171,21 @@ describe('WP3 manual draft modified detection', () => {
       toggleManualPlanActualDifference(schema, marked, weekday.date, 'missing'),
     ).toBe(marked);
 
-    const cleared = toggleManualPlanActualDifference(
+    const redAgain = setManualPlanMarker(
       schema,
-      marked,
+      reminded,
       weekday.date,
       'root',
+      'ACTUAL_DIFFERENCE',
     );
+    expect(redAgain.actualDifferenceMarkers).toEqual([
+      { date: weekday.date, memberKey: 'root' },
+    ]);
+    expect(redAgain.reminderMarkers).toEqual([]);
+
+    const cleared = setManualPlanMarker(schema, redAgain, weekday.date, 'root', null);
     expect(cleared.actualDifferenceMarkers).toEqual([]);
+    expect(cleared.reminderMarkers).toEqual([]);
     expect(isManualPlanDraftModified(schema, cleared)).toBe(false);
   });
 });

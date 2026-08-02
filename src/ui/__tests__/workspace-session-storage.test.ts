@@ -90,7 +90,7 @@ describe('persistent workspace storage v4', () => {
     });
   });
 
-  it('persists plan-versus-actual difference markers with the manual plan', () => {
+  it('persists recalculation and reminder markers with the manual plan', () => {
     const draft = createDraft();
     const manualPlanDraft = {
       cells: [
@@ -104,6 +104,9 @@ describe('persistent workspace storage v4', () => {
       ],
       actualDifferenceMarkers: [
         { date: '2026-07-06', memberKey: 'member-1' },
+      ],
+      reminderMarkers: [
+        { date: '2026-07-07', memberKey: 'member-1' },
       ],
     };
 
