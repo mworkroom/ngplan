@@ -283,7 +283,7 @@ describe('Phase 4 request and candidate boundary', () => {
     allocations = replaceCell(allocations, first, {
       pvp: 267,
     });
-    allocations = replaceCell(allocations, second, { pvp: 433 });
+    allocations = replaceCell(allocations, second, { pvp: 400 });
     expect(
       verifyAutomaticPlanCandidate(
         request,

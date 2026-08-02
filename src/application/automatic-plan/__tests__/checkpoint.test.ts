@@ -48,6 +48,7 @@ describe('verified automatic-plan workspace checkpoint', () => {
     expect(serialized).not.toContain('proof');
     expect(snapshot.checkpointVersion).toBe('4.0.0');
     expect(snapshot.checkpointVersion).toBe(AUTOMATIC_PLAN_CHECKPOINT_VERSION);
+    expect(snapshot.objectiveVersion).toBe('8.0.0');
     expect(snapshot.objective).toMatchObject({
       confirmedPayoutWon: expect.any(Number),
       futureCumulativePvpInvestmentPv: expect.any(Number),
@@ -88,13 +89,32 @@ describe('verified automatic-plan workspace checkpoint', () => {
     expect(
       restoreAutomaticPlanCheckpointSnapshot(fixture.request, {
         ...snapshot,
+        objectiveVersion: '7.0.0',
+      }),
+    ).toMatchObject({
+      status: 'IGNORED', reason: 'CHECKPOINT_MALFORMED',
+    });
+    expect(
+      restoreAutomaticPlanCheckpointSnapshot(fixture.request, {
+        ...snapshot,
+        engineVersion: '7.0.0',
+      }),
+    ).toMatchObject({
+      status: 'IGNORED', reason: 'CHECKPOINT_MALFORMED',
+    });
+    expect(
+      restoreAutomaticPlanCheckpointSnapshot(fixture.request, {
+        ...snapshot,
         checkpointVersion: '1.1.0',
       }),
     ).toMatchObject({
       status: 'IGNORED', reason: 'CHECKPOINT_MALFORMED',
     });
-    const incompatible = { ...fixture.request, problemFingerprint: 'another-problem' };
-    expect(restoreAutomaticPlanCheckpointSnapshot(incompatible, snapshot)).toMatchObject({
+    const legacyPolicyRequest = {
+      ...fixture.request,
+      problemFingerprint: 'legacy-policy-fingerprint',
+    };
+    expect(restoreAutomaticPlanCheckpointSnapshot(legacyPolicyRequest, snapshot)).toMatchObject({
       status: 'IGNORED', reason: 'CHECKPOINT_FINGERPRINT_MISMATCH',
     });
 

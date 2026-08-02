@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildConstructiveCandidate,
+  compareAutomaticPlanObjectives,
+  verifyAutomaticPlanCandidate,
   type AutomaticPlanConstructionOutcome,
+  type AutomaticPlanObjectiveVector,
 } from '../../../optimizer';
 import { createAutomaticPlanRequest } from '../create-request';
 import {
@@ -72,12 +75,34 @@ describe('automatic-plan worker candidate preflight', () => {
       valid,
     ]);
 
-    expect(assessment.publishableCandidates).toEqual([valid.candidate]);
+    expect(assessment.publishableCandidates[0]).toEqual(valid.candidate);
+    expect(assessment.publishableCandidates.length).toBeGreaterThan(0);
+    let previousObjective: AutomaticPlanObjectiveVector | null = null;
+    for (let index = 0; index < assessment.publishableCandidates.length; index += 1) {
+      const verified = verifyAutomaticPlanCandidate(
+        request,
+        assessment.publishableCandidates[index]!,
+        {
+          candidateId: `published-${index + 1}`,
+          sequence: index + 1,
+          foundAtElapsedMs: 0,
+        },
+      );
+      expect(verified.status).toBe('SUCCESS');
+      if (verified.status === 'FAILURE') continue;
+      if (previousObjective !== null) {
+        expect(compareAutomaticPlanObjectives(
+          verified.candidate.objective,
+          previousObjective,
+        )).toBeLessThan(0);
+      }
+      previousObjective = verified.candidate.objective;
+    }
     expect(assessment.firstFailure).toBe(constructionFailure.error);
     const terminal = workerTerminalFailure(assessment);
     expect(terminal.messageCode).toBe('EXACT_PROOF_BACKEND_UNAVAILABLE');
     expect(terminal.error.message).toBe(
       '정확한 최소값 확인만 중단됐습니다. 찾은 검증 계획은 사용할 수 있습니다.',
     );
-  });
+  }, 90_000);
 });

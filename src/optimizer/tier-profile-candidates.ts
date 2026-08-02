@@ -383,6 +383,7 @@ function reprofileCandidate(
 export function buildTierProfileCandidateVariants(
   request: AutomaticPlanRequest,
   source: RawAutomaticPlanCandidate,
+  requestedFocusMemberKeys?: readonly string[],
 ): readonly RawAutomaticPlanCandidate[] {
   const businessDateCount = request.calendar.dates.length - request.calendar.skipDateSet.length;
   if (businessDateCount <= 2 || request.canonicalMemberKeys.length <= 1) {
@@ -395,11 +396,16 @@ export function buildTierProfileCandidateVariants(
   const memberByKey = new Map(
     request.organization.members.map((member) => [member.memberKey, member] as const),
   );
-  const focusMemberKeys = request.canonicalMemberKeys.filter((memberKey) => {
+  const eligibleMemberKeys = request.canonicalMemberKeys.filter((memberKey) => {
     const member = memberByKey.get(memberKey);
-    if (member?.parentMemberKey === null || member === undefined) return false;
-    return member.pvpTarget === 1_500 || member.pvpTarget === 2_400;
+    return member !== undefined && member.parentMemberKey !== null;
   });
+  const eligibleSet = new Set(eligibleMemberKeys);
+  const focusMemberKeys = requestedFocusMemberKeys === undefined
+    ? eligibleMemberKeys
+    : requestedFocusMemberKeys.filter((memberKey, index) =>
+        eligibleSet.has(memberKey) &&
+        requestedFocusMemberKeys.indexOf(memberKey) === index);
   const variants: RawAutomaticPlanCandidate[] = [];
 
   const allSideFields = editableSideFieldsForMembers(

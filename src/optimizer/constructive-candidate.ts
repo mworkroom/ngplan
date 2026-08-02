@@ -20,6 +20,8 @@ import type {
 const CUMULATIVE_PVP_CAP = 2_400;
 const MINIMUM_AUTOMATIC_DIRECT_PV = 30;
 const PREFERRED_DIRECT_PV_BLOCK = 100;
+const ALL_MEMBER_TIER_PROFILE_LIMIT = 20;
+const LARGE_ORGANIZATION_TIER_PROFILE_FOCUS_LIMIT = 12;
 
 interface MutableCell {
   date: string;
@@ -905,6 +907,22 @@ export function buildConstructiveCandidateVariants(
   const rootMemberKey = request.organization.members.find(
     (member) => member.parentMemberKey === null,
   )!.memberKey;
+  const memberByKey = new Map(request.organization.members.map((member) => [
+    member.memberKey,
+    member,
+  ] as const));
+  const tierProfileEligibleMemberKeys = request.canonicalMemberKeys.filter(
+    (memberKey) => memberKey !== rootMemberKey,
+  );
+  const tierProfileFocusMemberKeys = tierProfileEligibleMemberKeys.length <=
+    ALL_MEMBER_TIER_PROFILE_LIMIT
+    ? tierProfileEligibleMemberKeys
+    : [...tierProfileEligibleMemberKeys]
+        .sort((left, right) =>
+          memberByKey.get(right)!.pvpTarget - memberByKey.get(left)!.pvpTarget ||
+          request.canonicalMemberKeys.indexOf(left) -
+            request.canonicalMemberKeys.indexOf(right))
+        .slice(0, LARGE_ORGANIZATION_TIER_PROFILE_FOCUS_LIMIT);
   const rootChildren = childSlots.get(rootMemberKey)!;
   const composedMemberKeys = (
     rootChildren.left === undefined && rootChildren.right === undefined
@@ -954,6 +972,7 @@ export function buildConstructiveCandidateVariants(
   for (const candidate of buildTierProfileCandidateVariants(
     request,
     payoutAligned,
+    tierProfileFocusMemberKeys,
   )) {
     const signature = JSON.stringify(candidate.allocations);
     if (seenCandidates.has(signature)) continue;

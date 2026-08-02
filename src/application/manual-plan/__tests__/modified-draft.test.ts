@@ -125,14 +125,20 @@ describe('WP3 manual draft modified detection', () => {
     const sunday = schema.dates.find(
       (date) => date.settlementMode === 'SKIP_NO_INPUT',
     )!;
+    const legacyWithoutMarkers: ManualPlanDraft = { cells: initial.cells };
+    expect(hasManualPlanActualDifference(
+      legacyWithoutMarkers,
+      weekday.date,
+      'root',
+    )).toBe(false);
 
     const marked = toggleManualPlanActualDifference(
       schema,
-      initial,
+      legacyWithoutMarkers,
       weekday.date,
       'root',
     );
-    expect(marked).not.toBe(initial);
+    expect(marked).not.toBe(legacyWithoutMarkers);
     expect(marked.cells).toBe(initial.cells);
     expect(marked.actualDifferenceMarkers).toEqual([
       { date: weekday.date, memberKey: 'root' },

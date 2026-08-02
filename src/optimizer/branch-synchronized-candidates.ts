@@ -621,8 +621,7 @@ export function buildBranchRotationCandidateVariants(
   );
   const eligibleFocusMemberKeys = request.canonicalMemberKeys.filter((memberKey) => {
     const member = memberByKey.get(memberKey);
-    return member !== undefined && member.parentMemberKey !== null &&
-      (member.pvpTarget === 1_500 || member.pvpTarget === 2_400);
+    return member !== undefined && member.parentMemberKey !== null;
   });
   const eligibleSet = new Set(eligibleFocusMemberKeys);
   const focusMemberKeys = requestedFocusMemberKeys === undefined
@@ -679,8 +678,7 @@ export function buildBranchSynchronizedCandidateVariants(
   );
   const eligibleFocusMemberKeys = request.canonicalMemberKeys.filter((memberKey) => {
     const member = memberByKey.get(memberKey);
-    return member !== undefined && member.parentMemberKey !== null &&
-      (member.pvpTarget === 1_500 || member.pvpTarget === 2_400);
+    return member !== undefined && member.parentMemberKey !== null;
   });
   const eligibleSet = new Set(eligibleFocusMemberKeys);
   const focusMemberKeys = requestedFocusMemberKeys === undefined

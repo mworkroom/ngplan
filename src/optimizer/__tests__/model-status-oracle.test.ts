@@ -134,9 +134,9 @@ describe('Phase 4 model certificate and truthful statuses', () => {
     expect(outcome.status).toBe('SUCCESS');
     if (outcome.status !== 'SUCCESS') return;
     expect(outcome.model.objectiveStages).toEqual([
-      'TOTAL_NEW_PV',
       'ROOT_COMMISSION_GOAL_SHORTFALL',
       'CONFIRMED_PAYOUT_WON',
+      'TOTAL_NEW_PV',
       'DISCARDED_EXCESS',
       'HIGH_TARGET_DESCENDING_EQUIVALENT_UNIT_SHORTFALL_VECTOR',
       'TARGET_700_DESCENDING_EQUIVALENT_UNIT_SHORTFALL_VECTOR',

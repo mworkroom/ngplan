@@ -15,6 +15,7 @@ import {
   automaticPlanObjectivesEqual,
   evaluateAutomaticPlanObjective,
 } from './objective';
+import { deriveAutomaticPlanPurchaseBudget } from './purchase-budget';
 import type {
   AutomaticPlanCandidateIdentity,
   AutomaticPlanRequest,
@@ -206,6 +207,20 @@ export function verifyAutomaticPlanCandidate(
     );
     if (evaluated.status === 'FAILURE') {
       return evaluated;
+    }
+    const purchaseBudget = deriveAutomaticPlanPurchaseBudget(request);
+    if (evaluated.objective.totalNewPv > purchaseBudget.maximumTotalPv) {
+      return {
+        status: 'FAILURE',
+        error: automaticPlanError(
+          'AUTOMATIC_PLAN_EXCESS_PURCHASE_LIMIT_EXCEEDED',
+          '자동 계획 후보의 새 구매 합계가 허용된 마무리 보정 범위를 넘습니다.',
+          {
+            causeCode:
+              `MAX_TOTAL_NEW_PV_${purchaseBudget.maximumTotalPv}`,
+          },
+        ),
+      };
     }
     let claimedObjectiveMatches = true;
     if (raw.claimedObjective !== undefined) {

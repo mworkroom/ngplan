@@ -1,4 +1,5 @@
 import { isCanonicalNonNegativeSafeInteger } from './checked-integer';
+import { AUTOMATIC_PLAN_OBJECTIVE_STAGE_ORDER } from './constants';
 import { automaticPlanError } from './errors';
 import type {
   AutomaticPlanProofProgress,
@@ -16,7 +17,7 @@ export type AutomaticPlanRunStateOutcome =
 
 export function createInitialAutomaticPlanProofProgress(): AutomaticPlanProofProgress {
   return Object.freeze({
-    stage: 'TOTAL_NEW_PV',
+    stage: AUTOMATIC_PLAN_OBJECTIVE_STAGE_ORDER[0],
     provenScalarObjectiveCount: 0,
     provenVectorPrefix: null,
     primaryLowerBound: null,

@@ -177,6 +177,32 @@ describe('WP1 manual-plan draft and worksheet schema', () => {
     expect(Object.isFrozen(reopened.actualDifferenceMarkers?.[0])).toBe(true);
   });
 
+  it('rebuilds missing or malformed legacy cells from the current schema', () => {
+    const originalBundle = bundle([
+      member('root', null, null),
+      member('right', 'root', 'RIGHT'),
+    ]);
+    const fresh = createManualPlanDraft(originalBundle);
+    expect(reconcileManualPlanDraft(originalBundle, null)).toEqual(fresh);
+
+    const first = fresh.cells[0]!;
+    const legacy = {
+      cells: [{
+        ...first,
+        pvp: 123 as unknown as string,
+        ...(Object.hasOwn(first, 'selfLeft')
+          ? { selfLeft: null as unknown as string }
+          : {}),
+      }],
+    };
+    const reopened = reconcileManualPlanDraft(originalBundle, legacy);
+
+    expect(reopened.cells).toHaveLength(fresh.cells.length);
+    expect(reopened.cells[0]).toEqual(first);
+    expect(reopened.cells[1]).toEqual(fresh.cells[1]);
+    expect(reopened.actualDifferenceMarkers).toEqual([]);
+  });
+
   it('P3-DRAFT-001: first half centers the root between its left and right organizations', () => {
     const setup = treeBundle();
     const schema = deriveManualPlanSchema(setup);

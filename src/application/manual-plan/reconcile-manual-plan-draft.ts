@@ -37,10 +37,10 @@ export function reconcileManualPlanDraft(
       memberKey: cell.memberKey,
       pvp: keepString(saved.pvp, cell.pvp),
       ...(Object.hasOwn(cell, 'selfLeft')
-        ? { selfLeft: keepString(saved.selfLeft, cell.selfLeft ?? '') }
+        ? { selfLeft: keepString(saved.selfLeft, cell.selfLeft!) }
         : {}),
       ...(Object.hasOwn(cell, 'selfRight')
-        ? { selfRight: keepString(saved.selfRight, cell.selfRight ?? '') }
+        ? { selfRight: keepString(saved.selfRight, cell.selfRight!) }
         : {}),
     });
   });

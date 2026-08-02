@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   buildBranchRotationCandidateVariants,
   buildBranchSynchronizedCandidateVariants,
+  buildCommissionBoundaryCandidateVariants,
+  buildVerifiedConstructiveCandidate,
+  totalAutomaticPlanDirectPv,
   type AutomaticPlanRequest,
   type RawAutomaticPlanCandidate,
 } from '..';
@@ -139,12 +142,141 @@ describe('branch-synchronized candidate boundaries', () => {
     expect(buildBranchSynchronizedCandidateVariants(
       leftUnqualified.request,
       leftUnqualified.source,
+      ['focus'],
     )).toEqual([]);
 
     const rightUnqualified = branchFixture({ focusQualification: 0 });
     expect(buildBranchSynchronizedCandidateVariants(
       rightUnqualified.request,
       rightUnqualified.source,
+      ['focus'],
     )).toEqual([]);
   });
+
+  it('moves payout-preserving branch slack toward the next boundary deterministically', () => {
+    const members = Object.freeze([
+      optimizerMember('root', null, null, 2_400),
+      optimizerMember('focus', 'root', 'LEFT', 2_400),
+      optimizerMember('root-right', 'root', 'RIGHT', 2_400),
+      optimizerMember('focus-left', 'focus', 'LEFT', 2_400),
+      optimizerMember('focus-right', 'focus', 'RIGHT', 2_400),
+    ]);
+    const openings = Object.freeze(Object.fromEntries(members.map((member) => [
+      member.memberKey,
+      optimizerOpening({
+        openingQualificationPvp: member.pvpTarget,
+        fortnightPvpOpeningCredit: member.pvpTarget,
+      }),
+    ])));
+    const request = createOptimizerRequest(members, openings);
+    const verified = buildVerifiedConstructiveCandidate(request, {
+      candidateId: 'commission-boundary-source',
+      sequence: 1,
+      foundAtElapsedMs: 0,
+    });
+    expect(verified.status).toBe('SUCCESS');
+    if (verified.status !== 'SUCCESS') return;
+
+    const first = buildCommissionBoundaryCandidateVariants(
+      request,
+      verified.candidate,
+      ['focus', 'focus', 'missing-member'],
+    );
+    const second = buildCommissionBoundaryCandidateVariants(
+      request,
+      verified.candidate,
+      ['focus', 'focus', 'missing-member'],
+    );
+    const allEligible = buildCommissionBoundaryCandidateVariants(
+      request,
+      verified.candidate,
+    );
+    const leafOnly = buildCommissionBoundaryCandidateVariants(
+      request,
+      verified.candidate,
+      ['focus-left'],
+    );
+    expect(buildCommissionBoundaryCandidateVariants(
+      request,
+      verified.candidate,
+      ['root', 'missing-member'],
+    )).toEqual([]);
+    const firstBusinessDate = request.calendar.dates.find((date) =>
+      !request.calendar.skipDateSet.includes(date))!;
+    const oneDateRequest: AutomaticPlanRequest = Object.freeze({
+      ...request,
+      calendar: Object.freeze({
+        ...request.calendar,
+        dates: Object.freeze([firstBusinessDate]),
+        skipDateSet: Object.freeze([]),
+      }),
+    });
+    expect(buildCommissionBoundaryCandidateVariants(
+      oneDateRequest,
+      verified.candidate,
+    )).toEqual([]);
+    const sourceTotal = totalAutomaticPlanDirectPv(
+      verified.candidate.allocations,
+    );
+
+    expect(first.length).toBeGreaterThan(0);
+    expect(first).toEqual(second);
+    expect(allEligible.length).toBeGreaterThanOrEqual(first.length);
+    expect(leafOnly).toEqual(buildCommissionBoundaryCandidateVariants(
+      request,
+      verified.candidate,
+      ['focus-left'],
+    ));
+    expect(first.every((candidate) =>
+      totalAutomaticPlanDirectPv(candidate.allocations) === sourceTotal,
+    )).toBe(true);
+    expect(first.every((candidate) => candidate.allocations.every((cell) =>
+      [cell.pvp, cell.selfLeft, cell.selfRight]
+        .filter((value): value is number => value !== undefined)
+        .every((value) => value === 0 || value >= 30),
+    ))).toBe(true);
+  });
+
+  it('can move descendant PVP together with branch contributions', () => {
+    const members = Object.freeze([
+      optimizerMember('root', null, null, 2_400),
+      optimizerMember('focus', 'root', 'LEFT', 2_400),
+      optimizerMember('root-right', 'root', 'RIGHT', 2_400),
+      optimizerMember('focus-left', 'focus', 'LEFT', 2_400),
+      optimizerMember('focus-right', 'focus', 'RIGHT', 2_400),
+    ]);
+    const openings = Object.freeze(Object.fromEntries(members.map((member) => [
+      member.memberKey,
+      optimizerOpening({
+        openingQualificationPvp: 300,
+        fortnightPvpOpeningCredit: 300,
+      }),
+    ])));
+    const request = createOptimizerRequest(members, openings);
+    const verified = buildVerifiedConstructiveCandidate(request, {
+      candidateId: 'commission-boundary-pvp-source',
+      sequence: 1,
+      foundAtElapsedMs: 0,
+    });
+    expect(verified.status).toBe('SUCCESS');
+    if (verified.status !== 'SUCCESS') return;
+
+    const variants = buildCommissionBoundaryCandidateVariants(
+      request,
+      verified.candidate,
+      ['focus'],
+    );
+    const sourceTotal = totalAutomaticPlanDirectPv(
+      verified.candidate.allocations,
+    );
+
+    expect(variants.length).toBeGreaterThan(0);
+    expect(variants.some((candidate) => candidate.allocations.some(
+      (cell, index) => cell.pvp !== verified.candidate.allocations[index]!.pvp,
+    ))).toBe(true);
+    expect(variants.every((candidate) =>
+      totalAutomaticPlanDirectPv(candidate.allocations) === sourceTotal,
+    )).toBe(true);
+  });
+
 });

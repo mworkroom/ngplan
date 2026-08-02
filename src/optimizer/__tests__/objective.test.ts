@@ -94,41 +94,61 @@ function calculationFixture() {
 }
 
 describe('Phase 4 canonical objective comparator', () => {
-  it('keeps total PV ahead of every lower preference', () => {
-    const exact = objective({
-      totalNewPv: 39,
-      confirmedPayoutWon: 0,
+  it('maximizes payout, then minimizes total PV after preserving the root goal', () => {
+    const structuralMinimum = objective({
+      totalNewPv: 100,
+      confirmedPayoutWon: 60_000,
+    });
+    const tenPvFinishingGain = objective({
+      totalNewPv: 110,
+      confirmedPayoutWon: 120_000,
       nonHundredCellCount: 1,
     });
-    const rounded = objective({
-      totalNewPv: 100,
-      confirmedPayoutWon: 480_000,
-      nonHundredCellCount: 0,
+    expect(
+      compareAutomaticPlanObjectives(tenPvFinishingGain, structuralMinimum),
+    ).toBe(-1);
+
+    const samePayoutHigherTotal = objective({
+      totalNewPv: 101,
+      confirmedPayoutWon: 120_000,
     });
-    expect(compareAutomaticPlanObjectives(exact, rounded)).toBe(-1);
+    const samePayoutLowerTotal = objective({
+      totalNewPv: 100,
+      confirmedPayoutWon: 120_000,
+    });
+    expect(
+      compareAutomaticPlanObjectives(samePayoutLowerTotal, samePayoutHigherTotal),
+    ).toBe(-1);
   });
 
-  it('minimizes the root commission goal shortfall after total PV and before payout', () => {
+  it('keeps the capacity-aware root goal ahead of payout and total PV', () => {
     const lowerTotalWithShortfall = objective({
       totalNewPv: 99,
       rootCommissionGoalShortfallDays: 1,
+      confirmedPayoutWon: 60_000,
     });
     const higherTotalWithoutShortfall = objective({
       totalNewPv: 100,
       rootCommissionGoalShortfallDays: 0,
-      confirmedPayoutWon: 480_000,
+      confirmedPayoutWon: 60_000,
     });
     expect(
       compareAutomaticPlanObjectives(lowerTotalWithShortfall, higherTotalWithoutShortfall),
-    ).toBe(-1);
+    ).toBe(1);
 
     const goalMet = objective({
       rootCommissionGoalShortfallDays: 0,
-      confirmedPayoutWon: 0,
+      confirmedPayoutWon: 60_000,
     });
+    const samePayoutWithShortfall = objective({
+      rootCommissionGoalShortfallDays: 1,
+      confirmedPayoutWon: 60_000,
+    });
+    expect(compareAutomaticPlanObjectives(goalMet, samePayoutWithShortfall)).toBe(-1);
+
     const morePayoutWithShortfall = objective({
       rootCommissionGoalShortfallDays: 1,
-      confirmedPayoutWon: 480_000,
+      confirmedPayoutWon: 120_000,
     });
     expect(compareAutomaticPlanObjectives(goalMet, morePayoutWithShortfall)).toBe(-1);
   });
@@ -240,6 +260,11 @@ describe('Phase 4 canonical objective comparator', () => {
       Partial<AutomaticPlanObjectiveVector>,
     ][] = [
       ['total PV', { totalNewPv: 101 }, { totalNewPv: 100 }],
+      [
+        'root commission goal shortfall',
+        { rootCommissionGoalShortfallDays: 1 },
+        { rootCommissionGoalShortfallDays: 0 },
+      ],
       ['confirmed payout', { confirmedPayoutWon: 0 }, { confirmedPayoutWon: 1 }],
       ['discarded excess', { discardedExcessPv: 1 }, { discardedExcessPv: 0 }],
       [

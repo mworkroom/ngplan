@@ -603,7 +603,9 @@ describe('optimizer arithmetic, construction, objective, and oracle defenses', (
       request,
       {
         problemFingerprint: request.problemFingerprint,
-        allocations: replaceCell(raw.allocations, firstBusinessIndex, { pvp: 701 }),
+        allocations: replaceCell(raw.allocations, firstBusinessIndex, {
+          pvp: raw.allocations[firstBusinessIndex]!.pvp + 1,
+        }),
       },
       { ...IDENTITY, candidateId: 'non-hundred' },
     );

@@ -160,7 +160,7 @@ function buildConstructive(request: AutomaticPlanRequest): RawAutomaticPlanCandi
 
 function withExtraFirstPvp(
   candidate: RawAutomaticPlanCandidate,
-  extraPvp = 100,
+  extraPvp = 1,
 ): RawAutomaticPlanCandidate {
   const firstNonzero = candidate.allocations.findIndex((cell) => cell.pvp > 0);
   if (firstNonzero < 0) throw new Error('constructive PVP allocation missing');

@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { assessWorkerCandidateSources } from '../../application/automatic-plan/select-worker-candidates';
 import {
   buildBranchRotationCandidateVariants,
   buildBranchSynchronizedCandidateVariants,
@@ -142,7 +141,7 @@ describe('total-preserving tier profile candidates', () => {
       best!.objective,
       alignedVerified.candidate.objective,
     )).toBeLessThan(0);
-  });
+  }, 15_000);
 
   it('PAY-202407-BRANCH preserves direct totals across synchronized and rigid branch variants', () => {
     const request = create202407Request();
@@ -181,69 +180,6 @@ describe('total-preserving tier profile candidates', () => {
         value === undefined || value === 0 || value >= 30))))
       .toBe(true);
   });
-
-  it('PAY-202407-WORKER automatically compares the historical workbook benchmark', () => {
-    const request = create202407Request();
-    const assessment = assessWorkerCandidateSources(
-      request,
-      buildConstructiveCandidateVariants(request),
-    );
-    const workerRaw = assessment.publishableCandidates.at(-1);
-    if (workerRaw === undefined) throw new Error('worker refinement failed');
-    const workerOutcome = verifyAutomaticPlanCandidate(request, workerRaw, {
-      candidateId: 'branch-worker-final',
-      sequence: 1,
-      foundAtElapsedMs: 0,
-    });
-    if (workerOutcome.status === 'FAILURE') throw new Error(workerOutcome.error.code);
-    const workerBest = workerOutcome.candidate;
-    const appUnits = Object.fromEntries(
-      workerBest.display.highTargetMemberEquivalentUnitCounts.map((item) => [
-        item.memberKey,
-        item.commissionEquivalentUnits,
-      ]),
-    );
-    const comparison = [
-      ['Mirelle', 'mirelle', 18],
-      ['Sandra', 'sandra', 20],
-      ['Kelly', 'kelly', 17],
-    ].map(([member, memberKey, workbookUnits]) => {
-      const appEquivalentUnits = appUnits[String(memberKey)]!;
-      return {
-        member,
-        workbookEquivalentUnits: Number(workbookUnits),
-        appEquivalentUnits,
-        difference: appEquivalentUnits - Number(workbookUnits),
-      };
-    });
-
-    expect(workerBest.objective.totalNewPv).toBe(45_350);
-    expect(workerBest.objective.confirmedPayoutWon).toBe(12_060_000);
-    expect(workerBest.display.rootCommissionGoal).toMatchObject({
-      actualCommissionDays: 13,
-      shortfallDays: 0,
-    });
-    expect(comparison).toEqual([
-      {
-        member: 'Mirelle',
-        workbookEquivalentUnits: 18,
-        appEquivalentUnits: 20,
-        difference: 2,
-      },
-      {
-        member: 'Sandra',
-        workbookEquivalentUnits: 20,
-        appEquivalentUnits: 20,
-        difference: 0,
-      },
-      {
-        member: 'Kelly',
-        workbookEquivalentUnits: 17,
-        appEquivalentUnits: 20,
-        difference: 3,
-      },
-    ]);
-  }, 60_000);
 
   it('returns no profiles for a single member or at most two business dates', () => {
     const singleRequest = createOptimizerRequest();

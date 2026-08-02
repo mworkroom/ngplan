@@ -172,12 +172,12 @@ export function compareAutomaticPlanObjectives(
   assertValidAutomaticPlanObjective(left);
   assertValidAutomaticPlanObjective(right);
   return (
-    compareMin(left.totalNewPv, right.totalNewPv) ||
     compareMin(
       left.rootCommissionGoalShortfallDays,
       right.rootCommissionGoalShortfallDays,
     ) ||
     compareMax(left.confirmedPayoutWon, right.confirmedPayoutWon) ||
+    compareMin(left.totalNewPv, right.totalNewPv) ||
     compareMin(left.discardedExcessPv, right.discardedExcessPv) ||
     compareMinVector(
       left.highTargetDescendingEquivalentUnitShortfallVector,
