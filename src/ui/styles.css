@@ -502,7 +502,7 @@ fieldset {
 
 .button--primary:hover,
 .primary-button:hover {
-  border-color: var(--color-accent-strong);
+  border-color: var(--color-accent);
   background: var(--color-accent);
 }
 
@@ -1966,8 +1966,8 @@ body {
 
 .button--primary:hover,
 .primary-button:hover {
-  border-color: var(--color-action-hover);
-  background: var(--color-action-hover);
+  border-color: var(--color-accent);
+  background: var(--color-accent);
 }
 
 .button--secondary,
