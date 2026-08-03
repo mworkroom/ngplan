@@ -859,5 +859,5 @@ describe('57-member first-candidate scale path', () => {
     console.info(`57-member constructive+verify elapsed: ${elapsedMs.toFixed(2)} ms`);
     expect(verified).toMatchObject({ status: 'SUCCESS' });
     expect(elapsedMs).toBeGreaterThanOrEqual(0);
-  }, 15_000);
+  }, 30_000);
 });

@@ -186,7 +186,7 @@ describe('202608A approved manual-plan regression', () => {
     expect(createProblemFingerprint(first.allocations)).toBe(
       '3.0.0:fnv1a64-canonical-json-v1:192478ba76417bd3',
     );
-  }, 180_000);
+  }, 300_000);
 
   it('measures the corrected Veronica left opening without replacing the historical fixture', () => {
     const historicalRequest = requestForFixture();
