@@ -120,7 +120,10 @@ describe('constructive payout-aligned candidate', () => {
     expect(goalPreservingObjectives.length).toBeGreaterThan(0);
     expect(
       new Set([payoutAligned!.objective, ...goalPreservingObjectives].map((objective) =>
-        JSON.stringify(objective.target700DescendingEquivalentUnitShortfallVector))).size,
+        JSON.stringify(
+          objective
+            .nonRootStructuralOpportunityDescendingEquivalentUnitShortfallVector,
+        ))).size,
     ).toBeGreaterThan(1);
     expect(
       new Set(shiftedObjectives.map((objective) =>

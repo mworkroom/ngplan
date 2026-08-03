@@ -127,9 +127,10 @@ describe('total-preserving tier profile candidates', () => {
     expect(verified.length).toBeGreaterThan(0);
     expect(best).toBeDefined();
     expect(best!.objective.totalNewPv).toBe(alignedVerified.candidate.objective.totalNewPv);
-    expect(best!.objective.rootCommissionGoalShortfallDays).toBe(0);
-    expect(best!.objective.confirmedPayoutWon)
-      .toBeGreaterThan(alignedVerified.candidate.objective.confirmedPayoutWon);
+    expect(best!.objective.nonRootCommissionEquivalentUnits)
+      .toBeGreaterThan(
+        alignedVerified.candidate.objective.nonRootCommissionEquivalentUnits,
+      );
     expect(fieldTotals(best!)).toEqual(fieldTotals(alignedVerified.candidate));
     expect(generatedBest).toBeDefined();
     expect(profileSignatures.has(JSON.stringify(generatedBest!.allocations))).toBe(true);

@@ -99,6 +99,38 @@ function collectSubtreeMemberKeys(
   return Object.freeze(result);
 }
 
+function affectedProtectedSides(
+  source: VerifiedAutomaticPlanCandidate,
+  date: string,
+  ref: FieldRef,
+  memberByKey: ReadonlyMap<string, AutomaticPlanRequest['organization']['members'][number]>,
+): readonly { readonly memberKey: string; readonly side: BranchSide }[] {
+  const result: { memberKey: string; side: BranchSide }[] = [];
+  const ownSide = ref.field === 'selfLeft'
+    ? 'LEFT'
+    : ref.field === 'selfRight'
+      ? 'RIGHT'
+      : source.calculation.dailySettlementByDateAndMember[date]![
+          ref.memberKey
+        ]!.pvpAppliedSide;
+  if (ownSide === 'LEFT' || ownSide === 'RIGHT') {
+    result.push({ memberKey: ref.memberKey, side: ownSide });
+  }
+  let current = memberByKey.get(ref.memberKey)!;
+  while (current.parentMemberKey !== null && current.sideAtParent !== null) {
+    result.push({
+      memberKey: current.parentMemberKey,
+      side: current.sideAtParent,
+    });
+    current = memberByKey.get(current.parentMemberKey)!;
+  }
+  const unique = new Map(result.map((item) => [
+    JSON.stringify([item.memberKey, item.side]),
+    Object.freeze(item),
+  ] as const));
+  return Object.freeze([...unique.values()]);
+}
+
 function branchFieldRefs(
   source: VerifiedAutomaticPlanCandidate,
   childSlots: ReadonlyMap<string, ChildSlots>,
@@ -227,6 +259,8 @@ function transferPlansForSide(
   deficit: number,
   businessDates: readonly string[],
   allocationIndexByCell: ReadonlyMap<string, number>,
+  memberByKey: ReadonlyMap<string, AutomaticPlanRequest['organization']['members'][number]>,
+  protectAffectedPath: boolean,
 ): readonly TransferPlan[] {
   if (deficit <= 0) return Object.freeze([Object.freeze([])]);
   const donors: DonorCoordinate[] = [];
@@ -237,12 +271,34 @@ function transferPlansForSide(
       focusMemberKey
     ]!;
     const protectedTier = settlement.commissionTier ?? 0;
-    const slack = Math.max(
+    const focusSlack = Math.max(
       0,
       assessedSideValue(source, date, focusMemberKey, side) - protectedTier,
     );
-    if (slack <= 0) continue;
     for (const ref of refs) {
+      const slack = protectAffectedPath
+        ? affectedProtectedSides(source, date, ref, memberByKey).reduce(
+            (available, protectedSide) => {
+              const protectedSettlement =
+                source.calculation.dailySettlementByDateAndMember[date]![
+                  protectedSide.memberKey
+                ]!;
+              const protectedTier = protectedSettlement.commissionTier ?? 0;
+              const protectedSlack = Math.max(
+                0,
+                assessedSideValue(
+                  source,
+                  date,
+                  protectedSide.memberKey,
+                  protectedSide.side,
+                ) - protectedTier,
+              );
+              return Math.min(available, protectedSlack);
+            },
+            focusSlack,
+          )
+        : focusSlack;
+      if (slack <= 0) continue;
       const sourceIndex = allocationIndexByCell.get(cellKey(date, ref.memberKey));
       const targetIndex = allocationIndexByCell.get(cellKey(targetDate, ref.memberKey));
       if (sourceIndex === undefined || targetIndex === undefined) continue;
@@ -356,7 +412,12 @@ function applyTransferPlans(
 /**
  * Moves payout-preserving slack from donor dates in both descendant branches
  * into a date that is short of its next 300/700/1,500/2,400 boundary. Unlike
- * a one-cell move, each candidate can repair LEFT and RIGHT together.
+ * a one-cell move, each candidate can repair LEFT and RIGHT together. The root
+ * is eligible because its two complete branches also need boundary alignment.
+ * Each repair emits both a full affected-path-protecting move and a relaxed
+ * exchange move, so the objective can preserve every touched member when that
+ * is possible or trade an ancestor extra unit for a fairer child unit when the
+ * aggregate payout stays equal.
  */
 export function buildCommissionBoundaryCandidateVariants(
   request: AutomaticPlanRequest,
@@ -367,12 +428,11 @@ export function buildCommissionBoundaryCandidateVariants(
   const businessDates = request.calendar.dates.filter((date) =>
     !skippedDates.has(date));
   if (businessDates.length <= 1) return Object.freeze([]);
+  const eligibleMemberKeys = request.canonicalMemberKeys;
   const memberByKey = new Map(request.organization.members.map((member) => [
     member.memberKey,
     member,
   ] as const));
-  const eligibleMemberKeys = request.canonicalMemberKeys.filter((memberKey) =>
-    memberByKey.get(memberKey)?.parentMemberKey !== null);
   const eligibleSet = new Set(eligibleMemberKeys);
   const focusMemberKeys = requestedFocusMemberKeys === undefined
     ? eligibleMemberKeys
@@ -415,38 +475,44 @@ export function buildCommissionBoundaryCandidateVariants(
         boundary - assessedSideValue(source, targetDate, memberKey, 'RIGHT'),
       );
       if (leftDeficit === 0 && rightDeficit === 0) continue;
-      const leftPlans = transferPlansForSide(
-        source,
-        leftRefs,
-        memberKey,
-        'LEFT',
-        targetDate,
-        leftDeficit,
-        businessDates,
-        allocationIndexByCell,
-      );
-      const rightPlans = transferPlansForSide(
-        source,
-        rightRefs,
-        memberKey,
-        'RIGHT',
-        targetDate,
-        rightDeficit,
-        businessDates,
-        allocationIndexByCell,
-      );
-      for (const leftPlan of leftPlans) {
-        for (const rightPlan of rightPlans) {
-          const candidate = applyTransferPlans(
-            request,
-            source,
-            [leftPlan, rightPlan],
-          );
-          if (candidate === null) continue;
-          const signature = JSON.stringify(candidate.allocations);
-          if (seen.has(signature)) continue;
-          seen.add(signature);
-          variants.push(candidate);
+      for (const protectAffectedPath of [true, false] as const) {
+        const leftPlans = transferPlansForSide(
+          source,
+          leftRefs,
+          memberKey,
+          'LEFT',
+          targetDate,
+          leftDeficit,
+          businessDates,
+          allocationIndexByCell,
+          memberByKey,
+          protectAffectedPath,
+        );
+        const rightPlans = transferPlansForSide(
+          source,
+          rightRefs,
+          memberKey,
+          'RIGHT',
+          targetDate,
+          rightDeficit,
+          businessDates,
+          allocationIndexByCell,
+          memberByKey,
+          protectAffectedPath,
+        );
+        for (const leftPlan of leftPlans) {
+          for (const rightPlan of rightPlans) {
+            const candidate = applyTransferPlans(
+              request,
+              source,
+              [leftPlan, rightPlan],
+            );
+            if (candidate === null) continue;
+            const signature = JSON.stringify(candidate.allocations);
+            if (seen.has(signature)) continue;
+            seen.add(signature);
+            variants.push(candidate);
+          }
         }
       }
     }

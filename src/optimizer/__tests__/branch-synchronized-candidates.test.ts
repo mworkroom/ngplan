@@ -198,10 +198,16 @@ describe('branch-synchronized candidate boundaries', () => {
       verified.candidate,
       ['focus-left'],
     );
-    expect(buildCommissionBoundaryCandidateVariants(
+    const rootFocused = buildCommissionBoundaryCandidateVariants(
       request,
       verified.candidate,
       ['root', 'missing-member'],
+    );
+    expect(rootFocused.length).toBeGreaterThan(0);
+    expect(buildCommissionBoundaryCandidateVariants(
+      request,
+      verified.candidate,
+      ['missing-member'],
     )).toEqual([]);
     const firstBusinessDate = request.calendar.dates.find((date) =>
       !request.calendar.skipDateSet.includes(date))!;
@@ -224,6 +230,9 @@ describe('branch-synchronized candidate boundaries', () => {
     expect(first.length).toBeGreaterThan(0);
     expect(first).toEqual(second);
     expect(allEligible.length).toBeGreaterThanOrEqual(first.length);
+    expect(rootFocused.every((candidate) =>
+      totalAutomaticPlanDirectPv(candidate.allocations) === sourceTotal,
+    )).toBe(true);
     expect(leafOnly).toEqual(buildCommissionBoundaryCandidateVariants(
       request,
       verified.candidate,

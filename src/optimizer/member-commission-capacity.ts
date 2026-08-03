@@ -8,6 +8,20 @@ import type { AutomaticPlanRequest } from './types';
 
 const MINIMUM_AUTOMATIC_DIRECT_PV = 30;
 
+export function baseCommissionEquivalentUnitsForFortnightSideTarget(
+  fortnightSideTarget: number,
+): number {
+  assertCanonicalNonNegativeSafeInteger(fortnightSideTarget, '좌우 목표');
+  switch (fortnightSideTarget) {
+    case 1_500:
+      return 5;
+    case 2_500:
+      return 8;
+    default:
+      throw new RangeError('automatic-plan base entitlement requires a 1,500 or 2,500 side target');
+  }
+}
+
 interface ChildSlots {
   left?: string;
   right?: string;

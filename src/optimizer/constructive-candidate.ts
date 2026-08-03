@@ -6,6 +6,10 @@ import {
 } from './candidate-shape';
 import { automaticPlanError } from './errors';
 import { verifyAutomaticPlanCandidate } from './candidate-verifier';
+import {
+  baseCommissionEquivalentUnitsForFortnightSideTarget,
+  deriveMemberCommissionCapacities,
+} from './member-commission-capacity';
 import { deriveRootCommissionGoalCapacity } from './root-commission-goal';
 import { buildTierProfileCandidateVariants } from './tier-profile-candidates';
 import type {
@@ -488,27 +492,6 @@ function buildRootPayoutAlignedCandidate(
   }
 }
 
-function deriveOrganizationDepthByMember(
-  request: AutomaticPlanRequest,
-): ReadonlyMap<string, number> {
-  const memberByKey = new Map(
-    request.organization.members.map((member) => [member.memberKey, member] as const),
-  );
-  const depthByMember = new Map<string, number>();
-  const derive = (memberKey: string): number => {
-    const cached = depthByMember.get(memberKey);
-    if (cached !== undefined) return cached;
-    const member = memberByKey.get(memberKey)!;
-    const depth = member.parentMemberKey === null
-      ? 1
-      : derive(member.parentMemberKey) + 1;
-    depthByMember.set(memberKey, depth);
-    return depth;
-  };
-  for (const memberKey of request.canonicalMemberKeys) derive(memberKey);
-  return depthByMember;
-}
-
 function collectSubtreeMemberKeys(
   memberKey: string,
   childSlots: ReadonlyMap<string, ChildSlots>,
@@ -898,12 +881,7 @@ export function buildConstructiveCandidateVariants(
     baseline,
     Object.freeze({ status: 'SUCCESS', candidate: payoutAligned }),
   ];
-  const depthByMember = deriveOrganizationDepthByMember(request);
   const childSlots = deriveChildSlots(request);
-  const priorityMemberKeys = request.canonicalMemberKeys.filter((memberKey) => {
-    const depth = depthByMember.get(memberKey);
-    return depth === 2 || depth === 3;
-  });
   const rootMemberKey = request.organization.members.find(
     (member) => member.parentMemberKey === null,
   )!.memberKey;
@@ -914,15 +892,27 @@ export function buildConstructiveCandidateVariants(
   const tierProfileEligibleMemberKeys = request.canonicalMemberKeys.filter(
     (memberKey) => memberKey !== rootMemberKey,
   );
-  const tierProfileFocusMemberKeys = tierProfileEligibleMemberKeys.length <=
+  const memberCapacities = deriveMemberCommissionCapacities(request);
+  const structuralPriorityMemberKeys = [...tierProfileEligibleMemberKeys]
+    .sort((left, right) =>
+      baseCommissionEquivalentUnitsForFortnightSideTarget(
+        memberByKey.get(right)!.fortnightSideTarget,
+      ) -
+        baseCommissionEquivalentUnitsForFortnightSideTarget(
+          memberByKey.get(left)!.fortnightSideTarget,
+        ) ||
+      memberCapacities.byMember.get(right)!.attainableEquivalentUnitsUpperBound -
+        memberCapacities.byMember.get(left)!.attainableEquivalentUnitsUpperBound ||
+      request.canonicalMemberKeys.indexOf(left) -
+        request.canonicalMemberKeys.indexOf(right));
+  const priorityMemberKeys = structuralPriorityMemberKeys.length <=
     ALL_MEMBER_TIER_PROFILE_LIMIT
-    ? tierProfileEligibleMemberKeys
-    : [...tierProfileEligibleMemberKeys]
-        .sort((left, right) =>
-          memberByKey.get(right)!.pvpTarget - memberByKey.get(left)!.pvpTarget ||
-          request.canonicalMemberKeys.indexOf(left) -
-            request.canonicalMemberKeys.indexOf(right))
-        .slice(0, LARGE_ORGANIZATION_TIER_PROFILE_FOCUS_LIMIT);
+    ? structuralPriorityMemberKeys
+    : structuralPriorityMemberKeys.slice(
+        0,
+        LARGE_ORGANIZATION_TIER_PROFILE_FOCUS_LIMIT,
+      );
+  const tierProfileFocusMemberKeys = priorityMemberKeys;
   const rootChildren = childSlots.get(rootMemberKey)!;
   const composedMemberKeys = (
     rootChildren.left === undefined && rootChildren.right === undefined

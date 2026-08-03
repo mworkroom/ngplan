@@ -12,7 +12,10 @@ import { validateAutomaticPlanCandidateShape } from './candidate-shape';
 import { AUTOMATIC_PLAN_TARGET_700_RECOMMENDED_EQUIVALENT_UNITS } from './constants';
 import { discardedExcessForSettlement } from './discarded-excess';
 import { automaticPlanError, errorFromUnknown } from './errors';
-import { deriveMemberCommissionCapacities } from './member-commission-capacity';
+import {
+  baseCommissionEquivalentUnitsForFortnightSideTarget,
+  deriveMemberCommissionCapacities,
+} from './member-commission-capacity';
 import { deriveRootCommissionGoalCapacity } from './root-commission-goal';
 import type {
   AutomaticPlanDisplayMetrics,
@@ -139,6 +142,10 @@ export function assertValidAutomaticPlanObjective(
       'rootCommissionGoalShortfallDays',
       objective.rootCommissionGoalShortfallDays,
     ],
+    [
+      'nonRootCommissionEquivalentUnits',
+      objective.nonRootCommissionEquivalentUnits,
+    ],
     ['totalNewPv', objective.totalNewPv],
     ['confirmedPayoutWon', objective.confirmedPayoutWon],
     ['discardedExcessPv', objective.discardedExcessPv],
@@ -152,12 +159,12 @@ export function assertValidAutomaticPlanObjective(
     assertCanonicalNonNegativeSafeInteger(value, label);
   }
   assertDescendingEquivalentUnitShortfallVector(
-    objective.highTargetDescendingEquivalentUnitShortfallVector,
-    'highTarget',
+    objective.nonRootBaseEntitlementDescendingEquivalentUnitShortfallVector,
+    'nonRootBaseEntitlement',
   );
   assertDescendingEquivalentUnitShortfallVector(
-    objective.target700DescendingEquivalentUnitShortfallVector,
-    'target700',
+    objective.nonRootStructuralOpportunityDescendingEquivalentUnitShortfallVector,
+    'nonRootStructuralOpportunity',
   );
   for (const value of objective.deterministicAllocationVector) {
     assertCanonicalNonNegativeSafeInteger(value, 'deterministic allocation value');
@@ -172,20 +179,24 @@ export function compareAutomaticPlanObjectives(
   assertValidAutomaticPlanObjective(left);
   assertValidAutomaticPlanObjective(right);
   return (
+    compareMinVector(
+      left.nonRootBaseEntitlementDescendingEquivalentUnitShortfallVector,
+      right.nonRootBaseEntitlementDescendingEquivalentUnitShortfallVector,
+    ) ||
+    compareMax(
+      left.nonRootCommissionEquivalentUnits,
+      right.nonRootCommissionEquivalentUnits,
+    ) ||
     compareMin(
       left.rootCommissionGoalShortfallDays,
       right.rootCommissionGoalShortfallDays,
     ) ||
     compareMax(left.confirmedPayoutWon, right.confirmedPayoutWon) ||
+    compareMinVector(
+      left.nonRootStructuralOpportunityDescendingEquivalentUnitShortfallVector,
+      right.nonRootStructuralOpportunityDescendingEquivalentUnitShortfallVector,
+    ) ||
     compareMin(left.totalNewPv, right.totalNewPv) ||
-    compareMinVector(
-      left.highTargetDescendingEquivalentUnitShortfallVector,
-      right.highTargetDescendingEquivalentUnitShortfallVector,
-    ) ||
-    compareMinVector(
-      left.target700DescendingEquivalentUnitShortfallVector,
-      right.target700DescendingEquivalentUnitShortfallVector,
-    ) ||
     compareMin(left.discardedExcessPv, right.discardedExcessPv) ||
     compareMax(
       left.futureCumulativePvpInvestmentPv,
@@ -233,6 +244,7 @@ export function evaluateAutomaticPlanObjective(
     }
 
     let confirmedPayoutWon = 0;
+    let nonRootCommissionEquivalentUnits = 0;
     let discardedExcessPv = 0;
     let futureCumulativePvpInvestmentPv = 0;
     const rootGoalCapacity = deriveRootCommissionGoalCapacity(request);
@@ -290,6 +302,12 @@ export function evaluateAutomaticPlanObjective(
         );
       }
       const isRoot = memberKey === rootGoalCapacity.rootMemberKey;
+      if (!isRoot) {
+        nonRootCommissionEquivalentUnits = checkedAddScore(
+          nonRootCommissionEquivalentUnits,
+          commissionEquivalentUnits,
+        );
+      }
       const attainableEquivalentUnits = memberCapacities.byMember.get(
         memberKey,
       )?.attainableEquivalentUnitsUpperBound;
@@ -300,6 +318,14 @@ export function evaluateAutomaticPlanObjective(
         0,
         attainableEquivalentUnits - commissionEquivalentUnits,
       );
+      const baseEntitlementEquivalentUnits =
+        baseCommissionEquivalentUnitsForFortnightSideTarget(
+          member.fortnightSideTarget,
+        );
+      const baseEntitlementEquivalentUnitShortfall = Math.max(
+        0,
+        baseEntitlementEquivalentUnits - commissionEquivalentUnits,
+      );
       if (
         !isRoot &&
         (member.pvpTarget === 1500 || member.pvpTarget === 2400)
@@ -309,6 +335,8 @@ export function evaluateAutomaticPlanObjective(
             memberKey,
             pvpTarget: member.pvpTarget,
             commissionEquivalentUnits,
+            baseEntitlementEquivalentUnits,
+            baseEntitlementEquivalentUnitShortfall,
             attainableEquivalentUnits,
             equivalentUnitShortfall,
           }),
@@ -318,6 +346,8 @@ export function evaluateAutomaticPlanObjective(
           Object.freeze({
             memberKey,
             commissionEquivalentUnits,
+            baseEntitlementEquivalentUnits,
+            baseEntitlementEquivalentUnitShortfall,
             attainableEquivalentUnits,
             equivalentUnitShortfall,
           }),
@@ -358,14 +388,18 @@ export function evaluateAutomaticPlanObjective(
         futureInvestment,
       );
     }
-    const highTargetDescendingEquivalentUnitShortfallVector =
-      highTargetMemberEquivalentUnitCounts
-      .map((item) => item.equivalentUnitShortfall)
-      .sort((left, right) => right - left);
-    const target700DescendingEquivalentUnitShortfallVector =
-      target700MemberEquivalentUnitCounts
-      .map((item) => item.equivalentUnitShortfall)
-      .sort((left, right) => right - left);
+    const nonRootMemberEquivalentUnitCounts = [
+      ...highTargetMemberEquivalentUnitCounts,
+      ...target700MemberEquivalentUnitCounts,
+    ];
+    const nonRootBaseEntitlementDescendingEquivalentUnitShortfallVector =
+      nonRootMemberEquivalentUnitCounts
+        .map((item) => item.baseEntitlementEquivalentUnitShortfall)
+        .sort((left, right) => right - left);
+    const nonRootStructuralOpportunityDescendingEquivalentUnitShortfallVector =
+      nonRootMemberEquivalentUnitCounts
+        .map((item) => item.equivalentUnitShortfall)
+        .sort((left, right) => right - left);
     const finalDate = request.calendar.dates.at(-1);
     if (finalDate === undefined) {
       throw new TypeError('automatic plan calendar is empty');
@@ -397,16 +431,19 @@ export function evaluateAutomaticPlanObjective(
       rootGoalCapacity.targetCommissionDays - rootActualCommissionDays,
     );
     const objective: AutomaticPlanObjectiveVector = Object.freeze({
+      nonRootBaseEntitlementDescendingEquivalentUnitShortfallVector:
+        Object.freeze(
+          nonRootBaseEntitlementDescendingEquivalentUnitShortfallVector,
+        ),
+      nonRootCommissionEquivalentUnits,
       rootCommissionGoalShortfallDays,
       totalNewPv,
       confirmedPayoutWon,
       discardedExcessPv,
-      highTargetDescendingEquivalentUnitShortfallVector: Object.freeze(
-        highTargetDescendingEquivalentUnitShortfallVector,
-      ),
-      target700DescendingEquivalentUnitShortfallVector: Object.freeze(
-        target700DescendingEquivalentUnitShortfallVector,
-      ),
+      nonRootStructuralOpportunityDescendingEquivalentUnitShortfallVector:
+        Object.freeze(
+          nonRootStructuralOpportunityDescendingEquivalentUnitShortfallVector,
+        ),
       futureCumulativePvpInvestmentPv,
       nonHundredCellCount,
       maxDirectPvp,

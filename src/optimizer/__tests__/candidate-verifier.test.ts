@@ -917,12 +917,13 @@ describe('Phase 4 request and candidate boundary', () => {
         {
           ...built.candidate,
           claimedObjective: {
+            nonRootBaseEntitlementDescendingEquivalentUnitShortfallVector: [],
+            nonRootCommissionEquivalentUnits: 0,
             rootCommissionGoalShortfallDays: 0,
             totalNewPv: 1,
             confirmedPayoutWon: 0,
             discardedExcessPv: 0,
-            highTargetDescendingEquivalentUnitShortfallVector: [],
-            target700DescendingEquivalentUnitShortfallVector: [1, 0],
+            nonRootStructuralOpportunityDescendingEquivalentUnitShortfallVector: [1, 0],
             futureCumulativePvpInvestmentPv: 0,
             nonHundredCellCount: 0,
             maxDirectPvp: 1,
@@ -941,12 +942,13 @@ describe('Phase 4 request and candidate boundary', () => {
         {
           ...built.candidate,
           claimedObjective: {
+            nonRootBaseEntitlementDescendingEquivalentUnitShortfallVector: [],
+            nonRootCommissionEquivalentUnits: 0,
             rootCommissionGoalShortfallDays: 0,
             totalNewPv: 5_700,
             confirmedPayoutWon: 0,
             discardedExcessPv: 0,
-            highTargetDescendingEquivalentUnitShortfallVector: [],
-            target700DescendingEquivalentUnitShortfallVector: [0],
+            nonRootStructuralOpportunityDescendingEquivalentUnitShortfallVector: [0],
             futureCumulativePvpInvestmentPv: 0,
             nonHundredCellCount: 0,
             maxDirectPvp: 700,

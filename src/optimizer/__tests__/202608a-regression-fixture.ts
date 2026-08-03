@@ -199,6 +199,25 @@ export const AUGUST_2026_FIRST_HALF_GOLD_BUNDLE = {
   }
 } as const satisfies ProjectSetupBundle;
 
+/**
+ * The later corrected real-use opening keeps the historical zero-opening
+ * fixture intact so both inputs remain independently reproducible.
+ */
+export const AUGUST_2026_FIRST_HALF_VERONICA_LEFT_235_BUNDLE = {
+  ...AUGUST_2026_FIRST_HALF_GOLD_BUNDLE,
+  organization: {
+    ...AUGUST_2026_FIRST_HALF_GOLD_BUNDLE.organization,
+    openingStateByMember: {
+      ...AUGUST_2026_FIRST_HALF_GOLD_BUNDLE.organization.openingStateByMember,
+      veronica: {
+        ...AUGUST_2026_FIRST_HALF_GOLD_BUNDLE.organization.openingStateByMember
+          .veronica,
+        dailyCarryLeft: 235,
+      },
+    },
+  },
+} as const satisfies ProjectSetupBundle;
+
 export const AUGUST_2026_FIRST_HALF_MOTHER_GOLD_DRAFT = {
   "cells": [
     {

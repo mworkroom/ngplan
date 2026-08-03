@@ -51,12 +51,15 @@ export interface AutomaticPlanRequest {
 }
 
 export interface AutomaticPlanObjectiveVector {
+  readonly nonRootBaseEntitlementDescendingEquivalentUnitShortfallVector:
+    readonly number[];
+  readonly nonRootCommissionEquivalentUnits: number;
   readonly rootCommissionGoalShortfallDays: number;
   readonly totalNewPv: number;
   readonly confirmedPayoutWon: number;
   readonly discardedExcessPv: number;
-  readonly highTargetDescendingEquivalentUnitShortfallVector: readonly number[];
-  readonly target700DescendingEquivalentUnitShortfallVector: readonly number[];
+  readonly nonRootStructuralOpportunityDescendingEquivalentUnitShortfallVector:
+    readonly number[];
   readonly futureCumulativePvpInvestmentPv: number;
   readonly nonHundredCellCount: number;
   readonly maxDirectPvp: number;
@@ -77,6 +80,8 @@ export interface HighTargetMemberEquivalentUnitCount {
   readonly memberKey: string;
   readonly pvpTarget: 1500 | 2400;
   readonly commissionEquivalentUnits: number;
+  readonly baseEntitlementEquivalentUnits: number;
+  readonly baseEntitlementEquivalentUnitShortfall: number;
   readonly attainableEquivalentUnits: number;
   readonly equivalentUnitShortfall: number;
 }
@@ -84,6 +89,8 @@ export interface HighTargetMemberEquivalentUnitCount {
 export interface Target700MemberEquivalentUnitCount {
   readonly memberKey: string;
   readonly commissionEquivalentUnits: number;
+  readonly baseEntitlementEquivalentUnits: number;
+  readonly baseEntitlementEquivalentUnitShortfall: number;
   readonly attainableEquivalentUnits: number;
   readonly equivalentUnitShortfall: number;
 }
@@ -145,8 +152,8 @@ export interface AutomaticPlanProofProgress {
   readonly provenVectorPrefix:
     | {
         readonly objective:
-          | 'HIGH_TARGET_DESCENDING_EQUIVALENT_UNIT_SHORTFALL_VECTOR'
-          | 'TARGET_700_DESCENDING_EQUIVALENT_UNIT_SHORTFALL_VECTOR'
+          | 'NON_ROOT_BASE_ENTITLEMENT_DESCENDING_EQUIVALENT_UNIT_SHORTFALL_VECTOR'
+          | 'NON_ROOT_STRUCTURAL_OPPORTUNITY_DESCENDING_EQUIVALENT_UNIT_SHORTFALL_VECTOR'
           | 'DETERMINISTIC_ALLOCATION_VECTOR';
         readonly length: number;
       }

@@ -536,12 +536,13 @@ describe('optimizer arithmetic, construction, objective, and oracle defenses', (
 
   it('rejects unsorted objectives and exercises prefix-length comparison validation', () => {
     const unsorted: AutomaticPlanObjectiveVector = {
+      nonRootBaseEntitlementDescendingEquivalentUnitShortfallVector: [],
+      nonRootCommissionEquivalentUnits: 0,
       rootCommissionGoalShortfallDays: 0,
       totalNewPv: 1,
       confirmedPayoutWon: 0,
       discardedExcessPv: 0,
-      highTargetDescendingEquivalentUnitShortfallVector: [],
-      target700DescendingEquivalentUnitShortfallVector: [7, 8],
+      nonRootStructuralOpportunityDescendingEquivalentUnitShortfallVector: [7, 8],
       futureCumulativePvpInvestmentPv: 0,
       nonHundredCellCount: 1,
       maxDirectPvp: 1,
@@ -589,9 +590,15 @@ describe('optimizer arithmetic, construction, objective, and oracle defenses', (
       Object.freeze({ root: optimizerOpening() }),
     );
     const target1500 = verifiedFixture(target1500Request);
-    expect(target1500.objective.highTargetDescendingEquivalentUnitShortfallVector)
+    expect(
+      target1500.objective
+        .nonRootBaseEntitlementDescendingEquivalentUnitShortfallVector,
+    )
       .toEqual([]);
-    expect(target1500.objective.target700DescendingEquivalentUnitShortfallVector)
+    expect(
+      target1500.objective
+        .nonRootStructuralOpportunityDescendingEquivalentUnitShortfallVector,
+    )
       .toEqual([]);
 
     const request = createOptimizerRequest();
@@ -713,7 +720,7 @@ describe('optimizer certificate and run-state defensive coverage', () => {
       {
         ...valid,
         provenVectorPrefix: {
-          objective: 'TARGET_700_DESCENDING_EQUIVALENT_UNIT_SHORTFALL_VECTOR',
+          objective: 'NON_ROOT_STRUCTURAL_OPPORTUNITY_DESCENDING_EQUIVALENT_UNIT_SHORTFALL_VECTOR',
           length: coordinateCount,
         },
       },

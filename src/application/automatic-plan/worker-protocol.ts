@@ -9,7 +9,7 @@ import {
   type SafeAutomaticPlanError,
 } from '../../optimizer';
 
-export const AUTOMATIC_PLAN_WORKER_PROTOCOL_VERSION = '4.0.0' as const;
+export const AUTOMATIC_PLAN_WORKER_PROTOCOL_VERSION = '5.0.0' as const;
 
 const PROOF_STAGE_SET: ReadonlySet<string> = new Set([
   ...AUTOMATIC_PLAN_OBJECTIVE_STAGE_ORDER,

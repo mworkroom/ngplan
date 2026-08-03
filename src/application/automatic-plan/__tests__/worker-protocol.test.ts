@@ -63,8 +63,8 @@ describe('automatic plan worker protocol variants', () => {
   it('validates proof progress scalar, bound, and vector-prefix variants', () => {
     expect(isAutomaticPlanWorkerResponse(progress())).toBe(true);
     for (const objective of [
-      'HIGH_TARGET_DESCENDING_EQUIVALENT_UNIT_SHORTFALL_VECTOR',
-      'TARGET_700_DESCENDING_EQUIVALENT_UNIT_SHORTFALL_VECTOR',
+      'NON_ROOT_BASE_ENTITLEMENT_DESCENDING_EQUIVALENT_UNIT_SHORTFALL_VECTOR',
+      'NON_ROOT_STRUCTURAL_OPPORTUNITY_DESCENDING_EQUIVALENT_UNIT_SHORTFALL_VECTOR',
       'DETERMINISTIC_ALLOCATION_VECTOR',
     ]) {
       expect(
@@ -97,14 +97,14 @@ describe('automatic plan worker protocol variants', () => {
       {
         ...PROOF,
         provenVectorPrefix: {
-          objective: 'TARGET_700_DESCENDING_EQUIVALENT_UNIT_SHORTFALL_VECTOR',
+          objective: 'NON_ROOT_STRUCTURAL_OPPORTUNITY_DESCENDING_EQUIVALENT_UNIT_SHORTFALL_VECTOR',
           length: -1,
         },
       },
       {
         ...PROOF,
         provenVectorPrefix: {
-          objective: 'TARGET_700_DESCENDING_EQUIVALENT_UNIT_SHORTFALL_VECTOR',
+          objective: 'NON_ROOT_STRUCTURAL_OPPORTUNITY_DESCENDING_EQUIVALENT_UNIT_SHORTFALL_VECTOR',
           length: 1.5,
         },
       },
