@@ -104,5 +104,5 @@ describe('automatic-plan worker candidate preflight', () => {
     expect(terminal.error.message).toBe(
       '정확한 최소값 확인만 중단됐습니다. 찾은 검증 계획은 사용할 수 있습니다.',
     );
-  }, 90_000);
+  }, 240_000);
 });

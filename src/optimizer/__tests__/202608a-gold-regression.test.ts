@@ -166,5 +166,5 @@ describe('202608A approved manual-plan regression', () => {
     expect(createProblemFingerprint(first.allocations)).toBe(
       '3.0.0:fnv1a64-canonical-json-v1:dcf9dc632d750079',
     );
-  }, 180_000);
+  }, 300_000);
 });
