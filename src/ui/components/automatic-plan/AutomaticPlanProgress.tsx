@@ -34,7 +34,7 @@ function statusLabel(status: AutomaticPlanUiStatus, hasCandidate: boolean): stri
       return '계산 전';
     case 'RUNNING':
       return hasCandidate
-        ? '자동 계산 결과를 찾았습니다. 더 나은 결과를 계산하고 있습니다.'
+        ? '계획표가 준비되었습니다. 조금 더 정리하고 있습니다.'
         : '자동으로 계산하고 있습니다.';
     case 'OPTIMAL':
       return '자동 계산이 끝났습니다.';

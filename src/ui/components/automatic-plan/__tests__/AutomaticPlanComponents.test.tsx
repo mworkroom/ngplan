@@ -95,7 +95,7 @@ describe('automatic plan operator components', () => {
 
     expect(
       screen.getByText(
-        '자동 계산 결과를 찾았습니다. 더 나은 결과를 계산하고 있습니다.',
+        '계획표가 준비되었습니다. 조금 더 정리하고 있습니다.',
       ),
     ).toBeTruthy();
     expect(screen.getByText('2분 05초 / 최대 30분 00초')).toBeTruthy();
@@ -195,8 +195,8 @@ describe('automatic plan operator components', () => {
         onPreview={onPreview}
       />,
     );
-    await user.click(screen.getByRole('button', { name: '계산 멈추기' }));
-    await user.click(screen.getByRole('button', { name: '결과 확인하기' }));
+    await user.click(screen.getByRole('button', { name: '지금 내용으로 계획표 보기' }));
+    await user.click(screen.getByRole('button', { name: '완성된 계획표 보기' }));
     expect(onStop).toHaveBeenCalledOnce();
     expect(onPreview).toHaveBeenCalledOnce();
     expect(screen.queryByText(/3시간|사용자 지정/)).toBeNull();

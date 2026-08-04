@@ -294,7 +294,7 @@ describe('App automatic-plan integration', () => {
     expect(factory.workers).toHaveLength(1);
     const planTitle = await screen.findByRole('heading', { name: '202607A' });
     await waitFor(() => expect(document.activeElement).toBe(planTitle));
-    expect(screen.getByRole('heading', { name: '자동 계획 만들기' })).toBeDefined();
+    expect(screen.getByRole('heading', { name: '계획표 만드는 중' })).toBeDefined();
     expect(screen.getByRole('heading', { name: '자동 계획표' })).toBeDefined();
     expect(screen.queryByRole('heading', { name: '수동 계획표' })).toBeNull();
     expect(
@@ -338,7 +338,7 @@ describe('App automatic-plan integration', () => {
 
     act(() => emitIncumbent(firstWorker, pinnedRaw, 1, 1_000));
     await screen.findByText(
-      '자동 계산 결과를 찾았습니다. 더 나은 결과를 계산하고 있습니다.',
+      '계획표가 준비되었습니다. 조금 더 정리하고 있습니다.',
     );
     act(() => {
       firstWorker.emit({
@@ -363,7 +363,7 @@ describe('App automatic-plan integration', () => {
     expect(screen.queryByRole('alert')).toBeNull();
     expect(firstWorker.terminated).toBe(true);
     expect(screen.queryByText(/아래 계획표와 확인 안내는 아직 기존 입력 기준/)).toBeNull();
-    await user.click(screen.getByRole('button', { name: '결과 확인하기' }));
+    await user.click(screen.getByRole('button', { name: '완성된 계획표 보기' }));
     expect(within(previewRegion()).getByText(`후보 ID ${pinnedCandidateId}`)).toBeDefined();
     expect(
       within(previewRegion()).getByText(formatPv(pinnedTotalNewPv)),
@@ -446,10 +446,10 @@ describe('App automatic-plan integration', () => {
     );
     act(() => emitIncumbent(worker, incumbent, 1, 100));
     await screen.findByText(
-      '자동 계산 결과를 찾았습니다. 더 나은 결과를 계산하고 있습니다.',
+      '계획표가 준비되었습니다. 조금 더 정리하고 있습니다.',
     );
 
-    await user.click(screen.getByRole('button', { name: '계산 멈추기' }));
+    await user.click(screen.getByRole('button', { name: '지금 내용으로 계획표 보기' }));
     expect(worker.sent.at(-1)).toMatchObject({
       type: 'CANCEL',
       runId: worker.startMessage().runId,
@@ -462,7 +462,7 @@ describe('App automatic-plan integration', () => {
     act(() => emitIncumbent(worker, constructive, 2, 200));
 
     expect(screen.queryByText('새 계산 결과가 준비되었습니다.')).toBeNull();
-    await user.click(screen.getByRole('button', { name: '결과 확인하기' }));
+    await user.click(screen.getByRole('button', { name: '완성된 계획표 보기' }));
     expect(within(previewRegion()).getByText(`후보 ID ${incumbentId}`)).toBeDefined();
     expect(
       within(previewRegion()).getByText(formatPv(incumbentTotalNewPv)),
@@ -481,9 +481,9 @@ describe('App automatic-plan integration', () => {
     const user = userEvent.setup();
     render(<App createAutomaticPlanWorker={factory.create} />);
 
-    await screen.findByRole('button', { name: '결과 확인하기' });
+    await screen.findByRole('button', { name: '완성된 계획표 보기' });
     expect(factory.workers).toHaveLength(0);
-    await user.click(screen.getByRole('button', { name: '결과 확인하기' }));
+    await user.click(screen.getByRole('button', { name: '완성된 계획표 보기' }));
     expect(
       within(previewRegion()).getByText(`후보 ID ${candidate.candidateId}`),
     ).toBeDefined();
