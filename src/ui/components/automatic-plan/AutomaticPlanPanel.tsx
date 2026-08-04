@@ -45,7 +45,7 @@ export function AutomaticPlanPanel({
     <section className="automatic-plan-panel" aria-labelledby="automatic-plan-title">
       <div className="automatic-plan-panel__heading">
         <div>
-          <h2 id="automatic-plan-title">자동 계획 만들기</h2>
+          <h2 id="automatic-plan-title">계획표 만드는 중</h2>
         </div>
         <AutomaticPlanControls
           status={status}

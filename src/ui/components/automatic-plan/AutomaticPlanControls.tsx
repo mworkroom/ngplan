@@ -28,12 +28,12 @@ export function AutomaticPlanControls({
       ) : null}
       {running ? (
         <button type="button" className="secondary-button" onClick={onStop}>
-          계산 멈추기
+          지금 내용으로 계획표 보기
         </button>
       ) : null}
       {hasCandidate ? (
         <button type="button" className="primary-button" onClick={onPreview}>
-          결과 확인하기
+          완성된 계획표 보기
         </button>
       ) : null}
       {canRestart ? (
